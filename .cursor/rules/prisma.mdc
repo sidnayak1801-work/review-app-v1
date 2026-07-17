@@ -1,0 +1,52 @@
+---
+description: Prisma and database conventions
+alwaysApply: true
+---
+
+Use Prisma ORM.
+
+## Models
+
+Every model should include when appropriate:
+
+- id
+- createdAt
+- updatedAt
+
+## Relationships
+
+Prefer relations over duplicated data.
+
+Do not duplicate Shopify data unless necessary.
+
+## Queries
+
+Avoid N+1 query patterns.
+
+Select only required fields.
+
+## Migrations
+
+Create small focused migrations.
+
+Never modify production migrations.
+
+## Repository Pattern
+
+All Prisma queries belong inside repositories.
+
+Routes should never directly access Prisma.
+
+Services should not contain Prisma queries.
+
+## Transactions
+
+Use transactions whenever multiple writes must succeed together.
+
+## Performance
+
+Design for large datasets.
+
+Use indexes where appropriate.
+
+Paginate all large queries.

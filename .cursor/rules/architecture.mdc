@@ -1,0 +1,83 @@
+---
+description: Overall project architecture and engineering principles
+alwaysApply: true
+---
+
+# Architecture Rules
+
+This application follows a feature-based architecture.
+
+## General Principles
+
+- Organize code by feature, not by file type.
+- Keep business logic independent from UI.
+- Favor composition over inheritance.
+- Keep modules loosely coupled and highly cohesive.
+- Prefer small, maintainable files over large monolithic files.
+
+## Folder Responsibilities
+
+- `routes/` → HTTP entry points only.
+- `features/` → Business logic.
+- `components/` → Shared UI.
+- `services/` → Shared infrastructure services.
+- `repositories/` → Database access.
+- `lib/` → Utilities.
+- `types/` → Shared TypeScript types.
+
+## Business Logic
+
+Never place business logic inside:
+
+- Remix routes
+- React components
+- Theme extension UI
+
+Business logic belongs inside feature services.
+
+## Separation of Concerns
+
+Routes
+
+↓
+
+Services
+
+↓
+
+Repositories
+
+↓
+
+Prisma
+
+↓
+
+Database
+
+Each layer has a single responsibility.
+
+## Error Handling
+
+- Throw meaningful domain errors.
+- Never silently ignore errors.
+- Validate input before executing business logic.
+
+## Reusability
+
+If code is likely to be reused, extract it into:
+
+- helper
+- utility
+- shared component
+- service
+
+Never duplicate business logic.
+
+## Scalability
+
+Write code assuming:
+
+- thousands of stores
+- millions of reviews
+- multiple future developers

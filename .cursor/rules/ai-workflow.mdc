@@ -1,0 +1,14 @@
+---
+description: AI collaboration workflow
+alwaysApply: true
+---
+
+When implementing features:
+
+- Read relevant documentation in `/docs` before making changes.
+- Implement only the requested feature or phase.
+- Do not add unrelated features.
+- Preserve existing architecture and coding conventions.
+- If information is missing, ask for clarification instead of making assumptions.
+- Prefer incremental, reviewable changes over large rewrites.
+- Keep generated code production-ready and well-typed.

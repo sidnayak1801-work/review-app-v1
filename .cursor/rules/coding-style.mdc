@@ -1,0 +1,77 @@
+---
+description: Coding conventions
+alwaysApply: true
+---
+
+# TypeScript
+
+- Use strict TypeScript.
+- Never use `any`.
+- Prefer explicit types.
+- Create shared interfaces when reused.
+
+# React
+
+- Functional components only.
+- Keep components focused.
+- Avoid components larger than ~200 lines.
+- Extract reusable UI.
+
+# Functions
+
+- Prefer small functions.
+- One responsibility per function.
+- Use early returns.
+
+# Async
+
+Always use:
+
+- async/await
+
+Avoid nested Promise chains.
+
+# Naming
+
+Components
+
+PascalCase
+
+Variables
+
+camelCase
+
+Constants
+
+UPPER_CASE
+
+Files
+
+kebab-case unless framework requires otherwise.
+
+# Imports
+
+Prefer absolute imports where possible.
+
+Group imports:
+
+1. external
+2. internal
+3. relative
+
+# Comments
+
+Write comments explaining WHY.
+
+Avoid comments explaining WHAT.
+
+# Code Quality
+
+Avoid:
+
+- duplicated logic
+- magic numbers
+- deeply nested if statements
+- giant switch statements
+
+Extract reusable code.
