@@ -1,52 +1,39 @@
 ---
-description: Prisma and database conventions
+description: MVP-focused Prisma and database conventions
 alwaysApply: true
 ---
 
-Use Prisma ORM.
+# Schema
 
-## Models
+- Use Prisma with PostgreSQL.
+- Add models and fields only for the active roadmap feature.
+- Include IDs, timestamps, relations, and constraints when the domain requires
+  them; do not add fields mechanically.
+- Store Shopify identifiers instead of duplicating complete Shopify resources.
+- Never duplicate OAuth tokens outside Shopify session storage.
 
-Every model should include when appropriate:
+# Tenant Safety
 
-- id
-- createdAt
-- updatedAt
+- Every merchant-owned query must include or safely resolve the shop boundary.
+- Do not treat a client-provided ID as authorization.
+- Add unique constraints for real invariants.
 
-## Relationships
+# Queries
 
-Prefer relations over duplicated data.
+- Keep Prisma queries in repositories.
+- Select only required fields.
+- Use stable pagination for growing lists.
+- Avoid N+1 access patterns.
+- Add indexes for documented query patterns, then verify plans when data volume
+  makes it useful.
 
-Do not duplicate Shopify data unless necessary.
+# Writes and Migrations
 
-## Queries
-
-Avoid N+1 query patterns.
-
-Select only required fields.
-
-## Migrations
-
-Create small focused migrations.
-
-Never modify production migrations.
-
-## Repository Pattern
-
-All Prisma queries belong inside repositories.
-
-Routes should never directly access Prisma.
-
-Services should not contain Prisma queries.
-
-## Transactions
-
-Use transactions whenever multiple writes must succeed together.
-
-## Performance
-
-Design for large datasets.
-
-Use indexes where appropriate.
-
-Paginate all large queries.
+- Use transactions when multiple writes must succeed or fail as one operation.
+- Keep migrations focused and review generated SQL.
+- Never edit a migration already applied to production.
+- Prefer additive migrations and safe backfills for live data.
+- Do not create tables for future analytics, AI, advanced billing, media,
+  loyalty, referral, or integration features.
+- MVP billing may extend Shop with a minimal verified entitlement cache; do not
+  add a generic subscription-history or usage-metering system.

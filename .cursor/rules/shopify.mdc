@@ -1,0 +1,56 @@
+---
+description: Shopify embedded-app conventions
+alwaysApply: true
+---
+
+# Platform
+
+- Use Shopify authentication; do not build custom merchant authentication.
+- Prefer the GraphQL Admin API for new Shopify API work.
+- Use App Bridge and Polaris for embedded merchant administration.
+- Use Theme App Extensions for storefront UI.
+- Keep extension code lightweight and free of server business logic.
+
+# Data Ownership
+
+Shopify is the source of truth for products, variants, customers, orders, and
+fulfillment.
+
+The application owns shops, reviews, moderation state, widget settings,
+review-request schedules, and import status.
+
+Store only Shopify identifiers or small snapshots required by an active
+workflow.
+
+# Requests and Webhooks
+
+- Verify every Shopify authenticated request, webhook, and app-proxy request.
+- Make webhook handlers idempotent.
+- Prefer webhooks to polling.
+- Request only scopes required by the active phase.
+- Respect Shopify GraphQL cost limits and batch related operations where
+  practical.
+
+# Merchant and Storefront Experience
+
+- Reuse Polaris instead of recreating common admin controls.
+- Keep onboarding and errors actionable.
+- Keep storefront payloads small, accessible, responsive, and theme-safe.
+- Never expose reviewer private data or internal errors in storefront output.
+
+# Billing
+
+- MVP billing uses Shopify App Pricing with only the documented Free and Pro
+  plans.
+- Shopify is the subscription source of truth.
+- Verify plan changes before updating cached entitlements.
+- Enforce published-review and review-request allowances server-side.
+- Never implement off-platform payment collection.
+
+# App Store Quality
+
+- Classify the listing under Product reviews.
+- Treat Built for Shopify as an earned status, not a self-assigned category.
+- Follow current App Store and Built for Shopify requirements.
+- Use the latest supported App Bridge and Shopify-native design patterns.
+- Never claim the Built for Shopify badge before Shopify awards it.

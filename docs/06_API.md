@@ -1,59 +1,140 @@
-# API
+# API Plan
 
-GET /api/reviews
+This document defines intended application boundaries, not a promise to build
+every endpoint immediately. Implement endpoints only in their roadmap phase.
 
-Returns product reviews.
+## API Principles
 
----
+- Use React Router loaders/actions as HTTP entry points.
+- Keep business rules in feature services.
+- Validate request data and query parameters with Zod.
+- Derive tenant identity from verified Shopify context.
+- Never authorize access using a client-provided `shopId` alone.
+- Return only fields required by the caller.
+- Use cursor pagination for lists that can grow.
+- Make webhook and retryable operations idempotent.
+- Version public contracts before making breaking changes.
 
-POST /api/reviews
+## Response Conventions
 
-Creates review.
+Successful list responses:
 
----
+```json
+{
+  "items": [],
+  "pageInfo": {
+    "nextCursor": null,
+    "hasNextPage": false
+  }
+}
+```
 
-PUT /api/reviews/:id
+Safe error responses:
 
-Updates review.
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "The submitted data is invalid."
+  }
+}
+```
 
----
+Do not return stack traces, Prisma errors, secrets, or customer data in errors.
 
-DELETE /api/reviews/:id
+## Existing Foundation Routes
 
-Deletes review.
+- Shopify authentication routes
+- `POST /webhooks/app/uninstalled`
+- `POST /webhooks/app/scopes_update`
 
----
+These routes use Shopify request verification.
 
-POST /api/replies
+## Phase 1 — Reviews and Widget
 
-Merchant reply.
+### Authenticated merchant routes
 
----
+- `GET /api/admin/reviews`
+  - Cursor-paginated reviews for the authenticated shop
+  - Optional product and moderation-status filters
+- `POST /api/admin/reviews`
+  - Create a merchant-entered review
+- `PATCH /api/admin/reviews/:reviewId`
+  - Edit review content or change moderation status
+- `DELETE /api/admin/reviews/:reviewId`
+  - Delete a review belonging to the authenticated shop
+- `GET /api/admin/widget-settings`
+  - Return the authenticated shop's widget settings
+- `PUT /api/admin/widget-settings`
+  - Validate and replace the MVP widget settings
 
-GET /api/widget
+### Storefront routes
 
-Returns widget configuration.
+- `GET /api/storefront/reviews`
+  - Requires verified storefront/app-proxy context
+  - Requires a Shopify product ID
+  - Returns approved public review fields only
+- `POST /api/storefront/reviews`
+  - Requires verified storefront/app-proxy context
+  - Creates a pending review
+  - Applies validation, rate limiting, and spam protection
 
----
+The public request must not accept arbitrary tenant identity as proof of access.
+Choose the final Shopify app-proxy URL when implementing the Theme App
+Extension and document it before release.
 
-GET /api/analytics
+## Phase 2 — Requests, Moderation, Imports, and Billing
 
-Dashboard metrics.
+Moderation continues to use the Phase 1 review update route.
 
----
+- `POST /webhooks/orders/fulfilled`
+  - Verified Shopify webhook
+  - Creates idempotent review-request schedules
+- `GET /api/admin/review-requests`
+  - Paginated request status for the authenticated shop
+- `POST /api/admin/review-imports`
+  - Accepts a bounded CSV upload and creates an import job
+- `GET /api/admin/review-imports/:importId`
+  - Returns progress, counts, and a safe error-report link
 
-POST /api/email/send
+Email delivery and import processing are service workflows, not public
+"send now" endpoints.
 
-Review request email.
+### Billing boundaries
 
----
+- Shopify App Pricing hosts plan selection and billing.
+- An authenticated billing entry route redirects merchants to Shopify's hosted
+  plan experience.
+- The configured Shopify welcome link verifies the active subscription before
+  updating the Shop entitlement cache.
+- Relevant Shopify billing lifecycle events refresh or invalidate cached
+  entitlements.
+- Paid actions check allowances server-side; no public endpoint can assign a
+  plan or bypass limits.
 
-POST /webhooks/orders/create
+Do not build a custom checkout, card form, or public billing API.
 
-Future automation.
+## Deferred APIs
 
----
+Do not implement these during MVP phases:
 
-POST /webhooks/app/uninstalled
+- Replies
+- Media upload
+- Advanced analytics
+- Advanced usage metering
+- AI processing
+- Partner/public API access
+- Third-party integrations
 
-Cleanup.
+Add each contract when its feature enters the active roadmap phase.
+
+## Security and Limits
+
+- Authenticate all merchant routes with Shopify admin authentication.
+- Verify app proxy and webhook signatures.
+- Validate ownership in the service/repository boundary.
+- Cap page size, review body length, and import file size.
+- Rate-limit public submissions.
+- Avoid returning reviewer email addresses from storefront APIs.
+- Add CSRF protections where the selected transport requires them.
+- Log request IDs and error codes, not request bodies.

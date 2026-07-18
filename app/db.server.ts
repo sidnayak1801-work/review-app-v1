@@ -1,5 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 
+import { getDatabaseEnv } from "./lib/env.server";
+
+getDatabaseEnv();
+
 declare global {
   // eslint-disable-next-line no-var
   var prismaGlobal: PrismaClient;

@@ -1,83 +1,43 @@
 ---
-description: Overall project architecture and engineering principles
+description: Modular-monolith architecture rules
 alwaysApply: true
 ---
 
-# Architecture Rules
+# Architecture
 
-This application follows a feature-based architecture.
+The application is a feature-oriented modular monolith.
 
-## General Principles
+```text
+Route → Service → Repository → Prisma → PostgreSQL
+```
 
-- Organize code by feature, not by file type.
-- Keep business logic independent from UI.
-- Favor composition over inheritance.
-- Keep modules loosely coupled and highly cohesive.
-- Prefer small, maintainable files over large monolithic files.
+- `routes/` contains HTTP loaders, actions, APIs, and webhooks.
+- `features/` contains feature rules, schemas, workflows, and feature-owned UI.
+- `repositories/` contains Prisma access.
+- `services/` contains shared infrastructure adapters.
+- `components/` contains genuinely shared presentational UI.
+- `lib/` contains small framework-independent utilities.
 
-## Folder Responsibilities
+# Boundaries
 
-- `routes/` → HTTP entry points only.
-- `features/` → Business logic.
-- `components/` → Shared UI.
-- `services/` → Shared infrastructure services.
-- `repositories/` → Database access.
-- `lib/` → Utilities.
-- `types/` → Shared TypeScript types.
+- Keep business rules out of routes, components, and Theme App Extension UI.
+- Keep Prisma queries in repositories.
+- Keep transport concerns out of services and repositories.
+- Keep tenant ownership explicit in service and repository operations.
+- Prefer cohesive modules over many tiny files.
+- Extract shared code only after real reuse or when it protects a meaningful
+  boundary.
+- Add interfaces for external providers, multiple implementations, or clear
+  testing value—not automatically.
 
-## Business Logic
+# Scope and Scale
 
-Never place business logic inside:
+- Build only modules required by the active roadmap phase.
+- Design queries for tenant isolation, stable pagination, and known indexes.
+- Measure before adding caches, queues, replicas, partitioning, or service
+  extraction.
+- Do not introduce microservices, event sourcing, generic plugin frameworks,
+  or distributed infrastructure for hypothetical growth.
 
-- Remix routes
-- React components
-- Theme extension UI
-
-Business logic belongs inside feature services.
-
-## Separation of Concerns
-
-Routes
-
-↓
-
-Services
-
-↓
-
-Repositories
-
-↓
-
-Prisma
-
-↓
-
-Database
-
-Each layer has a single responsibility.
-
-## Error Handling
-
-- Throw meaningful domain errors.
-- Never silently ignore errors.
-- Validate input before executing business logic.
-
-## Reusability
-
-If code is likely to be reused, extract it into:
-
-- helper
-- utility
-- shared component
-- service
-
-Never duplicate business logic.
-
-## Scalability
-
-Write code assuming:
-
-- thousands of stores
-- millions of reviews
-- multiple future developers
+The architecture must support growth without making MVP development behave
+like an enterprise platform project.

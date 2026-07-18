@@ -1,196 +1,118 @@
-# Billing & Plans
+# MVP Pricing and Billing
 
-## Vision
+Pricing is part of the launchable MVP. Keep it transparent and limited to two
+plans so one developer can implement and support it reliably.
 
-The application follows a freemium SaaS model.
+Use Shopify App Pricing, Shopify's default recommended billing approach for
+public App Store apps. Shopify hosts plan selection and handles approval,
+charges, trials, proration, upgrades, and downgrades. Never collect payment
+details or charge merchants outside Shopify.
 
-Merchants can start for free and upgrade as their store grows.
+## Free Plan
 
-Billing uses Shopify's Billing API.
+Price: `$0`
 
----
+Includes:
 
-# Plans
+- Up to 100 published reviews
+- Up to 50 review-request emails per month
+- Text review submission
+- Pending, approved, and rejected moderation
+- Product review widget and star-rating badge
+- Basic widget settings
+- CSV review import
+- Standard support
 
-## Free
+## Pro Plan
 
-Price
+Price: `$19/month`
 
-$0/month
+Trial: `14 days`
 
-Limits
+Includes everything in Free plus:
 
-- 100 published reviews
-- Basic review widget
-- Star rating widget
-- Basic moderation
-- Email support
-- Basic analytics
-
-Restrictions
-
-- No photo reviews
-- No video reviews
-- No AI features
-- No review request automation
-- Limited customization
-
----
-
-## Pro
-
-Price
-
-$19/month
-
-Limits
-
-- 5,000 reviews
-
-Features
-
-- Unlimited widgets
-- Photo reviews
-- Merchant replies
-- Advanced analytics
-- Review requests
-- Custom branding
-- SEO enhancements
-
----
-
-## Growth
-
-Price
-
-$49/month
-
-Limits
-
-- Unlimited reviews
-
-Features
-
-Everything in Pro plus:
-
-- Video reviews
-- AI summaries
-- AI moderation
-- Sentiment analysis
-- Review translation
-- API access
+- Up to 5,000 published reviews
+- Up to 1,000 review-request emails per month
+- Optional removal of app branding from the widget
 - Priority support
 
----
+Do not advertise photo reviews, merchant replies, advanced analytics, AI, or
+other post-MVP features as Pro benefits until those features exist.
 
-## Enterprise
+## Allowance Definitions
 
-Custom pricing
+Published reviews:
 
-Unlimited everything
+- Count Review records with `status = APPROVED`.
+- Pending and rejected reviews do not consume the allowance.
+- Imported reviews count only after approval.
 
-Dedicated support
+Review-request emails:
 
-Custom integrations
+- Use one UTC calendar-month allowance window for both plans.
+- Count each ReviewRequest once when the provider first accepts it for delivery.
+- Retries and failed requests do not consume another allowance.
 
-SLA
+Do not add a generic usage ledger. Use indexed counts from Review and
+ReviewRequest until measured load requires an aggregate.
 
-White-label options
+## Entitlement Source of Truth
 
----
+- Shopify is the subscription source of truth.
+- The Shop record may cache `FREE` or `PRO` and minimal synchronization state
+  for request-time checks.
+- Refresh the cache after the Shopify-hosted plan flow and relevant billing
+  lifecycle events.
+- Re-verify with Shopify when cached state is missing or stale.
+- Centralize entitlement checks in one billing service.
+- Enforce allowances server-side; hiding UI is not enforcement.
 
-# Feature Gating
+## Upgrade Flow
 
-Free
+1. Merchant chooses Pro.
+2. Redirect to Shopify's hosted App Pricing experience.
+3. Shopify processes approval and returns to the configured welcome link.
+4. The app verifies the active subscription with Shopify.
+5. The app refreshes the entitlement cache.
+6. Pro allowances become available.
 
-✓ Reviews
+## Downgrade and Cancellation
 
-✓ Ratings
+- Merchants can change plans without contacting support or reinstalling.
+- Never delete reviews, requests, settings, or imports.
+- Existing approved reviews remain visible after downgrade.
+- If approved reviews exceed 100, block new approvals until the merchant
+  reduces the count or upgrades.
+- Stop scheduling new emails after the Free monthly allowance is reached.
+- Preserve pending email records and explain how the limit affects them.
+- Show contextual upgrade guidance without blocking unrelated app use.
 
-✓ Dashboard
+## Failed or Unverified Billing State
 
-✓ Basic Analytics
+- Do not grant Pro based only on a browser redirect or client-provided value.
+- If Shopify cannot be reached, use a recently verified cache for a short,
+  documented grace period.
+- After the grace period, fail closed for new Pro-only actions while preserving
+  existing public reviews.
+- Log billing error codes without tokens or sensitive Shopify responses.
 
----
+## Built for Shopify Billing Traits
 
-Pro
+- Use Shopify App Pricing or another Shopify-provided billing solution.
+- Display accurate pricing, limits, trial terms, and additional charges.
+- Support self-serve upgrade and downgrade.
+- Ensure charges appear correctly in Shopify Admin.
+- Test trial conversion, cancellation, reinstall, and failed-payment paths.
+- Do not claim unavailable paid features.
 
-✓ Photos
+Official references:
 
-✓ Emails
+- https://shopify.dev/docs/apps/launch/billing
+- https://shopify.dev/docs/apps/launch/billing/shopify-app-pricing
+- https://shopify.dev/docs/apps/launch/shopify-app-store/app-store-requirements
 
-✓ Custom Widgets
+## Future Pricing
 
-✓ Replies
-
-✓ SEO
-
----
-
-Growth
-
-✓ AI
-
-✓ Video
-
-✓ API
-
-✓ Advanced Analytics
-
----
-
-# Usage Tracking
-
-Track:
-
-- Reviews published
-- Reviews remaining
-- Storage used
-- Email quota
-- API usage
-
----
-
-# Upgrade Flow
-
-Merchant reaches limit
-
-↓
-
-Display upgrade banner
-
-↓
-
-Pricing page
-
-↓
-
-Shopify Billing API
-
-↓
-
-Subscription approved
-
-↓
-
-Features unlocked
-
----
-
-# Downgrade
-
-If merchant downgrades:
-
-- Preserve existing reviews.
-- Disable premium functionality.
-- Never delete merchant data.
-- Show upgrade prompts where premium features are accessed.
-
----
-
-# Billing Principles
-
-- Use Shopify Billing API.
-- Never process payments directly.
-- Sync subscription status with Shopify.
-- Gracefully handle cancelled subscriptions.
+Growth, usage-based, and Enterprise plans remain future hypotheses. Introduce
+another plan only when real merchant demand cannot be served clearly by Free
+and Pro.

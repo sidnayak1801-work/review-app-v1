@@ -1,77 +1,42 @@
 ---
-description: Coding conventions
+description: Readable TypeScript and React conventions
 alwaysApply: true
 ---
 
 # TypeScript
 
 - Use strict TypeScript.
-- Never use `any`.
-- Prefer explicit types.
-- Create shared interfaces when reused.
+- Avoid `any`; use `unknown` and narrow at boundaries.
+- Prefer inference when the type is clear and explicit types when they improve
+  contracts or readability.
+- Use meaningful domain names.
 
-# React
+# Functions and Components
 
-- Functional components only.
-- Keep components focused.
-- Avoid components larger than ~200 lines.
-- Extract reusable UI.
+- Keep each function or component focused on one understandable purpose.
+- Prefer early returns over deeply nested conditions.
+- Use functional React components.
+- Extract code when a unit is hard to understand, independently reusable, or
+  independently testable—not to satisfy an arbitrary line limit.
+- Prefer local code over a premature shared abstraction.
 
-# Functions
+# Async and Errors
 
-- Prefer small functions.
-- One responsibility per function.
-- Use early returns.
+- Prefer `async`/`await`.
+- Handle expected failures explicitly.
+- Never swallow errors without a documented reason.
 
-# Async
+# Files and Imports
 
-Always use:
+- Use kebab-case filenames unless the framework requires another convention.
+- Group external and project imports consistently with nearby files.
+- Prefer the repository's existing import style; do not rewrite imports solely
+  for style.
 
-- async/await
+# Readability
 
-Avoid nested Promise chains.
-
-# Naming
-
-Components
-
-PascalCase
-
-Variables
-
-camelCase
-
-Constants
-
-UPPER_CASE
-
-Files
-
-kebab-case unless framework requires otherwise.
-
-# Imports
-
-Prefer absolute imports where possible.
-
-Group imports:
-
-1. external
-2. internal
-3. relative
-
-# Comments
-
-Write comments explaining WHY.
-
-Avoid comments explaining WHAT.
-
-# Code Quality
-
-Avoid:
-
-- duplicated logic
-- magic numbers
-- deeply nested if statements
-- giant switch statements
-
-Extract reusable code.
+- Avoid duplicated business rules, unexplained magic values, and clever
+  one-liners.
+- Use comments to explain important intent, constraints, or trade-offs.
+- Delete stale comments and unused code.
+- Choose the simplest correct implementation.

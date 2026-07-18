@@ -1,0 +1,33 @@
+---
+description: React Router application conventions
+alwaysApply: true
+---
+
+# Routes
+
+- Keep loaders and actions thin.
+- Authenticate the request and resolve the shop at the route boundary.
+- Parse and validate transport input before calling a service.
+- Call feature services for business workflows.
+- Convert known results and errors into safe responses.
+- Keep Prisma queries and business rules out of route files.
+
+# Data and Forms
+
+- Use framework loaders, actions, and forms when they fit the interaction.
+- Keep transformations close to the layer that owns them.
+- Return only data required by the route component.
+- Use cursor pagination for growing server lists.
+
+# Components
+
+- Keep route components focused on rendering and interaction state.
+- Use `useLoaderData` and `useActionData` with generated/inferred route types.
+- Add meaningful error boundaries to user-facing route trees.
+
+# Public Endpoints
+
+- Verify Shopify app-proxy, webhook, or authenticated admin context as
+  appropriate.
+- Do not trust query parameters to establish tenant identity.
+- Add rate limits and bounded input to public review submission.

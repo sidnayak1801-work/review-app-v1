@@ -1,362 +1,213 @@
-# AGENTS.md
-
 # AI Development Guide
 
-Welcome to the Review App project.
+## Mission
 
-This application is being built as a production-grade Shopify review platform with the long-term goal of becoming a competitive alternative to Judge.me.
+Build a useful Shopify review MVP for 50–100 merchants as quickly as quality
+allows. Keep the code clean enough to evolve into a larger platform, but do not
+build future scale or features before they are needed.
 
-Every implementation should prioritize maintainability, scalability, readability, and developer experience over writing code quickly.
+The default decision rule is:
 
----
+> Choose the simplest correct solution that fits the active roadmap phase and
+> preserves clear module boundaries.
 
-# Before Every Task
+## Before Every Task
 
-Before making any changes:
+1. Read `docs/01_PROJECT.md`.
+2. Read `docs/02_ARCHITECTURE.md`.
+3. Read the active phase in `docs/04_ROADMAP.md`.
+4. Read the relevant feature, database, API, or billing document.
+5. Follow all applicable rules in `.cursor/rules/`.
+6. Inspect the existing implementation before proposing a change.
 
-1. Read `docs/01_PROJECT.md`
-2. Read `docs/02_ARCHITECTURE.md`
-3. Read `docs/04_ROADMAP.md`
-4. Read any feature documentation related to the task.
-5. Follow every rule inside `.cursor/rules/`.
+If documentation conflicts, pause and resolve the conflict before
+implementation. If code and documentation differ, determine whether the code
+is incomplete or the documentation is stale; do not blindly preserve either.
 
-Never skip these steps.
+## Scope
 
----
+- Build only what is requested and belongs to the active roadmap phase.
+- Never implement a future-phase feature as a speculative improvement.
+- Do not add unrelated refactors, dependencies, tables, endpoints, settings, or
+  infrastructure.
+- Finish one coherent feature slice, including tests and documentation, before
+  starting another.
+- Keep partial scaffolding out of the codebase unless the active slice needs it.
 
-# Development Philosophy
+If a future concern is important, record it in `docs/08_IDEAS.md` or explain it
+as follow-up work. Do not implement it.
 
-Always think like a senior software engineer.
+## Engineering Standard
 
-Do not simply make the code work.
+Code must be:
 
-Instead, build code that is:
-
-- Maintainable
-- Scalable
 - Readable
-- Modular
-- Testable
-- Reusable
-- Production-ready
+- Maintainable
+- Well-typed
+- Secure at trust boundaries
+- Tested in proportion to risk
+- Consistent with the existing architecture
+
+Production quality does not mean maximum abstraction. Avoid cleverness,
+premature generalization, and infrastructure without a current requirement.
+
+## Architecture
+
+The application is a modular monolith:
 
-Every implementation should be capable of supporting thousands of Shopify stores.
+```text
+Route → Service → Repository → Prisma → PostgreSQL
+```
 
----
+- Routes authenticate, validate transport input, call services, and return
+  responses.
+- Services own business rules, tenant checks, and workflows.
+- Repositories own Prisma queries.
+- Components render UI and handle local presentation behavior.
+- Shopify extensions remain lightweight and contain no server business logic.
 
-# Project Architecture
+Create an interface when it protects an external boundary, supports multiple
+implementations, or materially improves testing. Do not create an interface,
+factory, base class, or wrapper for every module by default.
 
-The application follows Feature-Based Architecture.
+Do not introduce microservices, event sourcing, Kubernetes, distributed
+systems, generic plugin frameworks, or a data warehouse unless an approved
+future phase and measured need require them.
 
-Layers:
+## Shopify
 
-Routes
+Use:
 
-↓
+- Shopify authentication rather than custom authentication
+- GraphQL Admin API for new Shopify API work
+- App Bridge and Polaris for embedded merchant UI
+- Theme App Extensions for storefront UI
+- Verified webhooks or app-proxy requests at public Shopify boundaries
 
-Services
+Shopify remains the source of truth for products, variants, customers, orders,
+and fulfillment. Store only the identifiers and snapshots a current workflow
+requires.
 
-↓
+The listing category is Product reviews. Treat Built for Shopify as a quality
+target, not a label the app can self-assign:
 
-Repositories
+- Follow the current App Store and Built for Shopify requirements.
+- Use the latest supported App Bridge, Polaris patterns, and Theme App
+  Extensions.
+- Protect admin and storefront performance.
+- Never claim the status or badge before Shopify awards it.
 
-↓
+MVP billing uses Shopify App Pricing with the documented Free and Pro plans.
+Shopify is the subscription source of truth, and plan allowances are enforced
+server-side.
 
-Prisma
+## Data and Tenant Safety
 
-↓
+- Every merchant-owned operation must resolve and enforce `shopId`.
+- Never trust a client-provided resource ID as authorization.
+- Database access belongs in repositories.
+- Add indexes for actual query patterns.
+- Paginate lists that can grow.
+- Use transactions only when multiple writes must succeed together.
+- Add a table only when an active roadmap feature needs it.
+- Never duplicate OAuth tokens outside Shopify session storage.
+- Never delete merchant data because of uninstall or downgrade unless a
+  documented retention/deletion workflow requires it.
 
-Database
+## TypeScript and Validation
 
-Business logic never belongs inside:
+- Use strict TypeScript.
+- Avoid `any`; narrow `unknown` at boundaries.
+- Use meaningful names and focused functions.
+- Prefer early returns over deep nesting.
+- Validate external input before business logic.
+- Do not extract shared code until reuse or a clear boundary exists.
 
-- Remix routes
-- React components
-- Theme Extensions
+## UI
 
-Routes should coordinate requests.
+- Prefer Polaris for merchant administration.
+- Keep UI accessible, responsive, and understandable without training.
+- Reuse components when the same interaction genuinely repeats.
+- Do not create a design system before the product needs one.
+- Keep storefront JavaScript and payloads small.
 
-Services contain business rules.
+## Errors, Security, and Logging
 
-Repositories communicate with Prisma.
+- Never silently ignore failures.
+- Return safe, actionable user errors.
+- Log useful operational context without secrets or customer content.
+- Verify authentication, webhook signatures, and tenant ownership.
+- Rate-limit and protect public submission endpoints.
+- Treat privacy and deletion requirements as launch requirements, not future
+  polish.
 
-Components display UI only.
+## Performance
 
----
+Start with sound queries, indexes, pagination, bounded payloads, and batched
+Shopify calls. Measure before adding caches, queues, replicas, partitioning, or
+service extraction.
 
-# Scope Management
+Optimize the critical storefront path before low-value internal paths.
 
-Implement **only** the requested feature.
+## Testing
 
-Never:
+Test behavior at the lowest useful level:
 
-- build future roadmap items
-- add unrelated improvements
-- introduce speculative features
-- refactor unrelated code
+- Unit tests for validation and business rules
+- Repository integration tests for important queries and constraints
+- Route tests for authentication, validation, and response behavior
+- Critical-path end-to-end tests before launch
 
-If something important is missing, explain it first before implementing.
+Do not chase coverage numbers with low-value tests. Every bug fix should add a
+regression test when practical.
 
----
+## Documentation
 
-# Documentation First
+Documentation is the project source of intent.
 
-Documentation is the source of truth.
+When work changes:
 
-If implementation differs from documentation:
+- Phase status or scope → update `docs/04_ROADMAP.md`
+- Architecture decisions → update `docs/02_ARCHITECTURE.md`
+- Schema or retention → update `docs/03_DATABASE.md`
+- Public contracts → update `docs/06_API.md`
+- Completed work → update `docs/07_CHANGELOG.md`
+- Immediate next slice → update `docs/TODO.md`
 
-Documentation wins.
+Do not duplicate detailed plans across files. Link to the canonical document.
 
-Ask for clarification instead of guessing.
+## Workflow and Git
 
-If implementation introduces a new architectural decision:
+Before implementation:
 
-Update documentation.
+- State a short plan.
+- Identify material architecture or data implications.
+- Ask only when a missing decision would materially change the result.
 
----
+During implementation:
 
-# Code Quality
+- Keep changes focused and reviewable.
+- Complete the feature vertically.
+- Run checks proportional to the change.
+- Do not modify unrelated files.
 
-Every generated code should:
+After implementation:
 
-- use TypeScript
-- use strict typing
-- avoid `any`
-- avoid duplicated logic
-- use meaningful names
-- keep functions focused
-- use early returns
-- avoid deeply nested conditions
+- Summarize the result and verification.
+- List genuine follow-up work separately.
+- Suggest a concise commit message if useful.
+- Create commits or push only when explicitly requested.
 
-Prefer readability over cleverness.
+## Decision Order
 
----
+When valid options exist, prefer:
 
-# Shopify Principles
+1. Correctness and merchant safety
+2. Active-phase scope
+3. Simplicity
+4. Maintainability
+5. Consistency with existing code
+6. Measured performance
+7. Future flexibility with low current cost
 
-This is a Shopify Embedded App.
-
-Always use:
-
-- Shopify GraphQL Admin API
-- Polaris
-- App Bridge
-- Theme App Extensions
-- Remix conventions
-
-Do not duplicate Shopify resources unless necessary.
-
-Shopify remains the source of truth for:
-
-- Products
-- Orders
-- Customers
-- Variants
-
-Application owns:
-
-- Reviews
-- Replies
-- Widget Settings
-- Analytics
-- Review Requests
-
----
-
-# Database Rules
-
-Database access belongs only inside repositories.
-
-Services should never execute Prisma queries directly.
-
-Routes should never execute Prisma queries.
-
-Design every query for scalability.
-
-Always consider:
-
-- pagination
-- indexing
-- N+1 query problems
-
----
-
-# UI Principles
-
-UI should be simple.
-
-Reusable.
-
-Accessible.
-
-Responsive.
-
-Use Polaris whenever possible.
-
-Avoid custom components if Polaris already solves the problem.
-
----
-
-# Error Handling
-
-Never silently ignore errors.
-
-Return meaningful errors.
-
-Validate every input.
-
-Handle edge cases.
-
----
-
-# Security
-
-Never trust user input.
-
-Validate all requests.
-
-Protect authenticated routes.
-
-Escape unsafe data.
-
-Avoid exposing internal implementation details.
-
----
-
-# Performance
-
-Minimize Shopify API requests.
-
-Batch requests where possible.
-
-Avoid unnecessary database queries.
-
-Lazy-load heavy resources.
-
-Optimize for large datasets.
-
----
-
-# Git Workflow
-
-Work in small iterations.
-
-One feature.
-
-↓
-
-Review.
-
-↓
-
-Commit.
-
-↓
-
-Next feature.
-
-Avoid large unreviewed changes.
-
----
-
-# Roadmap
-
-Only implement the current roadmap phase.
-
-Never begin a future phase unless explicitly requested.
-
-If multiple phases overlap:
-
-Complete the current phase first.
-
----
-
-# Documentation Updates
-
-Whenever a feature is completed:
-
-Update:
-
-- docs/04_ROADMAP.md
-- docs/07_CHANGELOG.md
-- docs/TODO.md
-
-If architecture changes:
-
-Update:
-
-- docs/02_ARCHITECTURE.md
-
-If database changes:
-
-Update:
-
-- docs/03_DATABASE.md
-
----
-
-# AI Behavior
-
-When requirements are unclear:
-
-DO NOT GUESS.
-
-Instead:
-
-- explain the ambiguity
-- propose possible solutions
-- wait for confirmation
-
-Never invent business requirements.
-
----
-
-# Decision Making
-
-When multiple solutions exist:
-
-Choose the solution that is:
-
-- simpler
-- easier to maintain
-- scalable
-- consistent with existing architecture
-
-Explain trade-offs when appropriate.
-
----
-
-# Long-Term Vision
-
-This project is not a tutorial.
-
-It is intended to become a production SaaS application.
-
-Every decision should move the project closer to:
-
-- excellent developer experience
-- excellent merchant experience
-- scalability
-- maintainability
-- clean architecture
-
-Think beyond making the feature work.
-
-Think about how the application will look after three years of development.
-
-
-# Collaboration Rules
-
-Before writing code:
-
-- Explain the implementation plan in 3–7 concise steps.
-- Identify any architectural implications.
-- Mention any documentation that should be updated.
-- If there are multiple valid approaches, recommend one and briefly explain why.
-
-After writing code:
-
-- Summarize what was implemented.
-- List any follow-up work.
-- Suggest tests to run.
-- Suggest a meaningful Git commit message.
+Do not trade current clarity for hypothetical three-year requirements.

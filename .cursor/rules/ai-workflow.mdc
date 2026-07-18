@@ -1,14 +1,23 @@
 ---
-description: AI collaboration workflow
+description: MVP-first AI collaboration workflow
 alwaysApply: true
 ---
 
-When implementing features:
+# Workflow
 
-- Read relevant documentation in `/docs` before making changes.
-- Implement only the requested feature or phase.
-- Do not add unrelated features.
-- Preserve existing architecture and coding conventions.
-- If information is missing, ask for clarification instead of making assumptions.
-- Prefer incremental, reviewable changes over large rewrites.
-- Keep generated code production-ready and well-typed.
+- Read the project, architecture, active roadmap phase, and relevant feature
+  documentation before changing code.
+- Inspect existing code before proposing new structure.
+- Implement only the requested feature within the active phase.
+- Finish one coherent vertical slice, including appropriate tests and docs,
+  before starting another.
+- Prefer the simplest correct solution that preserves existing module
+  boundaries.
+- Do not add future features, speculative abstractions, unrelated refactors,
+  dependencies, tables, endpoints, or infrastructure.
+- Record valuable future ideas in the backlog rather than implementing them.
+- Ask for clarification only when a missing decision materially changes scope,
+  data, security, or user behavior.
+- Keep changes focused and run checks proportional to their risk.
+- Update canonical documentation when behavior, architecture, schema, API, or
+  roadmap status changes.
