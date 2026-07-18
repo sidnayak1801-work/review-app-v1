@@ -1,0 +1,38 @@
+{% liquid
+  assign product_resource = closest.product
+  if product_resource == blank
+    assign product_resource = product
+  endif
+%}
+
+{% if product_resource %}
+  <div
+    class="vouch-star-rating"
+    data-vouch-star-rating
+    data-product-id="{{ product_resource.id }}"
+    data-proxy-url="/apps/reviews"
+    style="--vouch-accent: {{ block.settings.accent_color }};"
+    {{ block.shopify_attributes }}
+  >
+    <div class="vouch-star-rating__placeholder" aria-live="polite">
+      Loading rating…
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Star rating badge",
+  "target": "section",
+  "stylesheet": "review-widget.css",
+  "javascript": "review-widget.js",
+  "settings": [
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Star color",
+      "default": "#111111"
+    }
+  ]
+}
+{% endschema %}

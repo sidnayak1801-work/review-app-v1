@@ -7,18 +7,28 @@ import {
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
 import { FoundationDashboardShell } from "../features/dashboard/components/foundation-dashboard-shell";
+import { reviewService } from "../features/reviews/review.service.server";
+import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
+  const reviews = await reviewService.listForShop(shop.id, { limit: 5 });
 
-  return { shopDomain: session.shop };
+  return {
+    shopDomain: shop.shopDomain,
+    status: shop.status,
+    installedAt: shop.installedAt.toISOString(),
+    uninstalledAt: shop.uninstalledAt?.toISOString() ?? null,
+    recentReviewCount: reviews.items.length,
+  };
 };
 
 export default function AppIndex() {
-  const { shopDomain } = useLoaderData<typeof loader>();
+  const shop = useLoaderData<typeof loader>();
 
-  return <FoundationDashboardShell shopDomain={shopDomain} />;
+  return <FoundationDashboardShell shop={shop} />;
 }
 
 export function ErrorBoundary() {

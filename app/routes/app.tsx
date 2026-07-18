@@ -1,5 +1,6 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { Outlet, useLoaderData, useRouteError } from "react-router";
+import { NavMenu } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
@@ -16,12 +17,18 @@ export default function EmbeddedAppLayout() {
 
   return (
     <AppProvider embedded apiKey={apiKey}>
+      <NavMenu>
+        <a href="/app" rel="home">
+          Home
+        </a>
+        <a href="/app/reviews">Reviews</a>
+        <a href="/app/settings">Widget settings</a>
+      </NavMenu>
       <Outlet />
     </AppProvider>
   );
 }
 
-// Shopify needs React Router to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   return boundary.error(useRouteError());
 }

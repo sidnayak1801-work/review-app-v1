@@ -7,6 +7,7 @@ import {
 import { logger } from "../../services/logger.server";
 import {
   createShopSchema,
+  installShopSchema,
   shopDomainSchema,
 } from "./shop.schema";
 
@@ -24,6 +25,47 @@ export class ShopService {
     logger.info("Shop record created", {
       shopId: shop.id,
       shopDomain: shop.shopDomain,
+    });
+
+    return shop;
+  }
+
+  async install(input: unknown): Promise<ShopRecord> {
+    const validatedInput = parseWithSchema(
+      installShopSchema,
+      input,
+      "Invalid shop install",
+    );
+    const shop = await this.shops.install(validatedInput);
+
+    logger.info("Shop installed", {
+      shopId: shop.id,
+      shopDomain: shop.shopDomain,
+      status: shop.status,
+    });
+
+    return shop;
+  }
+
+  async uninstall(shopDomain: unknown): Promise<ShopRecord | null> {
+    const validatedDomain = parseWithSchema(
+      shopDomainSchema,
+      shopDomain,
+      "Invalid shop domain",
+    );
+    const shop = await this.shops.markUninstalled(validatedDomain);
+
+    if (!shop) {
+      logger.warn("Uninstall ignored for unknown shop", {
+        shopDomain: validatedDomain,
+      });
+      return null;
+    }
+
+    logger.info("Shop marked uninstalled", {
+      shopId: shop.id,
+      shopDomain: shop.shopDomain,
+      status: shop.status,
     });
 
     return shop;

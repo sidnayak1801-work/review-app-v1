@@ -22,4 +22,7 @@ export const createShopSchema = z.object({
   shopifyShopId: shopifyShopIdSchema.optional(),
 });
 
+export const installShopSchema = createShopSchema;
+
 export type CreateShopInput = z.output<typeof createShopSchema>;
+export type InstallShopInput = z.output<typeof installShopSchema>;

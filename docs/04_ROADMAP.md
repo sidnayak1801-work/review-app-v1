@@ -40,7 +40,7 @@ Definition of done:
 
 ## Phase 1 — Core Reviews and Widget
 
-Status: ⏳ Not Started
+Status: ✅ Completed
 
 Objective: complete the first end-to-end product-review path.
 
@@ -48,36 +48,36 @@ Scope:
 
 ### Authentication and Shop Lifecycle
 
-- [ ] Connect successful Shopify authentication to Shop installation/reinstall
-- [ ] Track uninstall state while preserving merchant-owned data
-- [ ] Handle scope updates and idempotent lifecycle events
+- [x] Connect successful Shopify authentication to Shop installation/reinstall
+- [x] Track uninstall state while preserving merchant-owned data
+- [x] Handle scope updates and idempotent lifecycle events
 
 ### Database
 
-- [ ] Add Review and WidgetSettings models only
-- [ ] Add tenant, product, status, and time-based indexes
-- [ ] Add focused migrations and repository integration tests
+- [x] Add Review and WidgetSettings models only
+- [x] Add tenant, product, status, and time-based indexes
+- [x] Add focused migrations and repository integration tests
 
 ### Review CRUD
 
-- [ ] Add review schemas, repository, and service
-- [ ] Add authenticated review list and detail UI
-- [ ] Create, edit, and delete reviews
-- [ ] Add cursor pagination and basic product/status filters
-- [ ] Add customer review submission with validation and spam controls
+- [x] Add review schemas, repository, and service
+- [x] Add authenticated review list and detail UI
+- [x] Create, edit, and delete reviews
+- [x] Add cursor pagination and basic product/status filters
+- [x] Add customer review submission with validation and spam controls
 
 ### Review Widget
 
-- [ ] Add a Theme App Extension
-- [ ] Render approved product reviews
-- [ ] Add a star-rating badge
-- [ ] Keep the widget accessible, responsive, and lightweight
+- [x] Add a Theme App Extension
+- [x] Render approved product reviews
+- [x] Add a star-rating badge
+- [x] Keep the widget accessible, responsive, and lightweight
 
 ### Merchant Settings
 
-- [ ] Enable or disable the submission form
-- [ ] Configure accent color and reviews per page
-- [ ] Add setup guidance for enabling the extension
+- [x] Enable or disable the submission form
+- [x] Configure accent color and reviews per page
+- [x] Add setup guidance for enabling the extension
 
 Definition of done:
 

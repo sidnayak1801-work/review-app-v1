@@ -17,3 +17,17 @@ export class ValidationError extends DomainError {
     this.name = "ValidationError";
   }
 }
+
+export class NotFoundError extends DomainError {
+  constructor(message = "Resource not found") {
+    super(message, "NOT_FOUND");
+    this.name = "NotFoundError";
+  }
+}
+
+export class RateLimitError extends DomainError {
+  constructor(message = "Too many requests. Please try again later.") {
+    super(message, "RATE_LIMITED");
+    this.name = "RateLimitError";
+  }
+}

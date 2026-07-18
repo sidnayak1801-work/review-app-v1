@@ -79,7 +79,14 @@ These routes use Shopify request verification.
   - Creates a pending review
   - Applies validation, rate limiting, and spam protection
 
-The public request must not accept arbitrary tenant identity as proof of access.
+The public storefront contract uses the Shopify app proxy:
+
+- Storefront path: `/apps/reviews`
+- App route: `/api/storefront/reviews`
+- Authenticated with `authenticate.public.appProxy`
+- Query `productId` (numeric or GID) for approved reviews
+- POST creates a pending storefront review with honeypot and rate limiting
+
 Choose the final Shopify app-proxy URL when implementing the Theme App
 Extension and document it before release.
 

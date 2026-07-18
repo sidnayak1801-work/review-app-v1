@@ -15,7 +15,8 @@ describeWithDatabase("PrismaShopRepository integration", () => {
     datasourceUrl: testDatabaseUrl,
   });
   const repository = new PrismaShopRepository(database);
-  const shopDomain = `phase-zero-${Date.now()}.myshopify.com`;
+  const shopDomain = `phase-one-${Date.now()}.myshopify.com`;
+  const shopifyShopId = `gid://shopify/Shop/${Date.now()}`;
 
   afterAll(async () => {
     await database.shop.deleteMany({ where: { shopDomain } });
@@ -23,16 +24,37 @@ describeWithDatabase("PrismaShopRepository integration", () => {
   });
 
   it(
-    "creates and finds a shop",
+    "creates, finds, reinstalls, and marks a shop uninstalled",
     async () => {
       const created = await repository.create({
         shopDomain,
-        shopifyShopId: `gid://shopify/Shop/${Date.now()}`,
+        shopifyShopId,
       });
 
       const found = await repository.findByDomain(shopDomain);
-
       expect(found).toEqual(created);
+
+      const uninstalled = await repository.markUninstalled(shopDomain);
+      expect(uninstalled).toMatchObject({
+        shopDomain,
+        status: "UNINSTALLED",
+      });
+      expect(uninstalled?.uninstalledAt).toBeInstanceOf(Date);
+
+      const reinstalled = await repository.install({
+        shopDomain,
+        shopifyShopId: `gid://shopify/Shop/${Date.now() + 1}`,
+      });
+
+      expect(reinstalled).toMatchObject({
+        shopDomain,
+        status: "INSTALLED",
+        uninstalledAt: null,
+      });
+      expect(reinstalled.shopifyShopId).not.toBe(shopifyShopId);
+
+      const secondUninstall = await repository.markUninstalled(shopDomain);
+      expect(secondUninstall?.status).toBe("UNINSTALLED");
     },
     20_000,
   );

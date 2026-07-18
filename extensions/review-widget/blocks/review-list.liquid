@@ -1,0 +1,92 @@
+{% liquid
+  assign product_resource = closest.product
+  if product_resource == blank
+    assign product_resource = product
+  endif
+%}
+
+{% if product_resource %}
+  <div
+    class="vouch-reviews"
+    data-vouch-reviews
+    data-product-id="{{ product_resource.id }}"
+    data-proxy-url="/apps/reviews"
+    data-show-form="{{ block.settings.show_form }}"
+    style="--vouch-accent: {{ block.settings.accent_color }};"
+    {{ block.shopify_attributes }}
+  >
+    <h2 class="vouch-reviews__heading">{{ block.settings.heading }}</h2>
+    <div class="vouch-reviews__list" data-vouch-reviews-list>
+      Loading reviews…
+    </div>
+    <div class="vouch-reviews__form-wrap" data-vouch-reviews-form hidden>
+      <h3>Write a review</h3>
+      <form data-vouch-review-form>
+        <fieldset class="vouch-reviews__rating">
+          <legend>Your rating</legend>
+          <input type="hidden" name="rating" value="5" required data-vouch-rating-input />
+          <div
+            class="vouch-reviews__star-picker"
+            data-vouch-star-picker
+            role="radiogroup"
+            aria-label="Rating"
+          >
+            <button type="button" class="vouch-reviews__star-btn is-active" data-rating="1" aria-label="1 star">★</button>
+            <button type="button" class="vouch-reviews__star-btn is-active" data-rating="2" aria-label="2 stars">★</button>
+            <button type="button" class="vouch-reviews__star-btn is-active" data-rating="3" aria-label="3 stars">★</button>
+            <button type="button" class="vouch-reviews__star-btn is-active" data-rating="4" aria-label="4 stars">★</button>
+            <button type="button" class="vouch-reviews__star-btn is-active" data-rating="5" aria-label="5 stars">★</button>
+          </div>
+        </fieldset>
+        <label>
+          Title
+          <input type="text" name="title" maxlength="200" />
+        </label>
+        <label>
+          Review
+          <textarea name="body" required maxlength="5000"></textarea>
+        </label>
+        <label>
+          Your name
+          <input type="text" name="authorName" required maxlength="100" />
+        </label>
+        <label>
+          Email (optional)
+          <input type="email" name="authorEmail" />
+        </label>
+        <input type="text" name="website" tabindex="-1" autocomplete="off" class="vouch-reviews__honeypot" aria-hidden="true" />
+        <button type="submit" class="vouch-reviews__submit">Submit review</button>
+      </form>
+      <p class="vouch-reviews__message" data-vouch-review-message hidden></p>
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Product reviews",
+  "target": "section",
+  "stylesheet": "review-widget.css",
+  "javascript": "review-widget.js",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Customer reviews"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#111111"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_form",
+      "label": "Show submission form",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

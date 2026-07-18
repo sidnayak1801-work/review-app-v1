@@ -222,10 +222,26 @@ The MVP needs:
 Horizontal application scaling remains possible because durable application
 state lives in PostgreSQL or Shopify, not process memory.
 
+## Shop Lifecycle Runtime
+
+Shopify OAuth `afterAuth` installs or reinstalls the Shop record by
+`shopDomain`. The App Uninstalled webhook marks the shop `UNINSTALLED` and then
+clears sessions. Merchant-owned data is retained. Scope updates continue to
+update Shopify session storage only.
+
+Authenticated admin loaders may call `shopService.install` as a safety net when
+a session exists without a Shop row yet.
+
+## Phase 1 Storefront Runtime
+
+Theme App Extension blocks call the app proxy at `/apps/reviews`, which maps to
+`/api/storefront/reviews`. The proxy resolves the shop from Shopify verification,
+returns approved public reviews, and accepts pending storefront submissions.
+
 ## Open MVP Risks
 
-- The final app-proxy contract and tenant-verification approach for storefront
-  reads and submissions must be decided in Phase 1.
+- App-proxy storefront traffic and Theme App Extension loading should be
+  measured on a real product page before the Phase 3 pilot.
 - Shopify scopes, webhook topic, and retention rules for review-request emails
   must be finalized before Phase 2.
 - Scheduled email and import processing must remain reliable across deploys;

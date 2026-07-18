@@ -7,9 +7,44 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 
 import prisma from "./db.server";
+import { shopService } from "./features/shops/shop.service.server";
 import { getShopifyEnv } from "./lib/env.server";
+import { logger } from "./services/logger.server";
 
 const environment = getShopifyEnv();
+
+const SHOP_IDENTITY_QUERY = `#graphql
+  query ShopIdentity {
+    shop {
+      id
+    }
+  }
+`;
+
+interface ShopIdentityResponse {
+  data?: {
+    shop?: {
+      id?: string;
+    };
+  };
+}
+
+async function resolveShopifyShopId(
+  admin: { graphql: (query: string) => Promise<Response> },
+): Promise<string | undefined> {
+  try {
+    const response = await admin.graphql(SHOP_IDENTITY_QUERY);
+    const payload = (await response.json()) as ShopIdentityResponse;
+    const shopId = payload.data?.shop?.id;
+
+    return typeof shopId === "string" ? shopId : undefined;
+  } catch (error) {
+    logger.warn("Unable to resolve Shopify shop GID during install", {
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return undefined;
+  }
+}
 
 const shopify = shopifyApp({
   apiKey: environment.SHOPIFY_API_KEY,
@@ -22,6 +57,16 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
+  hooks: {
+    afterAuth: async ({ session, admin }) => {
+      const shopifyShopId = await resolveShopifyShopId(admin);
+
+      await shopService.install({
+        shopDomain: session.shop,
+        ...(shopifyShopId ? { shopifyShopId } : {}),
+      });
+    },
+  },
   future: {
     expiringOfflineAccessTokens: true,
   },

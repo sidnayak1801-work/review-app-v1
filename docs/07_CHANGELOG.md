@@ -5,6 +5,11 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Completed Phase 1 review CRUD, widget settings, storefront app proxy, and
+  Theme App Extension blocks.
+- Wired Shopify `afterAuth` to idempotent Shop install/reinstall.
+- Uninstall webhook marks shops `UNINSTALLED` without deleting Shop records.
+- Dashboard shows Shop lifecycle status from the database.
 - Reframed project documentation around a 50–100-store MVP.
 - Consolidated the roadmap into four MVP phases and deferred expansion work.
 - Limited the database and API plans to tables and contracts needed by active

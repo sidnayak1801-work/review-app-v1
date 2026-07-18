@@ -16,8 +16,9 @@ Phase 0 — Foundation is complete:
 - Shop model, repository, and service core
 - Focused unit and repository integration tests
 
-Phase 1 begins with Shop installation lifecycle, then Review CRUD, the first
-Theme App Extension widget, and merchant settings.
+Phase 1 is complete: shop lifecycle, review CRUD, widget settings, storefront
+app-proxy API, and Theme App Extension blocks. Phase 2 covers email requests,
+moderation queues, CSV import, and Free/Pro billing.
 
 ## MVP
 

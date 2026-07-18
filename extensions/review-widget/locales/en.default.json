@@ -1,0 +1,9 @@
+{
+  "name": "Review Widget",
+  "star_rating": {
+    "name": "Star rating badge"
+  },
+  "review_list": {
+    "name": "Product reviews"
+  }
+}

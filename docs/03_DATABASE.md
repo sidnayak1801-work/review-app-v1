@@ -49,8 +49,9 @@ Current fields:
 - `createdAt`
 - `updatedAt`
 
-Phase 1 connects this existing model to installation, reinstallation, and
-uninstall workflows.
+Phase 1 Shop lifecycle connects this model to installation, reinstallation, and
+uninstall workflows. Uninstall sets `status = UNINSTALLED` and `uninstalledAt`
+without deleting the row.
 
 ## Phase 1 Tables
 
