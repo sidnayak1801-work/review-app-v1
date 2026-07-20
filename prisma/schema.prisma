@@ -33,6 +33,13 @@ enum ReviewSource {
   IMPORT
 }
 
+enum ReviewImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model Shop {
   id             String          @id @default(cuid())
   shopDomain     String          @unique
@@ -46,6 +53,7 @@ model Shop {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   reviews        Review[]
+  reviewImports  ReviewImport[]
   widgetSettings WidgetSettings?
 
   @@index([status])
@@ -71,6 +79,24 @@ model Review {
 
   @@index([shopId, status, createdAt])
   @@index([shopId, shopifyProductId, status, createdAt])
+}
+
+model ReviewImport {
+  id           String             @id @default(cuid())
+  shopId       String
+  shop         Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  status       ReviewImportStatus @default(PENDING)
+  fileKey      String
+  contentHash  String?
+  totalRows    Int                @default(0)
+  importedRows Int                @default(0)
+  failedRows   Int                @default(0)
+  errorFileKey String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([shopId, contentHash])
+  @@index([shopId, createdAt])
 }
 
 model WidgetSettings {

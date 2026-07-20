@@ -69,14 +69,22 @@ export interface ListReviewsResult {
   };
 }
 
+export interface ReviewStatusCounts {
+  PENDING: number;
+  APPROVED: number;
+  REJECTED: number;
+}
+
 export interface ReviewRepository {
   create(input: CreateReviewRecordInput): Promise<ReviewRecord>;
   findByIdForShop(
     shopId: string,
     reviewId: string,
   ): Promise<ReviewRecord | null>;
+  findByIdsForShop(shopId: string, reviewIds: string[]): Promise<ReviewRecord[]>;
   list(input: ListReviewsInput): Promise<ListReviewsResult>;
   countApprovedForShop(shopId: string): Promise<number>;
+  countByStatusForShop(shopId: string): Promise<ReviewStatusCounts>;
   updateForShop(
     shopId: string,
     reviewId: string,
@@ -114,11 +122,16 @@ type ReviewModel = {
   }): Promise<ReviewRecord | null>;
   findMany(args: {
     where: Record<string, unknown>;
-    orderBy: Array<Record<string, "asc" | "desc">>;
-    take: number;
+    orderBy?: Array<Record<string, "asc" | "desc">>;
+    take?: number;
     select: typeof REVIEW_SELECT;
   }): Promise<ReviewRecord[]>;
   count(args: { where: Record<string, unknown> }): Promise<number>;
+  groupBy(args: {
+    by: ["status"];
+    where: { shopId: string };
+    _count: { _all: true };
+  }): Promise<Array<{ status: ReviewStatus; _count: { _all: number } }>>;
   updateMany(args: {
     where: { id: string; shopId: string };
     data: UpdateReviewRecordInput;
@@ -148,6 +161,23 @@ export class PrismaReviewRepository implements ReviewRepository {
   ): Promise<ReviewRecord | null> {
     return reviewModel(this.database).findFirst({
       where: { id: reviewId, shopId },
+      select: REVIEW_SELECT,
+    });
+  }
+
+  async findByIdsForShop(
+    shopId: string,
+    reviewIds: string[],
+  ): Promise<ReviewRecord[]> {
+    if (reviewIds.length === 0) {
+      return [];
+    }
+
+    return reviewModel(this.database).findMany({
+      where: {
+        shopId,
+        id: { in: reviewIds },
+      },
       select: REVIEW_SELECT,
     });
   }
@@ -206,6 +236,26 @@ export class PrismaReviewRepository implements ReviewRepository {
     return reviewModel(this.database).count({
       where: { shopId, status: "APPROVED" },
     });
+  }
+
+  async countByStatusForShop(shopId: string): Promise<ReviewStatusCounts> {
+    const rows = await reviewModel(this.database).groupBy({
+      by: ["status"],
+      where: { shopId },
+      _count: { _all: true },
+    });
+
+    const counts: ReviewStatusCounts = {
+      PENDING: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+    };
+
+    for (const row of rows) {
+      counts[row.status] = row._count._all;
+    }
+
+    return counts;
   }
 
   async updateForShop(

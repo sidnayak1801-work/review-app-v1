@@ -22,6 +22,8 @@ export default function EmbeddedAppLayout() {
           Home
         </a>
         <a href="/app/reviews">Reviews</a>
+        <a href="/app/imports">Imports</a>
+        <a href="/app/billing">Billing</a>
         <a href="/app/settings">Widget settings</a>
       </NavMenu>
       <Outlet />

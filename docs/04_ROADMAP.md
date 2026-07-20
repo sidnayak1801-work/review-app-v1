@@ -95,7 +95,7 @@ Not in this phase:
 
 ## Phase 2 — Launch Features
 
-Status: ⏳ Not Started
+Status: 🚧 In Progress
 
 Objective: add the workflows required to operate reviews for real merchants.
 
@@ -110,28 +110,29 @@ Objective: add the workflows required to operate reviews for real merchants.
 
 ### Moderation
 
-- [ ] Add pending, approved, and rejected queues
-- [ ] Add single-review approve/reject actions
-- [ ] Add safe bulk approve/reject for selected reviews
-- [ ] Ensure only approved reviews are public
+- [x] Add pending, approved, and rejected queues
+- [x] Add single-review approve/reject actions
+- [x] Add safe bulk approve/reject for selected reviews
+- [x] Ensure only approved reviews are public
 
 ### Import Reviews
 
-- [ ] Define and document the supported CSV format
-- [ ] Validate file size, headers, rows, and tenant ownership
-- [ ] Process imports in bounded batches
-- [ ] Show progress and provide a downloadable error report
-- [ ] Prevent duplicate import submissions
+- [x] Define and document the supported CSV format
+- [x] Validate file size, headers, rows, and tenant ownership
+- [x] Process imports in bounded batches
+- [x] Show progress and provide a downloadable error report
+- [x] Prevent duplicate import submissions
 
 ### Pricing and Billing
 
-- [ ] Configure Free and Pro plans with Shopify App Pricing
-- [ ] Set Pro pricing to `$19/month` with a 14-day trial
-- [ ] Enforce only published-review and review-request allowances
-- [ ] Centralize server-side entitlement checks
-- [ ] Sync plan changes and cancellation state from Shopify
-- [ ] Implement upgrade, downgrade, and failed-payment behavior
+- [x] Configure Free and Pro plans with Shopify App Pricing
+- [x] Set Pro pricing to `$19/month` with a 14-day trial
+- [x] Enforce published-review allowances server-side (Free plan cap in moderation)
+- [x] Centralize server-side entitlement checks (published-review allowance service)
+- [x] Sync plan changes and cancellation state from Shopify
+- [x] Implement upgrade, downgrade, and failed-payment behavior
 - [ ] Test Shopify-hosted plan selection and billing transitions
+- [ ] Enforce review-request email allowances
 
 Definition of done:
 

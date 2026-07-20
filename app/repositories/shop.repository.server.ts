@@ -15,6 +15,12 @@ export interface InstallShopRecordInput {
   shopifyShopId?: string;
 }
 
+export interface UpdateShopBillingStateInput {
+  plan: ShopPlan;
+  billingStatus: string;
+  billingSyncedAt: Date;
+}
+
 export interface ShopRecord {
   id: string;
   shopDomain: string;
@@ -28,10 +34,15 @@ export interface ShopRecord {
 }
 
 export interface ShopRepository {
+  findById(shopId: string): Promise<ShopRecord | null>;
   findByDomain(shopDomain: string): Promise<ShopRecord | null>;
   create(input: CreateShopRecordInput): Promise<ShopRecord>;
   install(input: InstallShopRecordInput): Promise<ShopRecord>;
   markUninstalled(shopDomain: string): Promise<ShopRecord | null>;
+  updateBillingState(
+    shopId: string,
+    input: UpdateShopBillingStateInput,
+  ): Promise<ShopRecord | null>;
 }
 
 const SHOP_SELECT = {
@@ -48,7 +59,7 @@ const SHOP_SELECT = {
 
 type ShopModel = {
   findUnique(args: {
-    where: { shopDomain: string };
+    where: { shopDomain: string } | { id: string };
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord | null>;
   create(args: {
@@ -76,10 +87,13 @@ type ShopModel = {
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord>;
   update(args: {
-    where: { shopDomain: string };
+    where: { shopDomain: string } | { id: string };
     data: {
-      status: ShopStatus;
-      uninstalledAt: Date;
+      status?: ShopStatus;
+      uninstalledAt?: Date;
+      plan?: ShopPlan;
+      billingStatus?: string;
+      billingSyncedAt?: Date;
     };
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord>;
@@ -91,6 +105,13 @@ function shopModel(database: PrismaClient): ShopModel {
 
 export class PrismaShopRepository implements ShopRepository {
   constructor(private readonly database: PrismaClient = prisma) {}
+
+  async findById(shopId: string): Promise<ShopRecord | null> {
+    return shopModel(this.database).findUnique({
+      where: { id: shopId },
+      select: SHOP_SELECT,
+    });
+  }
 
   async findByDomain(shopDomain: string): Promise<ShopRecord | null> {
     return shopModel(this.database).findUnique({
@@ -152,6 +173,25 @@ export class PrismaShopRepository implements ShopRepository {
       },
       select: SHOP_SELECT,
     });
+  }
+
+  async updateBillingState(
+    shopId: string,
+    input: UpdateShopBillingStateInput,
+  ): Promise<ShopRecord | null> {
+    try {
+      return await shopModel(this.database).update({
+        where: { id: shopId },
+        data: {
+          plan: input.plan,
+          billingStatus: input.billingStatus,
+          billingSyncedAt: input.billingSyncedAt,
+        },
+        select: SHOP_SELECT,
+      });
+    } catch {
+      return null;
+    }
   }
 }
 

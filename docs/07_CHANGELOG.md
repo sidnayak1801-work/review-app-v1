@@ -5,6 +5,16 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Added Shopify billing sync, Pro upgrade flow, and `/app/billing` with Free and
+  Pro published-review allowances (100 / 5,000).
+- Added CSV review import with validation, bounded batch processing, import job
+  history, and downloadable row-level error reports at `/app/imports`.
+- Added moderation queues with pending, approved, and rejected counts on the
+  reviews page.
+- Added bulk approve/reject actions with partial-success messaging and Free-plan
+  published-review limit feedback.
+- Added server-side published-review entitlement checks for single and bulk
+  approval flows.
 - Completed Phase 1 review CRUD, widget settings, storefront app proxy, and
   Theme App Extension blocks.
 - Wired Shopify `afterAuth` to idempotent Shop install/reinstall.

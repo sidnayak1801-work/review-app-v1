@@ -101,7 +101,15 @@ export const listStorefrontReviewsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(20).default(5),
 });
 
+export const bulkUpdateReviewStatusSchema = z.object({
+  reviewIds: z.array(z.string().trim().min(1)).min(1).max(50),
+  status: reviewStatusSchema,
+});
+
 export type CreateMerchantReviewInput = z.output<
   typeof createMerchantReviewSchema
 >;
 export type UpdateReviewInput = z.output<typeof updateReviewSchema>;
+export type BulkUpdateReviewStatusInput = z.output<
+  typeof bulkUpdateReviewStatusSchema
+>;

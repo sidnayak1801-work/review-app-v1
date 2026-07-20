@@ -94,15 +94,59 @@ Extension and document it before release.
 
 Moderation continues to use the Phase 1 review update route.
 
+### CSV review import
+
+App route: `/app/imports`
+
+- Authenticated embedded admin route
+- `POST` multipart upload with `file` (CSV) creates and processes an import job
+  synchronously
+- `GET ?errorReport=:importId` downloads the row-level error report CSV when
+  present
+
+Required CSV headers:
+
+- `product_id` — numeric product ID or Shopify product GID
+- `rating` — integer 1–5
+- `body` — review text (max 5,000 characters)
+- `author_name` — reviewer display name (max 100 characters)
+
+Optional headers:
+
+- `title` — review title (max 200 characters)
+- `author_email` — valid email
+- `status` — `PENDING`, `APPROVED`, or `REJECTED` (default `PENDING`)
+- `verified_purchase` — `true` or `false` (default `false`)
+
+Limits:
+
+- Max file size: 1 MB
+- Max rows: 500
+- Processing batch size: 50 rows
+
+Imported reviews use `source = IMPORT`. Rows with `status = APPROVED` consume
+published-review allowance during import. Duplicate uploads with the same CSV
+content hash per shop are rejected.
+
+### Billing
+
+App route: `/app/billing`
+
+- Authenticated embedded admin route
+- Loader syncs Shopify subscription state to cached `Shop.plan`
+- `POST intent=upgrade` starts Shopify-hosted Pro subscription approval
+- `POST intent=sync` refreshes billing state from Shopify
+
+Deferred REST-style admin endpoints (future if needed):
+
+- `POST /api/admin/review-imports`
+- `GET /api/admin/review-imports/:importId`
+
 - `POST /webhooks/orders/fulfilled`
   - Verified Shopify webhook
   - Creates idempotent review-request schedules
 - `GET /api/admin/review-requests`
   - Paginated request status for the authenticated shop
-- `POST /api/admin/review-imports`
-  - Accepts a bounded CSV upload and creates an import job
-- `GET /api/admin/review-imports/:importId`
-  - Returns progress, counts, and a safe error-report link
 
 Email delivery and import processing are service workflows, not public
 "send now" endpoints.

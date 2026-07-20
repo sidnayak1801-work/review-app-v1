@@ -1,9 +1,10 @@
-import { NotFoundError, ValidationError } from "../../lib/domain-error";
+import { DomainError, NotFoundError, ValidationError } from "../../lib/domain-error";
 import { parseWithSchema } from "../../lib/validation";
 import {
   reviewRepository,
   type ReviewRecord,
   type ReviewRepository,
+  type ReviewStatusCounts,
   type ListReviewsResult,
 } from "../../repositories/review.repository.server";
 import { logger } from "../../services/logger.server";
@@ -11,12 +12,19 @@ import type { ShopPlan } from "../../repositories/shop.repository.server";
 import type { BillingService } from "../billing/billing.service.server";
 import { billingEntitlementsService } from "../billing/billing.service.server";
 import {
+  bulkUpdateReviewStatusSchema,
   createMerchantReviewSchema,
   createStorefrontReviewSchema,
   listReviewsQuerySchema,
   listStorefrontReviewsQuerySchema,
   updateReviewSchema,
 } from "./review.schema";
+
+export interface BulkUpdateReviewStatusResult {
+  updatedCount: number;
+  skippedCount: number;
+  failures: Array<{ reviewId: string; reason: string }>;
+}
 
 function toPublicReview(review: ReviewRecord) {
   return {
@@ -67,6 +75,10 @@ export class ReviewService {
     }
 
     return review;
+  }
+
+  async getStatusCountsForShop(shopId: string): Promise<ReviewStatusCounts> {
+    return this.reviews.countByStatusForShop(shopId);
   }
 
   async createMerchantReview(
@@ -155,6 +167,100 @@ export class ReviewService {
     });
 
     return updated;
+  }
+
+  async bulkUpdateStatusForShop(
+    shopId: string,
+    shopPlan: ShopPlan,
+    input: unknown,
+  ): Promise<BulkUpdateReviewStatusResult> {
+    const data = parseWithSchema(
+      bulkUpdateReviewStatusSchema,
+      input,
+      "Invalid bulk review update",
+    );
+
+    const reviews = await this.reviews.findByIdsForShop(shopId, data.reviewIds);
+    const reviewsById = new Map(reviews.map((item) => [item.id, item]));
+
+    const result: BulkUpdateReviewStatusResult = {
+      updatedCount: 0,
+      skippedCount: 0,
+      failures: [],
+    };
+
+    let stopApproving = false;
+
+    for (const reviewId of data.reviewIds) {
+      const existing = reviewsById.get(reviewId);
+
+      if (!existing) {
+        result.failures.push({
+          reviewId,
+          reason: "Review not found",
+        });
+        continue;
+      }
+
+      if (existing.status === data.status) {
+        result.skippedCount += 1;
+        continue;
+      }
+
+      if (data.status === "APPROVED") {
+        if (stopApproving) {
+          result.skippedCount += 1;
+          continue;
+        }
+
+        try {
+          await this.billing.assertCanApprovePublishedReview({
+            shopId,
+            shopPlan,
+          });
+        } catch (error) {
+          const reason =
+            error instanceof DomainError
+              ? error.message
+              : "Could not approve review";
+
+          result.failures.push({ reviewId, reason });
+          stopApproving = true;
+          continue;
+        }
+      }
+
+      const publishedAt =
+        data.status === "APPROVED"
+          ? (existing.publishedAt ?? new Date())
+          : null;
+
+      const updated = await this.reviews.updateForShop(shopId, reviewId, {
+        status: data.status,
+        publishedAt,
+      });
+
+      if (!updated) {
+        result.failures.push({
+          reviewId,
+          reason: "Review not found",
+        });
+        continue;
+      }
+
+      result.updatedCount += 1;
+      reviewsById.set(reviewId, updated);
+    }
+
+    logger.info("Bulk review status update completed", {
+      shopId,
+      status: data.status,
+      updatedCount: result.updatedCount,
+      skippedCount: result.skippedCount,
+      failureCount: result.failures.length,
+    });
+
+    return result;
   }
 
   async deleteForShop(shopId: string, reviewId: string): Promise<void> {

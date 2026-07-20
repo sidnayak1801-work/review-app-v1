@@ -4,7 +4,24 @@ import type {
   ReviewRecord,
   ReviewRepository,
 } from "../../repositories/review.repository.server";
+import { DomainError } from "../../lib/domain-error";
+import type { BillingService } from "../billing/billing.service.server";
 import { ReviewService } from "./review.service.server";
+
+function createBilling(
+  overrides: Partial<BillingService> = {},
+): BillingService {
+  return {
+    assertCanApprovePublishedReview: vi
+      .fn()
+      .mockResolvedValue(undefined),
+    getPublishedReviewUsage: vi.fn().mockResolvedValue({
+      used: 0,
+      limit: 100,
+    }),
+    ...overrides,
+  };
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -34,11 +51,17 @@ function createRepository(
   return {
     create: vi.fn().mockResolvedValue(review),
     findByIdForShop: vi.fn().mockResolvedValue(review),
+    findByIdsForShop: vi.fn().mockResolvedValue([review]),
     list: vi.fn().mockResolvedValue({
       items: [review],
       pageInfo: { nextCursor: null, hasNextPage: false },
     }),
     countApprovedForShop: vi.fn().mockResolvedValue(0),
+    countByStatusForShop: vi.fn().mockResolvedValue({
+      PENDING: 0,
+      APPROVED: 1,
+      REJECTED: 0,
+    }),
     updateForShop: vi.fn().mockResolvedValue(review),
     deleteForShop: vi.fn().mockResolvedValue(true),
     ...overrides,
@@ -49,11 +72,7 @@ describe("ReviewService", () => {
   it("creates a merchant review as approved by default", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const repository = createRepository();
-    const billing = {
-      assertCanApprovePublishedReview: vi
-        .fn()
-        .mockResolvedValue(undefined),
-    };
+    const billing = createBilling();
     const service = new ReviewService(repository, billing);
 
     await service.createMerchantReview("shop-1", "FREE", {
@@ -80,11 +99,7 @@ describe("ReviewService", () => {
 
   it("lists only approved reviews for the storefront", async () => {
     const repository = createRepository();
-    const billing = {
-      assertCanApprovePublishedReview: vi
-        .fn()
-        .mockResolvedValue(undefined),
-    };
+    const billing = createBilling();
     const service = new ReviewService(repository, billing);
 
     const result = await service.listApprovedForStorefront("shop-1", {
@@ -103,11 +118,7 @@ describe("ReviewService", () => {
 
   it("rejects honeypot storefront submissions", async () => {
     const repository = createRepository();
-    const billing = {
-      assertCanApprovePublishedReview: vi
-        .fn()
-        .mockResolvedValue(undefined),
-    };
+    const billing = createBilling();
     const service = new ReviewService(repository, billing);
 
     await expect(
@@ -124,11 +135,7 @@ describe("ReviewService", () => {
 
   it("does not call billing when updating an already approved review", async () => {
     const repository = createRepository();
-    const billing = {
-      assertCanApprovePublishedReview: vi
-        .fn()
-        .mockResolvedValue(undefined),
-    };
+    const billing = createBilling();
     const service = new ReviewService(repository, billing);
 
     await service.updateForShop(
@@ -157,11 +164,7 @@ describe("ReviewService", () => {
       }),
     });
 
-    const billing = {
-      assertCanApprovePublishedReview: vi
-        .fn()
-        .mockResolvedValue(undefined),
-    };
+    const billing = createBilling();
     const service = new ReviewService(repository, billing);
 
     await service.updateForShop(
@@ -184,5 +187,110 @@ describe("ReviewService", () => {
         publishedAt: expect.any(Date),
       }),
     );
+  });
+
+  it("bulk rejects pending reviews without billing checks", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+
+    const pendingReview: ReviewRecord = {
+      ...review,
+      id: "review-pending",
+      status: "PENDING",
+      publishedAt: null,
+    };
+
+    const repository = createRepository({
+      findByIdsForShop: vi.fn().mockResolvedValue([pendingReview]),
+      updateForShop: vi.fn().mockResolvedValue({
+        ...pendingReview,
+        status: "REJECTED",
+        publishedAt: null,
+      }),
+    });
+
+    const billing = createBilling();
+    const service = new ReviewService(repository, billing);
+
+    const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
+      reviewIds: ["review-pending"],
+      status: "REJECTED",
+    });
+
+    expect(result.updatedCount).toBe(1);
+    expect(billing.assertCanApprovePublishedReview).not.toHaveBeenCalled();
+  });
+
+  it("bulk approves until the Free plan limit is reached", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+
+    const pendingReviews: ReviewRecord[] = [
+      {
+        ...review,
+        id: "review-2",
+        status: "PENDING",
+        publishedAt: null,
+      },
+      {
+        ...review,
+        id: "review-3",
+        status: "PENDING",
+        publishedAt: null,
+      },
+    ];
+
+    const repository = createRepository({
+      findByIdsForShop: vi.fn().mockResolvedValue(pendingReviews),
+      updateForShop: vi
+        .fn()
+        .mockImplementation(async (_shopId, reviewId, input) => ({
+          ...pendingReviews.find((item) => item.id === reviewId)!,
+          status: input.status ?? "APPROVED",
+          publishedAt: input.publishedAt ?? new Date(),
+        })),
+    });
+
+    const billing = createBilling({
+      assertCanApprovePublishedReview: vi
+        .fn()
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(
+          new DomainError(
+            "Free plan allows up to 100 published reviews. Upgrade to Pro to approve more reviews.",
+            "PLAN_LIMIT_REACHED",
+          ),
+        ),
+    });
+    const service = new ReviewService(repository, billing);
+
+    const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
+      reviewIds: ["review-2", "review-3"],
+      status: "APPROVED",
+    });
+
+    expect(result.updatedCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(billing.assertCanApprovePublishedReview).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips already approved reviews during bulk approve", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+
+    const repository = createRepository({
+      findByIdsForShop: vi.fn().mockResolvedValue([review]),
+    });
+
+    const billing = createBilling();
+    const service = new ReviewService(repository, billing);
+
+    const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
+      reviewIds: ["review-1"],
+      status: "APPROVED",
+    });
+
+    expect(result.updatedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+    expect(repository.updateForShop).not.toHaveBeenCalled();
+    expect(billing.assertCanApprovePublishedReview).not.toHaveBeenCalled();
   });
 });

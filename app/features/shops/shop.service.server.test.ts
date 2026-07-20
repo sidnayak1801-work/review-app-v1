@@ -32,10 +32,12 @@ function createRepository(
   overrides: Partial<ShopRepository> = {},
 ): ShopRepository {
   return {
+    findById: vi.fn().mockResolvedValue(shopRecord),
     create: vi.fn().mockResolvedValue(shopRecord),
     findByDomain: vi.fn().mockResolvedValue(shopRecord),
     install: vi.fn().mockResolvedValue(shopRecord),
     markUninstalled: vi.fn().mockResolvedValue(uninstalledShopRecord),
+    updateBillingState: vi.fn().mockResolvedValue(shopRecord),
     ...overrides,
   };
 }

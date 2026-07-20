@@ -2,11 +2,13 @@ import "@shopify/shopify-app-react-router/adapters/node";
 import {
   ApiVersion,
   AppDistribution,
+  BillingInterval,
   shopifyApp,
 } from "@shopify/shopify-app-react-router/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 
 import prisma from "./db.server";
+import { PRO_PLAN } from "./features/billing/billing.constants";
 import { shopService } from "./features/shops/shop.service.server";
 import { getShopifyEnv } from "./lib/env.server";
 import { logger } from "./services/logger.server";
@@ -57,6 +59,17 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
+  billing: {
+    [PRO_PLAN]: {
+      lineItems: [
+        {
+          amount: 19,
+          currencyCode: "USD",
+          interval: BillingInterval.Every30Days,
+        },
+      ],
+    },
+  },
   hooks: {
     afterAuth: async ({ session, admin }) => {
       const shopifyShopId = await resolveShopifyShopId(admin);
@@ -76,6 +89,7 @@ const shopify = shopifyApp({
 });
 
 export default shopify;
+export { PRO_PLAN };
 export const apiVersion = ApiVersion.July26;
 export const shopifyApiKey = environment.SHOPIFY_API_KEY;
 export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
