@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import prisma from "../db.server";
 
-export type ShopPlan = "FREE";
+export type ShopPlan = "FREE" | "PRO";
 export type ShopStatus = "INSTALLED" | "UNINSTALLED";
 
 export interface CreateShopRecordInput {
@@ -23,6 +23,8 @@ export interface ShopRecord {
   status: ShopStatus;
   installedAt: Date;
   uninstalledAt: Date | null;
+  billingStatus: string | null;
+  billingSyncedAt: Date | null;
 }
 
 export interface ShopRepository {
@@ -40,6 +42,8 @@ const SHOP_SELECT = {
   status: true,
   installedAt: true,
   uninstalledAt: true,
+  billingStatus: true,
+  billingSyncedAt: true,
 } as const;
 
 type ShopModel = {

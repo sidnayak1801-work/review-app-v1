@@ -7,6 +7,9 @@ import {
   type ListReviewsResult,
 } from "../../repositories/review.repository.server";
 import { logger } from "../../services/logger.server";
+import type { ShopPlan } from "../../repositories/shop.repository.server";
+import type { BillingService } from "../billing/billing.service.server";
+import { billingEntitlementsService } from "../billing/billing.service.server";
 import {
   createMerchantReviewSchema,
   createStorefrontReviewSchema,
@@ -32,7 +35,10 @@ function toPublicReview(review: ReviewRecord) {
 }
 
 export class ReviewService {
-  constructor(private readonly reviews: ReviewRepository) {}
+  constructor(
+    private readonly reviews: ReviewRepository,
+    private readonly billing: BillingService,
+  ) {}
 
   async listForShop(
     shopId: string,
@@ -65,6 +71,7 @@ export class ReviewService {
 
   async createMerchantReview(
     shopId: string,
+    shopPlan: ShopPlan,
     input: unknown,
   ): Promise<ReviewRecord> {
     const data = parseWithSchema(
@@ -72,6 +79,13 @@ export class ReviewService {
       input,
       "Invalid review",
     );
+
+    if (data.status === "APPROVED") {
+      await this.billing.assertCanApprovePublishedReview({
+        shopId,
+        shopPlan,
+      });
+    }
 
     const publishedAt = data.status === "APPROVED" ? new Date() : null;
 
@@ -100,6 +114,7 @@ export class ReviewService {
 
   async updateForShop(
     shopId: string,
+    shopPlan: ShopPlan,
     reviewId: string,
     input: unknown,
   ): Promise<ReviewRecord> {
@@ -111,6 +126,14 @@ export class ReviewService {
 
     const existing = await this.getForShop(shopId, reviewId);
     const nextStatus = data.status ?? existing.status;
+
+    if (nextStatus === "APPROVED" && existing.status !== "APPROVED") {
+      await this.billing.assertCanApprovePublishedReview({
+        shopId,
+        shopPlan,
+      });
+    }
+
     const publishedAt =
       nextStatus === "APPROVED"
         ? (existing.publishedAt ?? new Date())
@@ -208,4 +231,7 @@ export class ReviewService {
   }
 }
 
-export const reviewService = new ReviewService(reviewRepository);
+export const reviewService = new ReviewService(
+  reviewRepository,
+  billingEntitlementsService,
+);

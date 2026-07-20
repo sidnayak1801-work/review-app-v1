@@ -18,6 +18,8 @@ const shopRecord: ShopRecord = {
   status: "INSTALLED",
   installedAt: new Date("2026-07-17T00:00:00.000Z"),
   uninstalledAt: null,
+  billingStatus: null,
+  billingSyncedAt: null,
 };
 
 const uninstalledShopRecord: ShopRecord = {

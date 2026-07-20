@@ -51,23 +51,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     if (intent === "create") {
-      const review = await reviewService.createMerchantReview(shop.id, {
-        shopifyProductId: formData.get("shopifyProductId"),
-        rating: formData.get("rating"),
-        title: formData.get("title"),
-        body: formData.get("body"),
-        authorName: formData.get("authorName"),
-        authorEmail: formData.get("authorEmail"),
-        status: formData.get("status") || "APPROVED",
-        verifiedPurchase: formData.get("verifiedPurchase") === "on",
-      });
+      const review = await reviewService.createMerchantReview(
+        shop.id,
+        shop.plan,
+        {
+          shopifyProductId: formData.get("shopifyProductId"),
+          rating: formData.get("rating"),
+          title: formData.get("title"),
+          body: formData.get("body"),
+          authorName: formData.get("authorName"),
+          authorEmail: formData.get("authorEmail"),
+          status: formData.get("status") || "APPROVED",
+          verifiedPurchase: formData.get("verifiedPurchase") === "on",
+        },
+      );
 
       return { ok: true as const, message: `Review ${review.id} created.` };
     }
 
     if (intent === "update-status") {
       const reviewId = String(formData.get("reviewId") ?? "");
-      await reviewService.updateForShop(shop.id, reviewId, {
+      await reviewService.updateForShop(shop.id, shop.plan, reviewId, {
         status: formData.get("status"),
       });
       return { ok: true as const, message: "Review status updated." };

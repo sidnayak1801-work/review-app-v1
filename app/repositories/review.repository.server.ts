@@ -76,6 +76,7 @@ export interface ReviewRepository {
     reviewId: string,
   ): Promise<ReviewRecord | null>;
   list(input: ListReviewsInput): Promise<ListReviewsResult>;
+  countApprovedForShop(shopId: string): Promise<number>;
   updateForShop(
     shopId: string,
     reviewId: string,
@@ -117,6 +118,7 @@ type ReviewModel = {
     take: number;
     select: typeof REVIEW_SELECT;
   }): Promise<ReviewRecord[]>;
+  count(args: { where: Record<string, unknown> }): Promise<number>;
   updateMany(args: {
     where: { id: string; shopId: string };
     data: UpdateReviewRecordInput;
@@ -198,6 +200,12 @@ export class PrismaReviewRepository implements ReviewRepository {
           : null,
       },
     };
+  }
+
+  async countApprovedForShop(shopId: string): Promise<number> {
+    return reviewModel(this.database).count({
+      where: { shopId, status: "APPROVED" },
+    });
   }
 
   async updateForShop(

@@ -38,6 +38,7 @@ function createRepository(
       items: [review],
       pageInfo: { nextCursor: null, hasNextPage: false },
     }),
+    countApprovedForShop: vi.fn().mockResolvedValue(0),
     updateForShop: vi.fn().mockResolvedValue(review),
     deleteForShop: vi.fn().mockResolvedValue(true),
     ...overrides,
@@ -48,9 +49,14 @@ describe("ReviewService", () => {
   it("creates a merchant review as approved by default", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const repository = createRepository();
-    const service = new ReviewService(repository);
+    const billing = {
+      assertCanApprovePublishedReview: vi
+        .fn()
+        .mockResolvedValue(undefined),
+    };
+    const service = new ReviewService(repository, billing);
 
-    await service.createMerchantReview("shop-1", {
+    await service.createMerchantReview("shop-1", "FREE", {
       shopifyProductId: "1",
       rating: 5,
       body: "Loved it",
@@ -65,11 +71,21 @@ describe("ReviewService", () => {
         source: "MERCHANT",
       }),
     );
+
+    expect(billing.assertCanApprovePublishedReview).toHaveBeenCalledWith({
+      shopId: "shop-1",
+      shopPlan: "FREE",
+    });
   });
 
   it("lists only approved reviews for the storefront", async () => {
     const repository = createRepository();
-    const service = new ReviewService(repository);
+    const billing = {
+      assertCanApprovePublishedReview: vi
+        .fn()
+        .mockResolvedValue(undefined),
+    };
+    const service = new ReviewService(repository, billing);
 
     const result = await service.listApprovedForStorefront("shop-1", {
       shopifyProductId: "1",
@@ -87,7 +103,12 @@ describe("ReviewService", () => {
 
   it("rejects honeypot storefront submissions", async () => {
     const repository = createRepository();
-    const service = new ReviewService(repository);
+    const billing = {
+      assertCanApprovePublishedReview: vi
+        .fn()
+        .mockResolvedValue(undefined),
+    };
+    const service = new ReviewService(repository, billing);
 
     await expect(
       service.createStorefrontReview("shop-1", {
@@ -99,5 +120,69 @@ describe("ReviewService", () => {
       }),
     ).rejects.toThrow("Invalid review");
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it("does not call billing when updating an already approved review", async () => {
+    const repository = createRepository();
+    const billing = {
+      assertCanApprovePublishedReview: vi
+        .fn()
+        .mockResolvedValue(undefined),
+    };
+    const service = new ReviewService(repository, billing);
+
+    await service.updateForShop(
+      "shop-1",
+      "FREE",
+      "review-1",
+      { status: "APPROVED" },
+    );
+
+    expect(billing.assertCanApprovePublishedReview).not.toHaveBeenCalled();
+  });
+
+  it("calls billing when transitioning a review to approved", async () => {
+    const pendingReview: ReviewRecord = {
+      ...review,
+      status: "PENDING",
+      publishedAt: null,
+    };
+
+    const repository = createRepository({
+      findByIdForShop: vi.fn().mockResolvedValue(pendingReview),
+      updateForShop: vi.fn().mockResolvedValue({
+        ...review,
+        status: "APPROVED",
+        publishedAt: new Date("2026-07-18T00:00:00.000Z"),
+      }),
+    });
+
+    const billing = {
+      assertCanApprovePublishedReview: vi
+        .fn()
+        .mockResolvedValue(undefined),
+    };
+    const service = new ReviewService(repository, billing);
+
+    await service.updateForShop(
+      "shop-1",
+      "FREE",
+      "review-1",
+      { status: "APPROVED" },
+    );
+
+    expect(billing.assertCanApprovePublishedReview).toHaveBeenCalledWith({
+      shopId: "shop-1",
+      shopPlan: "FREE",
+    });
+
+    expect(repository.updateForShop).toHaveBeenCalledWith(
+      "shop-1",
+      "review-1",
+      expect.objectContaining({
+        status: "APPROVED",
+        publishedAt: expect.any(Date),
+      }),
+    );
   });
 });
