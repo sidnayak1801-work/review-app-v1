@@ -8,19 +8,12 @@ import {
   ValidationError,
 } from "../lib/domain-error";
 import { assertWithinRateLimit } from "../lib/rate-limit.server";
+import { clientIp } from "../lib/request-ip.server";
 import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return Response.json(body, { status });
-}
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -78,12 +71,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 };
 
+function loggedInCustomerIdFromRequest(request: Request): string | null {
+  const value = new URL(request.url).searchParams.get("logged_in_customer_id");
+  if (!value || !value.trim()) {
+    return null;
+  }
+  return value.trim();
+}
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.public.appProxy(request);
 
   if (!session?.shop) {
     return jsonResponse(
       { error: { code: "UNAUTHORIZED", message: "Shop not found." } },
+      401,
+    );
+  }
+
+  const shopifyCustomerId = loggedInCustomerIdFromRequest(request);
+  if (!shopifyCustomerId) {
+    return jsonResponse(
+      {
+        error: {
+          code: "AUTH_REQUIRED",
+          message: "Sign in to leave a review.",
+        },
+      },
       401,
     );
   }
@@ -111,7 +125,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       ? await request.json()
       : Object.fromEntries(await request.formData());
 
-    const review = await reviewService.createStorefrontReview(shop.id, payload);
+    const review = await reviewService.createStorefrontReview(
+      shop.id,
+      payload,
+      { shopifyCustomerId },
+    );
 
     return jsonResponse({ review }, 201);
   } catch (error) {

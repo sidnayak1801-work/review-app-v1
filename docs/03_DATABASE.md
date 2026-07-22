@@ -170,6 +170,24 @@ Required index:
 Imported reviews are written to Review with `source = IMPORT`. Process rows in
 bounded batches rather than loading the entire file into memory.
 
+## Phase 4 Notes — Review-request settings
+
+`ReviewRequestSettings` (1:1 with Shop):
+
+- `requestDelayDays` — Free global delay (1–14, default 3)
+- `domesticDelayDays` / `internationalDelayDays` — Pro delays (1–30 each)
+- `homeCountryCode` — ISO country used to classify domestic vs international
+- `emailSubject` / `emailBodyHtml` — first-request template (placeholders)
+- `reminderEnabled` / `reminderDelayDays` / `reminderSubject` / `reminderBodyHtml`
+
+`ReviewRequest.reminderSentAt` — set on one row per order when a reminder email
+is sent (counts as one monthly email credit).
+
+Multi-product emails group due rows by `(shopId, shopifyOrderId)` for one
+outbound message. Per-product rows remain for tokens and status. Email credits
+count distinct orders with `sentAt` in the UTC month plus reminder rows with
+`reminderSentAt` in that month.
+
 ## Tables Deferred Until a Feature Needs Them
 
 - `ReviewMedia`
@@ -196,7 +214,15 @@ patterns and retention rules before adding its migration.
 
 ## Data Retention and Privacy
 
-- Define merchant uninstall retention before public launch.
-- Provide deletion/export workflows required by Shopify and applicable law.
+- Uninstall (`app/uninstalled`): mark shop `UNINSTALLED`, delete sessions, retain
+  merchant review data until `shop/redact`.
+- Customer data request (`customers/data_request`): locate reviews and review
+  requests by email / customer id; operator exports within 30 days. See
+  `10_OPERATIONS.md`.
+- Customer redaction (`customers/redact`): anonymize review author fields; redact
+  and cancel matching review requests.
+- Shop redaction (`shop/redact`, ~48h after uninstall): delete the Shop row and
+  cascade owned application data.
 - Store only customer data required for review and email-request workflows.
 - Do not log review text, email addresses, access tokens, or import contents.
+- Backup, restore, and export procedures: `10_OPERATIONS.md`.

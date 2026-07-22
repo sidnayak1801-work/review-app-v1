@@ -184,39 +184,6 @@ export function ReviewsPage({
         </Form>
       </s-section>
 
-      <s-section heading="Add review">
-        <Form method="post">
-          <input type="hidden" name="intent" value="create" />
-          <s-stack direction="block" gap="base">
-            <s-text-field
-              label="Product ID"
-              name="shopifyProductId"
-              required
-              details="gid://shopify/Product/123 or 123"
-            />
-            <s-text-field
-              label="Rating"
-              name="rating"
-              required
-              details="Enter a number from 1 to 5"
-            />
-            <s-text-field label="Title" name="title" />
-            <s-text-area label="Review" name="body" required />
-            <s-text-field label="Author name" name="authorName" required />
-            <s-text-field label="Author email" name="authorEmail" />
-            <s-select label="Status" name="status" value="APPROVED">
-              <s-option value="APPROVED">Approved</s-option>
-              <s-option value="PENDING">Pending</s-option>
-              <s-option value="REJECTED">Rejected</s-option>
-            </s-select>
-            <s-checkbox name="verifiedPurchase" label="Verified purchase" />
-            <s-button type="submit" variant="primary" disabled={isSubmitting}>
-              Create review
-            </s-button>
-          </s-stack>
-        </Form>
-      </s-section>
-
       <s-section heading={`${filters.status.charAt(0)}${filters.status.slice(1).toLowerCase()} queue`}>
         {reviews.length > 0 && (canBulkApprove || canBulkReject) ? (
           <s-stack direction="block" gap="base">

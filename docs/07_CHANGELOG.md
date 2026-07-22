@@ -5,6 +5,29 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Storefront widget reviews require a signed-in Shopify customer
+  (`logged_in_customer_id`); guests see a sign-in/sign-up wall. Review-request
+  email token submissions remain allowed without storefront login. Removed the
+  merchant admin “Add review” test form.
+- Phase 4 review-request improvements: configurable Free/Pro delays, one
+  multi-product email per order (Free ≤5 / Pro all), editable templates, and
+  one reminder email with monthly credit counting by order + reminder.
+- Added Fly.io production host config (`fly.toml`, multi-stage Dockerfile,
+  `.dockerignore`) and `scripts/set-fly-secrets.mjs`. Live `fly deploy` is
+  blocked until the Fly organization has billing enabled.
+- Added Fly.io deployment runbook and merchant pilot setup docs
+  (`12_DEPLOYMENT.md`, `13_MERCHANT_SETUP.md`).
+- Phase 3 production readiness (through BFS gap record, deploy deferred):
+  mandatory privacy compliance webhooks, public API rate limits, `/health`,
+  CI, onboarding/uninstall polish, operations/retention docs, and App Store /
+  Built for Shopify eligibility gap checklist.
+- Documented Phase 4 review-request roadmap: configurable delays and
+  multi-product emails with Free/Pro limits; kept Phase 3 free of Judge.me
+  parity product features.
+- Added sample CSV download and format guide on the imports page.
+- Added review-request emails: fulfillment webhook scheduling, Resend/console
+  email provider, token-based submission, merchant status UI, and monthly
+  allowances (Free 50 / Pro 1,000).
 - Added Shopify billing sync, Pro upgrade flow, and `/app/billing` with Free and
   Pro published-review allowances (100 / 5,000).
 - Added CSV review import with validation, bounded batch processing, import job

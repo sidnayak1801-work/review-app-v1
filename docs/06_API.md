@@ -47,8 +47,11 @@ Do not return stack traces, Prisma errors, secrets, or customer data in errors.
 - Shopify authentication routes
 - `POST /webhooks/app/uninstalled`
 - `POST /webhooks/app/scopes_update`
+- `POST /webhooks/compliance` — mandatory privacy topics:
+  `customers/data_request`, `customers/redact`, `shop/redact`
+- `GET /health` — liveness; `GET /health?ready=1` — database readiness
 
-These routes use Shopify request verification.
+These webhook routes use Shopify request verification.
 
 ## Phase 1 — Reviews and Widget
 
@@ -76,7 +79,10 @@ These routes use Shopify request verification.
   - Returns approved public review fields only
 - `POST /api/storefront/reviews`
   - Requires verified storefront/app-proxy context
-  - Creates a pending review
+  - Requires signed-in storefront customer (`logged_in_customer_id` on the
+    signed app-proxy query); otherwise returns `401 AUTH_REQUIRED`
+  - Creates a pending review attributed to that customer (name/email from the
+    logged-in customer; no guest email field)
   - Applies validation, rate limiting, and spam protection
 
 The public storefront contract uses the Shopify app proxy:
@@ -85,14 +91,56 @@ The public storefront contract uses the Shopify app proxy:
 - App route: `/api/storefront/reviews`
 - Authenticated with `authenticate.public.appProxy`
 - Query `productId` (numeric or GID) for approved reviews
-- POST creates a pending storefront review with honeypot and rate limiting
+- POST requires `logged_in_customer_id` and creates a pending storefront review
+  with honeypot and rate limiting
+- Guests see an in-widget sign-in wall linking to Liquid
+  `routes.storefront_login_url` / `routes.account_register_url` (Shopify owns
+  account auth)
 
-Choose the final Shopify app-proxy URL when implementing the Theme App
-Extension and document it before release.
+Review-request email links use a separate public token API and do **not**
+require storefront login:
+
+- `GET/POST /api/review-request?token=...` — verified purchase email flow
 
 ## Phase 2 — Requests, Moderation, Imports, and Billing
 
 Moderation continues to use the Phase 1 review update route.
+
+### Review-request emails
+
+App routes:
+
+- `/app/review-requests` — authenticated merchant history and monthly usage
+- `POST /webhooks/orders/fulfilled` — verified Shopify webhook; schedules one
+  request per fulfilled order product
+- `GET/POST /api/review-request?token=...` — public token lookup and review
+  submission (creates a pending review); rate-limited per client IP
+
+Email provider:
+
+- Production: Resend when `RESEND_API_KEY` and `EMAIL_FROM` are configured
+- Development fallback: console logging
+
+Required scope: `read_orders`
+
+Limits:
+
+- Free: 50 review-request emails per UTC calendar month
+- Pro: 1,000 review-request emails per UTC calendar month
+- Count increments when the provider first accepts delivery; retries do not
+  consume additional allowance
+- Allowance counts emails, not products. Phase 4 multi-product sends still use
+  one credit per outbound email.
+
+MVP / Phase 4 behavior:
+
+- Merchant-configurable delay (Free: one global 1–14 days; Pro: domestic /
+  international 1–30 days via shipping country vs home country)
+- One email per fulfilled order listing products (Free up to 5 links; Pro all)
+- Editable subject/body templates with `{{shop_name}}`, `{{review_links}}`, etc.
+- Optional one reminder email after `reminderDelayDays` if any product review
+  is still incomplete (one additional monthly credit)
+- Settings UI: `/app/review-requests`
 
 ### CSV review import
 
@@ -101,8 +149,9 @@ App route: `/app/imports`
 - Authenticated embedded admin route
 - `POST` multipart upload with `file` (CSV) creates and processes an import job
   synchronously
-- `GET ?errorReport=:importId` downloads the row-level error report CSV when
-  present
+- Sample CSV downloads client-side from the Imports page
+- `GET /app/imports/download?type=error-report&importId=...` returns the
+  row-level error report CSV (authenticated session token)
 
 Required CSV headers:
 
@@ -141,12 +190,7 @@ Deferred REST-style admin endpoints (future if needed):
 
 - `POST /api/admin/review-imports`
 - `GET /api/admin/review-imports/:importId`
-
-- `POST /webhooks/orders/fulfilled`
-  - Verified Shopify webhook
-  - Creates idempotent review-request schedules
 - `GET /api/admin/review-requests`
-  - Paginated request status for the authenticated shop
 
 Email delivery and import processing are service workflows, not public
 "send now" endpoints.

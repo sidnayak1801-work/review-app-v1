@@ -75,6 +75,11 @@ export interface ReviewStatusCounts {
   REJECTED: number;
 }
 
+export interface ReviewCustomerMatchInput {
+  email: string | null;
+  customerIds: string[];
+}
+
 export interface ReviewRepository {
   create(input: CreateReviewRecordInput): Promise<ReviewRecord>;
   findByIdForShop(
@@ -82,6 +87,10 @@ export interface ReviewRepository {
     reviewId: string,
   ): Promise<ReviewRecord | null>;
   findByIdsForShop(shopId: string, reviewIds: string[]): Promise<ReviewRecord[]>;
+  findForCustomerPrivacy(
+    shopId: string,
+    match: ReviewCustomerMatchInput,
+  ): Promise<ReviewRecord[]>;
   list(input: ListReviewsInput): Promise<ListReviewsResult>;
   countApprovedForShop(shopId: string): Promise<number>;
   countByStatusForShop(shopId: string): Promise<ReviewStatusCounts>;
@@ -90,6 +99,10 @@ export interface ReviewRepository {
     reviewId: string,
     input: UpdateReviewRecordInput,
   ): Promise<ReviewRecord | null>;
+  redactCustomerPii(
+    shopId: string,
+    match: ReviewCustomerMatchInput,
+  ): Promise<number>;
   deleteForShop(shopId: string, reviewId: string): Promise<boolean>;
 }
 
@@ -133,8 +146,12 @@ type ReviewModel = {
     _count: { _all: true };
   }): Promise<Array<{ status: ReviewStatus; _count: { _all: number } }>>;
   updateMany(args: {
-    where: { id: string; shopId: string };
-    data: UpdateReviewRecordInput;
+    where: Record<string, unknown>;
+    data: UpdateReviewRecordInput & {
+      authorName?: string;
+      authorEmail?: string | null;
+      shopifyCustomerId?: string | null;
+    };
   }): Promise<{ count: number }>;
   deleteMany(args: {
     where: { id: string; shopId: string };
@@ -177,6 +194,24 @@ export class PrismaReviewRepository implements ReviewRepository {
       where: {
         shopId,
         id: { in: reviewIds },
+      },
+      select: REVIEW_SELECT,
+    });
+  }
+
+  async findForCustomerPrivacy(
+    shopId: string,
+    match: ReviewCustomerMatchInput,
+  ): Promise<ReviewRecord[]> {
+    const orFilters = buildCustomerOrFilters(match);
+    if (orFilters.length === 0) {
+      return [];
+    }
+
+    return reviewModel(this.database).findMany({
+      where: {
+        shopId,
+        OR: orFilters,
       },
       select: REVIEW_SELECT,
     });
@@ -275,6 +310,30 @@ export class PrismaReviewRepository implements ReviewRepository {
     return this.findByIdForShop(shopId, reviewId);
   }
 
+  async redactCustomerPii(
+    shopId: string,
+    match: ReviewCustomerMatchInput,
+  ): Promise<number> {
+    const orFilters = buildCustomerOrFilters(match);
+    if (orFilters.length === 0) {
+      return 0;
+    }
+
+    const result = await reviewModel(this.database).updateMany({
+      where: {
+        shopId,
+        OR: orFilters,
+      },
+      data: {
+        authorName: "Redacted customer",
+        authorEmail: null,
+        shopifyCustomerId: null,
+      },
+    });
+
+    return result.count;
+  }
+
   async deleteForShop(shopId: string, reviewId: string): Promise<boolean> {
     const result = await reviewModel(this.database).deleteMany({
       where: { id: reviewId, shopId },
@@ -282,6 +341,26 @@ export class PrismaReviewRepository implements ReviewRepository {
 
     return result.count > 0;
   }
+}
+
+function buildCustomerOrFilters(
+  match: ReviewCustomerMatchInput,
+): Array<Record<string, unknown>> {
+  const filters: Array<Record<string, unknown>> = [];
+
+  if (match.email) {
+    filters.push({
+      authorEmail: { equals: match.email, mode: "insensitive" },
+    });
+  }
+
+  if (match.customerIds.length > 0) {
+    filters.push({
+      shopifyCustomerId: { in: match.customerIds },
+    });
+  }
+
+  return filters;
 }
 
 export const reviewRepository = new PrismaReviewRepository();

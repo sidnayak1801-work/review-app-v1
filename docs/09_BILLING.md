@@ -23,6 +23,12 @@ Includes:
 - CSV review import
 - Standard support
 
+Phase 4 review-request entitlements:
+
+- One global review-request delay setting (1–14 days, default 3)
+- Multi-product request emails: one email per order, up to 5 products listed
+- Editable email templates and optional reminder emails
+
 ## Pro Plan
 
 Price: `$19/month`
@@ -35,6 +41,12 @@ Includes everything in Free plus:
 - Up to 1,000 review-request emails per month
 - Optional removal of app branding from the widget
 - Priority support
+
+Phase 4 review-request entitlements:
+
+- Separate domestic and international review-request delays (1–30 days each)
+- Multi-product request emails: one email per order listing all products
+- Editable email templates and optional reminder emails
 
 Do not advertise photo reviews, merchant replies, advanced analytics, AI, or
 other post-MVP features as Pro benefits until those features exist.
@@ -50,7 +62,8 @@ Published reviews:
 Review-request emails:
 
 - Use one UTC calendar-month allowance window for both plans.
-- Count each ReviewRequest once when the provider first accepts it for delivery.
+- Count each **email accepted for delivery** once, not each product line on the
+  order. A multi-product email therefore consumes one credit.
 - Retries and failed requests do not consume another allowance.
 
 Do not add a generic usage ledger. Use indexed counts from Review and

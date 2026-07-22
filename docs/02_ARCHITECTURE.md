@@ -240,13 +240,15 @@ returns approved public reviews, and accepts pending storefront submissions.
 
 ## Open MVP Risks
 
-- App-proxy storefront traffic and Theme App Extension loading should be
-  measured on a real product page before the Phase 3 pilot.
-- Shopify scopes, webhook topic, and retention rules for review-request emails
-  must be finalized before Phase 2.
+- App-proxy storefront traffic and Theme App Extension loading should still be
+  measured on a real product page during the Phase 3 pilot (notes in
+  `10_OPERATIONS.md` and `11_APP_STORE_AND_BFS.md`).
 - Scheduled email and import processing must remain reliable across deploys;
-  the MVP database-backed approach needs explicit retry and locking behavior.
-- Customer email retention, review export/deletion, and uninstall retention
-  need product and legal decisions before the Phase 3 pilot.
-- Performance targets are provisional until representative review data and
-  real storefront traffic are measured.
+  the MVP database-backed approach needs explicit retry and locking behavior
+  before horizontal scale.
+- Built for Shopify Product reviews category still requires a Flow trigger and
+  customer admin block (`11_APP_STORE_AND_BFS.md`).
+- Performance targets remain provisional until representative review data and
+  real storefront/admin traffic are measured in production.
+- Public App Store distribution and protected customer data access remain
+  Partner Dashboard prerequisites for production billing and order email.

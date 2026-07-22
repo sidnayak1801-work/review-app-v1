@@ -85,13 +85,7 @@ export const createStorefrontReviewSchema = z.object({
     .transform((value) => value || undefined),
   body: z.string().trim().min(1).max(5000),
   authorName: z.string().trim().min(1).max(100),
-  authorEmail: z
-    .string()
-    .trim()
-    .email()
-    .optional()
-    .or(z.literal(""))
-    .transform((value) => value || undefined),
+  authorEmail: z.string().trim().email(),
   website: z.string().optional().default(""),
 });
 

@@ -37,6 +37,7 @@ function createRepository(
     findByDomain: vi.fn().mockResolvedValue(shopRecord),
     install: vi.fn().mockResolvedValue(shopRecord),
     markUninstalled: vi.fn().mockResolvedValue(uninstalledShopRecord),
+    deleteByDomain: vi.fn().mockResolvedValue(uninstalledShopRecord),
     updateBillingState: vi.fn().mockResolvedValue(shopRecord),
     ...overrides,
   };

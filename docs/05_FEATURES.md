@@ -60,7 +60,11 @@ delay validation of the core product.
 - Store-level reviews
 - Merchant replies
 - Photo reviews
-- Review request reminders
+- Configurable review-request delay (Free: one global delay; Pro: domestic +
+  international delays)
+- Multi-product review-request email (one email per order; Free lists up to 5
+  products, Pro lists all)
+- Review request reminders and editable templates
 - Review export
 - Search and richer moderation filters
 - Basic SEO aggregate-rating markup
@@ -75,6 +79,7 @@ delay validation of the core product.
 - Multiple widget layouts
 - Review highlights and simple product insights
 - Additional email templates
+- In-email interactive review forms
 - Multi-store agency conveniences
 
 ## Future — Scale and Platform Expansion
@@ -84,6 +89,7 @@ delay validation of the core product.
 - Public or partner API access
 - Review syndication
 - Klaviyo, Gorgias, WhatsApp, Zapier, Instagram, and TikTok integrations
+- SMS or push review-request channels via compatible apps
 - Loyalty-platform integrations
 - Enterprise roles, SLA, white-label, and custom integrations
 - Advanced billing tiers and usage metering

@@ -15,18 +15,52 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 
 import {
   FREE_MAX_PUBLISHED_REVIEWS,
+  FREE_MAX_REVIEW_REQUESTS_PER_MONTH,
   PRO_MAX_PUBLISHED_REVIEWS,
+  PRO_MAX_REVIEW_REQUESTS_PER_MONTH,
   PRO_MONTHLY_PRICE_USD,
   PRO_TRIAL_DAYS,
 } from "../features/billing/billing.constants";
 import { billingEntitlementsService } from "../features/billing/billing.service.server";
 import { billingSyncService } from "../features/billing/billing-sync.service.server";
 import { isBillingTestMode } from "../lib/billing-env.server";
+import { getShopifyEnv } from "../lib/env.server";
 import {
   requireShopRecord,
   requireShopWithBillingSync,
 } from "../lib/shop-context.server";
+import { logger } from "../services/logger.server";
 import { authenticate, PRO_PLAN } from "../shopify.server";
+
+function billingErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "Could not start the Pro upgrade. Please try again.";
+  }
+
+  const message = error.message;
+  const nested =
+    "errorData" in error && Array.isArray(error.errorData)
+      ? error.errorData
+          .map((entry) =>
+            typeof entry === "object" &&
+            entry !== null &&
+            "message" in entry &&
+            typeof entry.message === "string"
+              ? entry.message
+              : null,
+          )
+          .filter((value): value is string => Boolean(value))
+          .join(" ")
+      : "";
+
+  const combined = `${message} ${nested}`;
+
+  if (combined.includes("public distribution")) {
+    return "Shopify Billing requires this app to use public (App Store) distribution. In Partner Dashboard → your app → Distribution, choose Shopify App Store / public distribution, then try Upgrade again.";
+  }
+
+  return nested || message || "Could not start the Pro upgrade. Please try again.";
+}
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing, session } = await authenticate.admin(request);
@@ -38,28 +72,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     forceSync: true,
   });
 
-  const usage = await billingEntitlementsService.getPublishedReviewUsage({
-    shopId: shop.id,
-    shopPlan: shop.plan,
-  });
+  const [usage, reviewRequestUsage] = await Promise.all([
+    billingEntitlementsService.getPublishedReviewUsage({
+      shopId: shop.id,
+      shopPlan: shop.plan,
+    }),
+    billingEntitlementsService.getReviewRequestUsage({
+      shopId: shop.id,
+      shopPlan: shop.plan,
+    }),
+  ]);
 
   return {
     shopPlan: shop.plan,
     billingStatus: shop.billingStatus,
     billingSyncedAt: shop.billingSyncedAt?.toISOString() ?? null,
     usage,
+    reviewRequestUsage,
     isTest,
     plans: {
       free: {
         price: 0,
         publishedReviews: FREE_MAX_PUBLISHED_REVIEWS,
-        reviewRequests: 50,
+        reviewRequests: FREE_MAX_REVIEW_REQUESTS_PER_MONTH,
       },
       pro: {
         price: PRO_MONTHLY_PRICE_USD,
         trialDays: PRO_TRIAL_DAYS,
         publishedReviews: PRO_MAX_PUBLISHED_REVIEWS,
-        reviewRequests: 1_000,
+        reviewRequests: PRO_MAX_REVIEW_REQUESTS_PER_MONTH,
       },
     },
   };
@@ -73,22 +114,54 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const isTest = isBillingTestMode();
 
   if (intent === "sync") {
-    await billingSyncService.syncFromShopify({
-      shopId: shop.id,
-      billing,
-      isTest,
-    });
-
-    return { ok: true as const, message: "Billing status refreshed." };
+    try {
+      await billingSyncService.syncFromShopify({
+        shopId: shop.id,
+        billing,
+        isTest,
+      });
+      return { ok: true as const, message: "Billing status refreshed." };
+    } catch (error) {
+      logger.warn("Manual billing sync failed", {
+        shopId: shop.id,
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      });
+      return {
+        ok: false as const,
+        message: billingErrorMessage(error),
+      };
+    }
   }
 
   if (intent === "upgrade") {
-    return billing.request({
-      plan: PRO_PLAN,
-      isTest,
-      trialDays: PRO_TRIAL_DAYS,
-      returnUrl: "/app/billing",
-    });
+    const returnUrl = new URL(
+      "/app/billing",
+      getShopifyEnv().SHOPIFY_APP_URL,
+    ).href;
+
+    try {
+      // Throws a redirect Response when Shopify approval URL is ready.
+      return await billing.request({
+        plan: PRO_PLAN,
+        isTest,
+        trialDays: PRO_TRIAL_DAYS,
+        returnUrl,
+      });
+    } catch (error) {
+      if (error instanceof Response) {
+        throw error;
+      }
+
+      logger.warn("Billing upgrade request failed", {
+        shopId: shop.id,
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      });
+
+      return {
+        ok: false as const,
+        message: billingErrorMessage(error),
+      };
+    }
   }
 
   return { ok: false as const, message: "Unknown action." };
@@ -125,6 +198,10 @@ export default function BillingRoute() {
           <s-paragraph>
             Published reviews: {data.usage.used}
             {data.usage.limit !== null ? ` / ${data.usage.limit}` : ""}
+          </s-paragraph>
+          <s-paragraph>
+            Review-request emails this month: {data.reviewRequestUsage.used} /{" "}
+            {data.reviewRequestUsage.limit}
           </s-paragraph>
           {data.isTest ? (
             <s-banner tone="info" heading="Test billing mode">
@@ -188,9 +265,10 @@ export default function BillingRoute() {
           </Form>
         </s-stack>
         <s-paragraph>
-          To downgrade or cancel Pro, change your plan in Shopify Admin billing.
-          Existing approved reviews stay visible. New approvals are limited to
-          your active plan allowance.
+          Upgrade sends you to Shopify to approve the Pro subscription. After
+          you approve, Shopify returns here and we sync your plan to unlock Pro
+          limits. To downgrade or cancel, change the plan in Shopify Admin
+          billing — existing approved reviews stay visible.
         </s-paragraph>
       </s-section>
     </s-page>
@@ -201,7 +279,9 @@ export function ErrorBoundary() {
   const error = useRouteError();
   const message = isRouteErrorResponse(error)
     ? error.statusText
-    : "Billing could not be loaded.";
+    : error instanceof Error
+      ? error.message
+      : "Billing could not be loaded.";
 
   return (
     <s-page heading="Billing">

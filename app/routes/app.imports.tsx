@@ -17,7 +17,6 @@ import { reviewImportService } from "../features/review-imports/review-import.se
 import { DomainError, ValidationError } from "../lib/domain-error";
 import { isBillingTestMode } from "../lib/billing-env.server";
 import { requireShopWithBillingSync } from "../lib/shop-context.server";
-import { readStoredImportFile } from "../services/import-storage.server";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -27,25 +26,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     billing,
     isTest: isBillingTestMode(),
   });
-  const url = new URL(request.url);
-  const errorReportId = url.searchParams.get("errorReport");
-
-  if (errorReportId) {
-    const job = await reviewImportService.getForShop(shop.id, errorReportId);
-
-    if (!job.errorFileKey) {
-      throw new Response("Error report not found", { status: 404 });
-    }
-
-    const content = await readStoredImportFile(job.errorFileKey);
-
-    return new Response(new Uint8Array(content), {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="import-${job.id}-errors.csv"`,
-      },
-    });
-  }
 
   const imports = await reviewImportService.listRecentForShop(shop.id);
 

@@ -18,12 +18,19 @@ implementation cost are understood.
 
 ## Merchant Growth Tools
 
-- Coupons for completed reviews
+- Coupons for completed reviews (auto-generated discount after submission)
 - Referral prompts
 - Loyalty integrations
 - Additional review-request campaigns and reminders
+- In-email interactive review forms (AMP or similar)
+- SMS or web-push review requests via compatible apps
 - Product review highlights
 - Agency and multi-store workflows
+- Shopify Flow trigger when a review is collected (BFS Product reviews 5.11.1)
+- Admin customer-detail block for that customer’s reviews (BFS 5.11.2)
+
+Do not confuse these with Phase 3 (production readiness) or the Phase 4 delay /
+multi-product email checklist in `04_ROADMAP.md`.
 
 ## SEO and Insights
 

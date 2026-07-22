@@ -4,11 +4,13 @@ import { parseWithSchema } from "./validation";
 
 const billingEnvSchema = z.object({
   BILLING_TEST_MODE: z
-    .preprocess(
-      (value) => value === "true" || value === "1",
-      z.boolean(),
-    )
-    .default(false),
+    .preprocess((value) => {
+      if (value === undefined || value === "") {
+        return undefined;
+      }
+
+      return value === "true" || value === "1";
+    }, z.boolean().optional()),
 });
 
 export type BillingEnv = z.infer<typeof billingEnvSchema>;
@@ -23,8 +25,18 @@ export function getBillingEnv(
   );
 }
 
+/**
+ * Use test charges when explicitly enabled, or automatically outside production
+ * so local/dev stores can complete Shopify billing approval.
+ */
 export function isBillingTestMode(
   environment: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return getBillingEnv(environment).BILLING_TEST_MODE;
+  const configured = getBillingEnv(environment).BILLING_TEST_MODE;
+
+  if (configured !== undefined) {
+    return configured;
+  }
+
+  return environment.NODE_ENV !== "production";
 }

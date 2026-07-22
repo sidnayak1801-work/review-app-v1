@@ -1,21 +1,31 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { ReviewRepository } from "../../repositories/review.repository.server";
+import type { ReviewRequestRepository } from "../../repositories/review-request.repository.server";
 import { BillingEntitlementsService } from "./billing.service.server";
-import type {
-  ReviewRepository,
-} from "../../repositories/review.repository.server";
 
-function createBillingService(approvedCount: number) {
-  const repository = {
-    countApprovedForShop: vi.fn().mockResolvedValue(approvedCount),
+function createBillingService(input: {
+  approvedCount?: number;
+  sentRequestCount?: number;
+}) {
+  const reviews = {
+    countApprovedForShop: vi
+      .fn()
+      .mockResolvedValue(input.approvedCount ?? 0),
   } as unknown as ReviewRepository;
 
-  return new BillingEntitlementsService(repository);
+  const reviewRequests = {
+    countSentForShopInUtcMonth: vi
+      .fn()
+      .mockResolvedValue(input.sentRequestCount ?? 0),
+  } as unknown as ReviewRequestRepository;
+
+  return new BillingEntitlementsService(reviews, reviewRequests);
 }
 
 describe("BillingEntitlementsService", () => {
   it("allows approving when on FREE and approved count is below the limit", async () => {
-    const service = createBillingService(99);
+    const service = createBillingService({ approvedCount: 99 });
 
     await expect(
       service.assertCanApprovePublishedReview({
@@ -26,7 +36,7 @@ describe("BillingEntitlementsService", () => {
   });
 
   it("blocks approving when on FREE and approved count hits the limit", async () => {
-    const service = createBillingService(100);
+    const service = createBillingService({ approvedCount: 100 });
 
     await expect(
       service.assertCanApprovePublishedReview({
@@ -40,7 +50,7 @@ describe("BillingEntitlementsService", () => {
   });
 
   it("allows approving when on PRO below the limit", async () => {
-    const service = createBillingService(4_999);
+    const service = createBillingService({ approvedCount: 4_999 });
 
     await expect(
       service.assertCanApprovePublishedReview({
@@ -51,7 +61,7 @@ describe("BillingEntitlementsService", () => {
   });
 
   it("returns published review usage for Free plans", async () => {
-    const service = createBillingService(42);
+    const service = createBillingService({ approvedCount: 42 });
 
     await expect(
       service.getPublishedReviewUsage({
@@ -65,7 +75,7 @@ describe("BillingEntitlementsService", () => {
   });
 
   it("blocks approving when on PRO and approved count hits the limit", async () => {
-    const service = createBillingService(5_000);
+    const service = createBillingService({ approvedCount: 5_000 });
 
     await expect(
       service.assertCanApprovePublishedReview({
@@ -79,7 +89,7 @@ describe("BillingEntitlementsService", () => {
   });
 
   it("returns published review usage for Pro plans", async () => {
-    const service = createBillingService(250);
+    const service = createBillingService({ approvedCount: 250 });
 
     await expect(
       service.getPublishedReviewUsage({
@@ -91,5 +101,31 @@ describe("BillingEntitlementsService", () => {
       limit: 5_000,
     });
   });
-});
 
+  it("blocks review-request sends when Free monthly allowance is reached", async () => {
+    const service = createBillingService({ sentRequestCount: 50 });
+
+    await expect(
+      service.assertCanSendReviewRequest({
+        shopId: "shop-1",
+        shopPlan: "FREE",
+      }),
+    ).rejects.toMatchObject({
+      name: "DomainError",
+      code: "REVIEW_REQUEST_LIMIT_REACHED",
+    });
+  });
+
+  it("returns review-request usage for Pro plans", async () => {
+    const service = createBillingService({ sentRequestCount: 120 });
+
+    const usage = await service.getReviewRequestUsage({
+      shopId: "shop-1",
+      shopPlan: "PRO",
+    });
+
+    expect(usage.used).toBe(120);
+    expect(usage.limit).toBe(1_000);
+    expect(usage.monthLabel).toMatch(/^\d{4}-\d{2}$/);
+  });
+});

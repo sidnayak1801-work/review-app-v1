@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Lint, typecheck, test, and build
+        run: npm run check
+        env:
+          # Build/typegen need placeholders; tests use mocks or local env.
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/review_app_ci
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/review_app_ci
+          SHOPIFY_API_KEY: ci-shopify-api-key
+          SHOPIFY_API_SECRET: ci-shopify-api-secret
+          SCOPES: read_orders
+          SHOPIFY_APP_URL: https://example.com

@@ -72,7 +72,8 @@ export default function LandingPage() {
             </h1>
             <p className={styles.lede}>
               Collect unlimited product reviews, show them where shoppers decide,
-              and syndicate ratings across Google and social — built for Shopify.
+              and syndicate ratings across Google and social — designed for Shopify
+              merchants.
             </p>
             <div className={styles.ctaGroup}>
               <a className={styles.primaryCta} href="#install">

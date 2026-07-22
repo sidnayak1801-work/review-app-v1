@@ -40,6 +40,14 @@ enum ReviewImportStatus {
   FAILED
 }
 
+enum ReviewRequestStatus {
+  SCHEDULED
+  SENT
+  FAILED
+  CANCELLED
+  COMPLETED
+}
+
 model Shop {
   id             String          @id @default(cuid())
   shopDomain     String          @unique
@@ -54,7 +62,9 @@ model Shop {
   updatedAt      DateTime        @updatedAt
   reviews        Review[]
   reviewImports  ReviewImport[]
+  reviewRequests ReviewRequest[]
   widgetSettings WidgetSettings?
+  reviewRequestSettings ReviewRequestSettings?
 
   @@index([status])
 }
@@ -97,6 +107,47 @@ model ReviewImport {
 
   @@unique([shopId, contentHash])
   @@index([shopId, createdAt])
+}
+
+model ReviewRequest {
+  id                  String              @id @default(cuid())
+  shopId              String
+  shop                Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifyOrderId      String
+  shopifyProductId    String
+  customerEmail       String
+  status              ReviewRequestStatus @default(SCHEDULED)
+  scheduledAt         DateTime
+  sentAt              DateTime?
+  reminderSentAt      DateTime?
+  attemptCount        Int                 @default(0)
+  lastErrorCode       String?
+  submissionTokenHash String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@unique([shopId, shopifyOrderId, shopifyProductId])
+  @@index([status, scheduledAt])
+  @@index([shopId, createdAt])
+  @@index([shopId, shopifyOrderId, status])
+}
+
+model ReviewRequestSettings {
+  id                      String   @id @default(cuid())
+  shopId                  String   @unique
+  shop                    Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  requestDelayDays        Int      @default(3)
+  domesticDelayDays       Int      @default(3)
+  internationalDelayDays  Int      @default(3)
+  homeCountryCode         String   @default("US")
+  emailSubject            String   @default("How was your purchase?")
+  emailBodyHtml           String   @default("")
+  reminderEnabled         Boolean  @default(true)
+  reminderDelayDays       Int      @default(7)
+  reminderSubject         String   @default("Reminder: share your review")
+  reminderBodyHtml        String   @default("")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }
 
 model WidgetSettings {

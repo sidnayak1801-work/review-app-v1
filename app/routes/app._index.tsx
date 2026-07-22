@@ -14,7 +14,10 @@ import { authenticate } from "../shopify.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = await requireShopRecord(session.shop);
-  const reviews = await reviewService.listForShop(shop.id, { limit: 5 });
+  const [reviews, queueCounts] = await Promise.all([
+    reviewService.listForShop(shop.id, { limit: 5 }),
+    reviewService.getStatusCountsForShop(shop.id),
+  ]);
 
   return {
     shopDomain: shop.shopDomain,
@@ -22,6 +25,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     installedAt: shop.installedAt.toISOString(),
     uninstalledAt: shop.uninstalledAt?.toISOString() ?? null,
     recentReviewCount: reviews.items.length,
+    pendingReviewCount: queueCounts.PENDING,
   };
 };
 

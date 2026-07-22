@@ -39,6 +39,7 @@ export interface ShopRepository {
   create(input: CreateShopRecordInput): Promise<ShopRecord>;
   install(input: InstallShopRecordInput): Promise<ShopRecord>;
   markUninstalled(shopDomain: string): Promise<ShopRecord | null>;
+  deleteByDomain(shopDomain: string): Promise<ShopRecord | null>;
   updateBillingState(
     shopId: string,
     input: UpdateShopBillingStateInput,
@@ -95,6 +96,10 @@ type ShopModel = {
       billingStatus?: string;
       billingSyncedAt?: Date;
     };
+    select: typeof SHOP_SELECT;
+  }): Promise<ShopRecord>;
+  delete(args: {
+    where: { shopDomain: string };
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord>;
 };
@@ -171,6 +176,18 @@ export class PrismaShopRepository implements ShopRepository {
         status: "UNINSTALLED",
         uninstalledAt: new Date(),
       },
+      select: SHOP_SELECT,
+    });
+  }
+
+  async deleteByDomain(shopDomain: string): Promise<ShopRecord | null> {
+    const existing = await this.findByDomain(shopDomain);
+    if (!existing) {
+      return null;
+    }
+
+    return shopModel(this.database).delete({
+      where: { shopDomain },
       select: SHOP_SELECT,
     });
   }

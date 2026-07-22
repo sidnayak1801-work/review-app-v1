@@ -1,15 +1,35 @@
 .vouch-star-rating,
 .vouch-reviews {
   --vouch-accent: #111111;
+  --vouch-star-fill: #22c55e;
+  --vouch-star-empty: #9ca3af;
   color: inherit;
   font-family: inherit;
 }
 
 .vouch-star-rating__stars,
 .vouch-reviews__stars {
-  color: var(--vouch-accent);
   letter-spacing: 0.08em;
   font-size: 1.1rem;
+}
+
+.vouch-star {
+  display: inline-block;
+}
+
+.vouch-star--filled {
+  color: var(--vouch-star-fill);
+}
+
+.vouch-star--empty {
+  color: var(--vouch-star-empty);
+}
+
+.vouch-reviews__rating-value {
+  margin-left: 0.35em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: inherit;
 }
 
 .vouch-reviews {
@@ -77,6 +97,12 @@
   font-weight: 600;
 }
 
+.vouch-reviews__star-picker-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .vouch-reviews__star-picker {
   display: inline-flex;
   gap: 0.15rem;
@@ -88,7 +114,9 @@
   padding: 0.1rem 0.15rem;
   border: 0;
   background: transparent;
-  color: rgba(0, 0, 0, 0.25);
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--vouch-star-empty);
+  paint-order: stroke fill;
   font-size: 1.75rem;
   line-height: 1;
   cursor: pointer;
@@ -96,11 +124,12 @@
 
 .vouch-reviews__star-btn.is-active,
 .vouch-reviews__star-btn.is-hover {
-  color: var(--vouch-accent);
+  color: var(--vouch-star-fill);
+  -webkit-text-stroke: 0;
 }
 
 .vouch-reviews__star-btn:focus-visible {
-  outline: 2px solid var(--vouch-accent);
+  outline: 2px solid var(--vouch-star-fill);
   outline-offset: 2px;
   border-radius: 0.2rem;
 }
@@ -132,4 +161,117 @@
 
 .vouch-reviews__message.is-error {
   color: #b42318;
+}
+
+.vouch-reviews__guest {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 1rem;
+}
+
+.vouch-reviews__write-btn {
+  appearance: none;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 0.35rem;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.vouch-reviews__write-btn:hover {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+.vouch-reviews__author {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.vouch-auth-wall {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.vouch-auth-wall[hidden] {
+  display: none;
+}
+
+.vouch-auth-wall__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.vouch-auth-wall__panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 22rem);
+  padding: 1.75rem 1.5rem 1.5rem;
+  border-radius: 1rem;
+  background: #3a3a3a;
+  color: #f5f5f5;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.vouch-auth-wall__close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.75rem;
+  appearance: none;
+  margin: 0;
+  padding: 0.15rem 0.4rem;
+  border: 0;
+  background: transparent;
+  color: #f5f5f5;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vouch-auth-wall__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.vouch-auth-wall__body {
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: rgba(245, 245, 245, 0.78);
+}
+
+.vouch-auth-wall__signup {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  background: #0095f6;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.vouch-auth-wall__signup:hover {
+  background: #1877f2;
+}
+
+.vouch-auth-wall__login {
+  display: inline-block;
+  margin-top: 0.85rem;
+  color: #0095f6;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.vouch-auth-wall__login:hover {
+  text-decoration: underline;
 }

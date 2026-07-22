@@ -19,6 +19,12 @@ function createBilling(
       used: 0,
       limit: 100,
     }),
+    assertCanSendReviewRequest: vi.fn().mockResolvedValue(undefined),
+    getReviewRequestUsage: vi.fn().mockResolvedValue({
+      used: 0,
+      limit: 50,
+      monthLabel: "2026-07",
+    }),
     ...overrides,
   };
 }
@@ -52,6 +58,7 @@ function createRepository(
     create: vi.fn().mockResolvedValue(review),
     findByIdForShop: vi.fn().mockResolvedValue(review),
     findByIdsForShop: vi.fn().mockResolvedValue([review]),
+    findForCustomerPrivacy: vi.fn().mockResolvedValue([]),
     list: vi.fn().mockResolvedValue({
       items: [review],
       pageInfo: { nextCursor: null, hasNextPage: false },
@@ -63,6 +70,7 @@ function createRepository(
       REJECTED: 0,
     }),
     updateForShop: vi.fn().mockResolvedValue(review),
+    redactCustomerPii: vi.fn().mockResolvedValue(0),
     deleteForShop: vi.fn().mockResolvedValue(true),
     ...overrides,
   };
@@ -122,15 +130,69 @@ describe("ReviewService", () => {
     const service = new ReviewService(repository, billing);
 
     await expect(
-      service.createStorefrontReview("shop-1", {
-        shopifyProductId: "1",
-        rating: 5,
-        body: "Spam",
-        authorName: "Bot",
-        website: "https://spam.example",
-      }),
+      service.createStorefrontReview(
+        "shop-1",
+        {
+          shopifyProductId: "1",
+          rating: 5,
+          body: "Spam",
+          authorName: "Bot",
+          authorEmail: "bot@example.com",
+          website: "https://spam.example",
+        },
+        { shopifyCustomerId: "123" },
+      ),
     ).rejects.toThrow("Invalid review");
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects storefront submissions without a customer id", async () => {
+    const repository = createRepository();
+    const billing = createBilling();
+    const service = new ReviewService(repository, billing);
+
+    await expect(
+      service.createStorefrontReview(
+        "shop-1",
+        {
+          shopifyProductId: "1",
+          rating: 5,
+          body: "Great product",
+          authorName: "Ada",
+          authorEmail: "ada@example.com",
+        },
+        { shopifyCustomerId: "  " },
+      ),
+    ).rejects.toThrow("Sign in required");
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it("persists shopifyCustomerId and authorEmail on storefront create", async () => {
+    const repository = createRepository();
+    const billing = createBilling();
+    const service = new ReviewService(repository, billing);
+
+    await service.createStorefrontReview(
+      "shop-1",
+      {
+        shopifyProductId: "1",
+        rating: 5,
+        body: "Great product",
+        authorName: "Ada",
+        authorEmail: "ada@example.com",
+      },
+      { shopifyCustomerId: "998877" },
+    );
+
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shopifyCustomerId: "998877",
+        authorEmail: "ada@example.com",
+        authorName: "Ada",
+        source: "STOREFRONT",
+        status: "PENDING",
+      }),
+    );
   });
 
   it("does not call billing when updating an already approved review", async () => {

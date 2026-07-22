@@ -81,10 +81,12 @@ function createReviewRepository(
     create: vi.fn().mockResolvedValue(review),
     findByIdForShop: vi.fn(),
     findByIdsForShop: vi.fn(),
+    findForCustomerPrivacy: vi.fn(),
     list: vi.fn(),
     countApprovedForShop: vi.fn(),
     countByStatusForShop: vi.fn(),
     updateForShop: vi.fn(),
+    redactCustomerPii: vi.fn(),
     deleteForShop: vi.fn(),
     ...overrides,
   };
@@ -96,6 +98,8 @@ function createBilling(
   return {
     assertCanApprovePublishedReview: vi.fn().mockResolvedValue(undefined),
     getPublishedReviewUsage: vi.fn(),
+    assertCanSendReviewRequest: vi.fn().mockResolvedValue(undefined),
+    getReviewRequestUsage: vi.fn(),
     ...overrides,
   };
 }

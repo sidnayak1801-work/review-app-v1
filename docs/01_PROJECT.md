@@ -107,6 +107,9 @@ install, review, and rating thresholds.
 Current requirements:
 https://shopify.dev/docs/apps/launch/built-for-shopify/requirements
 
+Remaining eligibility gaps for this app are tracked in
+`11_APP_STORE_AND_BFS.md`.
+
 ## MVP Success Metrics
 
 - At least 50 net installs from active shops on paid Shopify plans

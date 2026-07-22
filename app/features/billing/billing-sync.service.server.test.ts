@@ -25,6 +25,7 @@ function createShopRepository(
     create: vi.fn(),
     install: vi.fn(),
     markUninstalled: vi.fn(),
+    deleteByDomain: vi.fn(),
     updateBillingState: vi.fn().mockResolvedValue(baseShop),
     ...overrides,
   };
@@ -110,5 +111,26 @@ describe("ShopifyBillingSyncService", () => {
 
     expect(billing.check).not.toHaveBeenCalled();
     expect(result).toBe(freshShop);
+  });
+
+  it("reuses cached billing when Shopify sync fails", async () => {
+    const shops = createShopRepository();
+    const billing = {
+      check: vi.fn().mockRejectedValue(new Error("Billing API unavailable")),
+    };
+    const service = new ShopifyBillingSyncService(shops);
+    const staleShop: ShopRecord = {
+      ...baseShop,
+      billingSyncedAt: new Date("2020-01-01T00:00:00.000Z"),
+    };
+
+    const result = await service.resolvePlanForShop({
+      shop: staleShop,
+      billing,
+      forceSync: true,
+    });
+
+    expect(result).toBe(staleShop);
+    expect(shops.updateBillingState).not.toHaveBeenCalled();
   });
 });

@@ -99,11 +99,20 @@ export class ShopifyBillingSyncService implements BillingSyncService {
       return input.shop;
     }
 
-    return this.syncFromShopify({
-      shopId: input.shop.id,
-      billing: input.billing,
-      isTest: input.isTest,
-    });
+    try {
+      return await this.syncFromShopify({
+        shopId: input.shop.id,
+        billing: input.billing,
+        isTest: input.isTest,
+      });
+    } catch (error) {
+      logger.warn("Billing sync failed; using cached plan", {
+        shopId: input.shop.id,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      });
+      return input.shop;
+    }
   }
 }
 

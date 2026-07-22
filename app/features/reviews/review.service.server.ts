@@ -303,7 +303,15 @@ export class ReviewService {
   async createStorefrontReview(
     shopId: string,
     input: unknown,
+    options: { shopifyCustomerId: string },
   ): Promise<ReturnType<typeof toPublicReview>> {
+    const shopifyCustomerId = options.shopifyCustomerId.trim();
+    if (!shopifyCustomerId) {
+      throw new ValidationError("Sign in required", [
+        "A signed-in customer is required to submit a review.",
+      ]);
+    }
+
     const data = parseWithSchema(
       createStorefrontReviewSchema,
       input,
@@ -317,6 +325,7 @@ export class ReviewService {
     const review = await this.reviews.create({
       shopId,
       shopifyProductId: data.shopifyProductId,
+      shopifyCustomerId,
       rating: data.rating,
       title: data.title,
       body: data.body,
@@ -331,6 +340,7 @@ export class ReviewService {
     logger.info("Storefront review submitted", {
       shopId,
       reviewId: review.id,
+      shopifyCustomerId,
     });
 
     return toPublicReview(review);
