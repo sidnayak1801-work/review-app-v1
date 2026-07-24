@@ -5,5 +5,8 @@
   },
   "review_list": {
     "name": "Product reviews"
+  },
+  "qa_list": {
+    "name": "Product Q&A"
   }
 }

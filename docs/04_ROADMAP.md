@@ -255,12 +255,12 @@ stable in production.
 
 ### Other growth candidates
 
+- [x] Photo reviews (and video) — `ReviewMedia`, R2 uploads, widget media step
 - Merchant replies
-- Photo reviews
 - Review export
 - Basic SEO aggregate-rating markup
 - Store-level reviews
-- Additional widget layout and translation controls
+- Additional widget translation controls
 
 Not in this phase:
 
@@ -286,17 +286,24 @@ Definition of done:
 
 ## Phase 5 — Insights and Ecosystem
 
-Status: ⏳ Future
+Status: 🚧 In Progress (Phase 5.2 Q&A shipped; further ecosystem candidates open)
 
 Candidate scope:
 
-- Useful review trends and product insights
-- Questions and answers
+- [x] Useful review trends and product insights — `/app/products/:id` health
+  dashboard (Shopify metadata, stats, rating mix, volume/rating trends, AI
+  placeholders, product-scoped Publish/Hide/Feature/Reply/Delete). Entry only
+  via product name links; no Products nav.
+- [x] Merchant replies + featured flag on reviews (admin + storefront widget)
+- [x] Questions and answers — Phase 5.2: `Question` model, `/app/questions`
+  moderation (Approve/Hide/Answer/Delete), storefront Q&A block +
+  `/apps/reviews/qa` proxy, merchant email on new questions, shared
+  moderation utilities
 - Coupons and referral prompts
 - Klaviyo and Gorgias integrations (including SMS-oriented channels)
 - Public or partner API
 - Review syndication
-- Video reviews
+- ~~Video reviews~~ (shipped with photo reviews in Phase 4 growth)
 
 Avoid an analytics warehouse or integration platform until volume requires it.
 

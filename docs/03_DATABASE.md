@@ -64,6 +64,7 @@ Planned fields:
 - `id`
 - `shopId`
 - `shopifyProductId`
+- `productTitle` — optional title snapshot for merchant moderation UI
 - `shopifyCustomerId` — optional
 - `rating` — integer constrained to 1–5
 - `title` — optional
@@ -73,6 +74,8 @@ Planned fields:
 - `status` — `PENDING`, `APPROVED`, or `REJECTED`
 - `source` — `STOREFRONT`, `MERCHANT`, or `IMPORT`
 - `verifiedPurchase`
+- `featured` — merchant highlight flag (Phase 5.1)
+- `merchantReply` / `merchantReplyAt` — single merchant reply (Phase 5.1)
 - `publishedAt` — optional
 - `createdAt`
 - `updatedAt`
@@ -89,18 +92,55 @@ approved reviews.
 
 One row per shop for the MVP widget.
 
-Planned fields:
+Current fields:
 
 - `id`
 - `shopId` — unique
+- `widgetEnabled`
 - `accentColor`
+- `primaryButtonColor`
+- `starColor`
+- `borderRadius` — 0–20 px
+- `cardShadow`
+- `layout` — `STACKED`, `COMPACT`, or `GRID`
+- `showCustomerName`
+- `showReviewDate`
+- `showProductImages`
+- `showCustomerPhotos`
+- `autoPublishReviews`
+- `darkMode`
 - `showReviewForm`
-- `reviewsPerPage`
+- `reviewsPerPage` — 5, 10, 20, or 50
 - `createdAt`
 - `updatedAt`
 
 Prefer explicit columns for stable MVP settings. Introduce a versioned JSON
 configuration only if later widget types need substantially different shapes.
+
+### ReviewMedia
+
+Photo and video attachments for reviews (optional `reviewId` until attached).
+
+Current fields:
+
+- `id`
+- `shopId`
+- `reviewId` — nullable until the review is created
+- `kind` — `IMAGE` or `VIDEO`
+- `storageKey`
+- `url` — public CDN/object URL
+- `mimeType`
+- `sizeBytes`
+- `width` / `height` — optional
+- `position`
+- `createdAt`
+- `updatedAt`
+
+Indexes: `(shopId, reviewId)`, `(reviewId, position)`, `(shopId, createdAt)`.
+
+Limits (enforced in service): up to 5 images and 1 video per review; images
+and videos ≤10 MB each. Production uses S3-compatible storage (Cloudflare R2);
+local development can use disk under `storage/media` served at `/api/media/*`.
 
 ## Phase 2 Tables
 
@@ -170,6 +210,38 @@ Required index:
 Imported reviews are written to Review with `source = IMPORT`. Process rows in
 bounded batches rather than loading the entire file into memory.
 
+## Phase 5.2 Tables
+
+### Question
+
+Product Q&A records owned by the app (not Shopify).
+
+Fields:
+
+- `id`
+- `shopId`
+- `shopifyProductId` — Shopify product GID (normalized)
+- `productTitle` — optional snapshot for merchant UI
+- `customerName`
+- `email` — never exposed on the storefront
+- `question`
+- `answer` — optional merchant reply
+- `status` — `PENDING`, `PUBLISHED`, `HIDDEN`, or `ANSWERED`
+- `answeredAt` — set when a merchant answer is saved
+- `publishedAt` — set on first transition to `PUBLISHED` or `ANSWERED`
+- `createdAt`
+- `updatedAt`
+
+Indexes:
+
+- `(shopId, status, createdAt)`
+- `(shopId, shopifyProductId, status, createdAt)`
+- `(shopId, email)` — privacy redact / data request
+
+Storefront lists only `PUBLISHED` and `ANSWERED`. Customer submit creates
+`PENDING`. Approve → `PUBLISHED`. Answer sets `answer` and usually →
+`ANSWERED` (stays `HIDDEN` if already hidden). Hide → `HIDDEN`.
+
 ## Phase 4 Notes — Review-request settings
 
 `ReviewRequestSettings` (1:1 with Shop):
@@ -190,8 +262,6 @@ count distinct orders with `sentAt` in the UTC month plus reminder rows with
 
 ## Tables Deferred Until a Feature Needs Them
 
-- `ReviewMedia`
-- `ReviewReply`
 - `StoreReview`
 - `EmailTemplate` or `EmailCampaign`
 - Subscription-history and generic usage-metering tables
@@ -216,13 +286,13 @@ patterns and retention rules before adding its migration.
 
 - Uninstall (`app/uninstalled`): mark shop `UNINSTALLED`, delete sessions, retain
   merchant review data until `shop/redact`.
-- Customer data request (`customers/data_request`): locate reviews and review
-  requests by email / customer id; operator exports within 30 days. See
-  `10_OPERATIONS.md`.
-- Customer redaction (`customers/redact`): anonymize review author fields; redact
-  and cancel matching review requests.
+- Customer data request (`customers/data_request`): locate reviews, questions,
+  and review requests by email / customer id; operator exports within 30 days.
+  See `10_OPERATIONS.md`.
+- Customer redaction (`customers/redact`): anonymize review author fields and
+  question asker fields; redact and cancel matching review requests.
 - Shop redaction (`shop/redact`, ~48h after uninstall): delete the Shop row and
   cascade owned application data.
-- Store only customer data required for review and email-request workflows.
+- Store only customer data required for review, Q&A, and email-request workflows.
 - Do not log review text, email addresses, access tokens, or import contents.
 - Backup, restore, and export procedures: `10_OPERATIONS.md`.

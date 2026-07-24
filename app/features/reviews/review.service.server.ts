@@ -17,8 +17,15 @@ import {
   createStorefrontReviewSchema,
   listReviewsQuerySchema,
   listStorefrontReviewsQuerySchema,
+  setFeaturedReviewSchema,
+  setMerchantReplySchema,
   updateReviewSchema,
 } from "./review.schema";
+import {
+  reviewMediaService,
+  toPublicMedia,
+  type ReviewMediaService,
+} from "./review-media.service.server";
 
 export interface BulkUpdateReviewStatusResult {
   updatedCount: number;
@@ -26,7 +33,10 @@ export interface BulkUpdateReviewStatusResult {
   failures: Array<{ reviewId: string; reason: string }>;
 }
 
-function toPublicReview(review: ReviewRecord) {
+function toPublicReview(
+  review: ReviewRecord,
+  media: ReturnType<typeof toPublicMedia>[] = [],
+) {
   return {
     id: review.id,
     shopifyProductId: review.shopifyProductId,
@@ -37,8 +47,12 @@ function toPublicReview(review: ReviewRecord) {
     status: review.status,
     source: review.source,
     verifiedPurchase: review.verifiedPurchase,
+    featured: review.featured,
+    merchantReply: review.merchantReply,
+    merchantReplyAt: review.merchantReplyAt?.toISOString() ?? null,
     publishedAt: review.publishedAt?.toISOString() ?? null,
     createdAt: review.createdAt.toISOString(),
+    media,
   };
 }
 
@@ -46,6 +60,7 @@ export class ReviewService {
   constructor(
     private readonly reviews: ReviewRepository,
     private readonly billing: BillingService,
+    private readonly media: ReviewMediaService = reviewMediaService,
   ) {}
 
   async listForShop(
@@ -79,6 +94,12 @@ export class ReviewService {
 
   async getStatusCountsForShop(shopId: string): Promise<ReviewStatusCounts> {
     return this.reviews.countByStatusForShop(shopId);
+  }
+
+  async getAverageApprovedRatingForShop(
+    shopId: string,
+  ): Promise<number | null> {
+    return this.reviews.averageApprovedRatingForShop(shopId);
   }
 
   async createMerchantReview(
@@ -273,9 +294,69 @@ export class ReviewService {
     logger.info("Review deleted", { shopId, reviewId });
   }
 
+  async setFeaturedForShop(
+    shopId: string,
+    input: unknown,
+  ): Promise<ReviewRecord> {
+    const data = parseWithSchema(
+      setFeaturedReviewSchema,
+      input,
+      "Invalid featured update",
+    );
+
+    await this.getForShop(shopId, data.reviewId);
+
+    const updated = await this.reviews.updateForShop(shopId, data.reviewId, {
+      featured: data.featured,
+    });
+
+    if (!updated) {
+      throw new NotFoundError("Review not found");
+    }
+
+    logger.info("Review featured flag updated", {
+      shopId,
+      reviewId: data.reviewId,
+      featured: data.featured,
+    });
+
+    return updated;
+  }
+
+  async setMerchantReplyForShop(
+    shopId: string,
+    input: unknown,
+  ): Promise<ReviewRecord> {
+    const data = parseWithSchema(
+      setMerchantReplySchema,
+      input,
+      "Invalid merchant reply",
+    );
+
+    await this.getForShop(shopId, data.reviewId);
+
+    const updated = await this.reviews.updateForShop(shopId, data.reviewId, {
+      merchantReply: data.merchantReply,
+      merchantReplyAt: data.merchantReply ? new Date() : null,
+    });
+
+    if (!updated) {
+      throw new NotFoundError("Review not found");
+    }
+
+    logger.info("Review merchant reply updated", {
+      shopId,
+      reviewId: data.reviewId,
+      hasReply: Boolean(data.merchantReply),
+    });
+
+    return updated;
+  }
+
   async listApprovedForStorefront(
     shopId: string,
     query: unknown,
+    options: { includeMedia?: boolean } = {},
   ): Promise<{
     items: ReturnType<typeof toPublicReview>[];
     pageInfo: ListReviewsResult["pageInfo"];
@@ -294,23 +375,36 @@ export class ReviewService {
       limit: filters.limit,
     });
 
+    const grouped =
+      options.includeMedia === false
+        ? new Map<string, ReturnType<typeof toPublicMedia>[]>()
+        : await this.media.listGroupedForReviews(
+            shopId,
+            result.items.map((item) => item.id),
+          );
+
     return {
-      items: result.items.map(toPublicReview),
+      items: result.items
+        .map((review) =>
+          toPublicReview(review, grouped.get(review.id) ?? []),
+        )
+        // Featured first within the page (storefront highlight).
+        .sort((left, right) => Number(right.featured) - Number(left.featured)),
       pageInfo: result.pageInfo,
     };
   }
 
   async createStorefrontReview(
     shopId: string,
+    shopPlan: ShopPlan,
     input: unknown,
-    options: { shopifyCustomerId: string },
+    options: {
+      shopifyCustomerId?: string | null;
+      autoPublish?: boolean;
+    } = {},
   ): Promise<ReturnType<typeof toPublicReview>> {
-    const shopifyCustomerId = options.shopifyCustomerId.trim();
-    if (!shopifyCustomerId) {
-      throw new ValidationError("Sign in required", [
-        "A signed-in customer is required to submit a review.",
-      ]);
-    }
+    // TEMP: guest submissions allowed for publication testing.
+    const shopifyCustomerId = options.shopifyCustomerId?.trim() || undefined;
 
     const data = parseWithSchema(
       createStorefrontReviewSchema,
@@ -322,28 +416,69 @@ export class ReviewService {
       throw new ValidationError("Invalid review", ["Spam check failed"]);
     }
 
+    const mediaRecords = await this.media.resolveForAttach(
+      shopId,
+      data.mediaIds,
+    );
+
+    let status: "PENDING" | "APPROVED" = "PENDING";
+    let publishedAt: Date | null = null;
+
+    if (options.autoPublish) {
+      try {
+        await this.billing.assertCanApprovePublishedReview({
+          shopId,
+          shopPlan,
+        });
+        status = "APPROVED";
+        publishedAt = new Date();
+      } catch (error) {
+        if (!(error instanceof DomainError)) {
+          throw error;
+        }
+        logger.info("Auto-publish skipped due to plan limit", {
+          shopId,
+          code: error.code,
+        });
+      }
+    }
+
     const review = await this.reviews.create({
       shopId,
       shopifyProductId: data.shopifyProductId,
       shopifyCustomerId,
       rating: data.rating,
       title: data.title,
+      productTitle: data.productTitle,
       body: data.body,
       authorName: data.authorName,
       authorEmail: data.authorEmail,
-      status: "PENDING",
+      status,
       source: "STOREFRONT",
       verifiedPurchase: false,
-      publishedAt: null,
+      publishedAt,
     });
+
+    if (mediaRecords.length > 0) {
+      await this.media.attachToReview(
+        shopId,
+        review.id,
+        mediaRecords.map((item) => item.id),
+      );
+    }
 
     logger.info("Storefront review submitted", {
       shopId,
       reviewId: review.id,
-      shopifyCustomerId,
+      status: review.status,
+      shopifyCustomerId: shopifyCustomerId ?? null,
+      mediaCount: mediaRecords.length,
     });
 
-    return toPublicReview(review);
+    return toPublicReview(
+      review,
+      mediaRecords.map((item) => toPublicMedia(item)),
+    );
   }
 }
 

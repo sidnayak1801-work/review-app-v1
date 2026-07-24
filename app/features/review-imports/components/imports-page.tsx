@@ -10,6 +10,7 @@ import {
   downloadAuthenticatedFile,
   downloadTextFile,
 } from "../../../lib/download-file";
+import { formatRelativeTime, statusBadgeTone } from "../../../lib/ui-format";
 
 type ReviewImportStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
@@ -31,20 +32,6 @@ interface ImportsPageProps {
     issues?: readonly string[];
   };
   isSubmitting: boolean;
-}
-
-function statusTone(
-  status: ReviewImportStatus,
-): "success" | "warning" | "critical" | "info" {
-  switch (status) {
-    case "COMPLETED":
-      return "success";
-    case "PROCESSING":
-    case "PENDING":
-      return "info";
-    case "FAILED":
-      return "critical";
-  }
 }
 
 function statusLabel(status: ReviewImportStatus): string {
@@ -100,6 +87,11 @@ export function ImportsPage({
 
   return (
     <s-page heading="Import reviews">
+      <s-stack direction="block" gap="large">
+        <s-text color="subdued">
+          Upload a CSV to bring existing reviews into your moderation queue.
+        </s-text>
+
       {actionData ? (
         <s-banner
           heading={actionData.ok ? "Import finished" : "Import failed"}
@@ -122,115 +114,103 @@ export function ImportsPage({
         </s-banner>
       ) : null}
 
-      <s-section heading="CSV format guide">
+      <s-section heading="Upload CSV">
+        <s-box padding="base" border="base" borderRadius="large" background="subdued">
+          <Form method="post" encType="multipart/form-data">
+            <input type="hidden" name="intent" value="upload" />
+            <s-stack direction="block" gap="base">
+              <s-text color="subdued">
+                Limits: 1 MB · 500 rows · defaults to pending moderation
+              </s-text>
+              <input
+                type="file"
+                name="file"
+                accept=".csv,text/csv"
+                required
+              />
+              <s-stack direction="inline" gap="small">
+                <s-button
+                  type="submit"
+                  variant="primary"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Importing…" : "Upload and import"}
+                </s-button>
+                <s-button variant="secondary" onClick={handleSampleDownload}>
+                  Download sample CSV
+                </s-button>
+              </s-stack>
+            </s-stack>
+          </Form>
+        </s-box>
+      </s-section>
+
+      <s-section heading="CSV format">
         <s-stack direction="block" gap="base">
-          <s-paragraph>
-            Create a CSV file with a header row, then one review per row. You can
-            build the file in Excel or Google Sheets and export as CSV.
-          </s-paragraph>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
+          <s-box padding="base" border="base" borderRadius="large">
             <s-stack direction="block" gap="small">
-              <s-text type="strong">Required columns</s-text>
+              <s-text type="strong">Required</s-text>
               <s-unordered-list>
                 <s-list-item>
                   <s-text type="strong">product_id</s-text> — Shopify product ID
-                  (numeric) or GID
+                  or GID
                 </s-list-item>
                 <s-list-item>
-                  <s-text type="strong">rating</s-text> — integer from 1 to 5
+                  <s-text type="strong">rating</s-text> — 1 to 5
                 </s-list-item>
                 <s-list-item>
-                  <s-text type="strong">body</s-text> — review text (max 5,000
-                  characters)
+                  <s-text type="strong">body</s-text> — review text
                 </s-list-item>
                 <s-list-item>
-                  <s-text type="strong">author_name</s-text> — reviewer display
-                  name (max 100 characters)
+                  <s-text type="strong">author_name</s-text> — display name
                 </s-list-item>
               </s-unordered-list>
-              <s-text type="strong">Optional columns</s-text>
+              <s-text type="strong">Optional</s-text>
               <s-unordered-list>
-                <s-list-item>
-                  <s-text type="strong">title</s-text> — review title (max 200
-                  characters)
-                </s-list-item>
-                <s-list-item>
-                  <s-text type="strong">author_email</s-text> — valid email
-                </s-list-item>
-                <s-list-item>
-                  <s-text type="strong">status</s-text> — PENDING, APPROVED, or
-                  REJECTED (default PENDING)
-                </s-list-item>
-                <s-list-item>
-                  <s-text type="strong">verified_purchase</s-text> — true or
-                  false (default false)
-                </s-list-item>
+                <s-list-item>title, author_email, status, verified_purchase</s-list-item>
               </s-unordered-list>
             </s-stack>
           </s-box>
-          <s-paragraph>
-            Imported reviews default to pending and appear in the Reviews
-            moderation queue. Only rows with status APPROVED publish immediately
-            and count toward your plan allowance.
-          </s-paragraph>
-          <s-paragraph>
-            Limits: 1 MB file size, 500 rows maximum.
-          </s-paragraph>
-          <s-button variant="secondary" onClick={handleSampleDownload}>
-            Download sample CSV
-          </s-button>
         </s-stack>
-      </s-section>
-
-      <s-section heading="Upload CSV">
-        <Form method="post" encType="multipart/form-data">
-          <input type="hidden" name="intent" value="upload" />
-          <s-stack direction="block" gap="small">
-            <input
-              type="file"
-              name="file"
-              accept=".csv,text/csv"
-              required
-            />
-            <s-button
-              type="submit"
-              variant="primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Importing…" : "Upload and import"}
-            </s-button>
-          </s-stack>
-        </Form>
       </s-section>
 
       <s-section heading="Recent imports">
         {imports.length === 0 ? (
-          <s-paragraph>No imports yet. Upload a CSV to get started.</s-paragraph>
+          <s-box padding="base" border="base" borderRadius="large" background="subdued">
+            <s-text color="subdued">No imports yet. Upload a CSV to get started.</s-text>
+          </s-box>
         ) : (
           <s-stack direction="block" gap="base">
             {imports.map((job) => (
               <s-box
                 key={job.id}
                 padding="base"
-                borderWidth="base"
-                borderRadius="base"
+                border="base"
+                borderRadius="large"
               >
                 <s-stack direction="block" gap="small">
-                  <s-stack direction="inline" gap="small">
-                    <s-text type="strong">
-                      {new Date(job.createdAt).toLocaleString()}
+                  <s-stack
+                    direction="inline"
+                    gap="small"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <s-stack direction="inline" gap="small" alignItems="center">
+                      <s-badge tone={statusBadgeTone(job.status)}>
+                        {statusLabel(job.status)}
+                      </s-badge>
+                      <s-text type="strong">
+                        {job.importedRows} imported · {job.failedRows} failed
+                      </s-text>
+                    </s-stack>
+                    <s-text color="subdued">
+                      {formatRelativeTime(job.createdAt)}
                     </s-text>
-                    <s-badge tone={statusTone(job.status)}>
-                      {statusLabel(job.status)}
-                    </s-badge>
                   </s-stack>
-                  <s-paragraph>
-                    {job.importedRows} imported, {job.failedRows} failed of{" "}
-                    {job.totalRows} rows
-                  </s-paragraph>
+                  <s-text color="subdued">{job.totalRows} rows total</s-text>
                   {job.errorFileKey ? (
                     <s-button
-                      variant="tertiary"
+                      variant="secondary"
                       disabled={downloadingId === job.id}
                       onClick={() => {
                         void handleErrorReportDownload(job.id);
@@ -247,6 +227,7 @@ export function ImportsPage({
           </s-stack>
         )}
       </s-section>
+      </s-stack>
     </s-page>
   );
 }

@@ -1,0 +1,219 @@
+.vouch-qa {
+  --vouch-accent: #0f766e;
+  --vouch-radius: 10px;
+  color: inherit;
+  font: inherit;
+}
+
+.vouch-qa__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.vouch-qa__heading {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.vouch-qa__ask-btn,
+.vouch-qa__load-more,
+.vouch-qa-modal__submit,
+.vouch-qa-modal__cancel {
+  appearance: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: calc(var(--vouch-radius) / 1.5);
+}
+
+.vouch-qa__ask-btn,
+.vouch-qa-modal__submit {
+  border: 0;
+  padding: 0.65rem 1.1rem;
+  background: var(--vouch-accent);
+  color: #fff;
+}
+
+.vouch-qa__ask-btn:hover,
+.vouch-qa-modal__submit:hover {
+  filter: brightness(0.95);
+}
+
+.vouch-qa__list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.vouch-qa__empty {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.vouch-qa__card {
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--vouch-radius);
+  background: #fff;
+}
+
+.vouch-qa__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  margin-bottom: 0.45rem;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.vouch-qa__author {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.vouch-qa__question {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.vouch-qa__answer {
+  margin-top: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid var(--vouch-accent);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: color-mix(in srgb, var(--vouch-accent) 8%, #fff);
+}
+
+.vouch-qa__answer-label {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--vouch-accent);
+}
+
+.vouch-qa__answer-body {
+  margin: 0;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.vouch-qa__load-more {
+  justify-self: center;
+  margin: 0.75rem auto 0;
+  display: block;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  color: inherit;
+}
+
+.vouch-qa__load-more:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.vouch-qa__honeypot {
+  position: absolute;
+  left: -9999px;
+  height: 0;
+  width: 0;
+  opacity: 0;
+}
+
+.vouch-qa-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.vouch-qa-modal[hidden] {
+  display: none !important;
+}
+
+.vouch-qa-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.vouch-qa-modal__panel {
+  position: relative;
+  width: min(480px, 100%);
+  padding: 1.25rem;
+  border-radius: var(--vouch-radius);
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.vouch-qa-modal__close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.75rem;
+  border: 0;
+  background: transparent;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vouch-qa-modal__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.vouch-qa-modal__product {
+  margin: 0 0 1rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.vouch-qa-modal__label {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.vouch-qa-modal__label input,
+.vouch-qa-modal__label textarea {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 0.45rem;
+}
+
+.vouch-qa-modal__error {
+  margin: 0 0 0.75rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.vouch-qa-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.vouch-qa-modal__cancel {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  padding: 0.55rem 0.9rem;
+  background: #fff;
+}
+
+.vouch-qa-modal__note {
+  margin: 0.75rem 0 0;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.82rem;
+}

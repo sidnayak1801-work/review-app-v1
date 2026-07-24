@@ -1,6 +1,6 @@
 .vouch-star-rating,
 .vouch-reviews {
-  --vouch-accent: #111111;
+  --vouch-accent: #0f766e;
   --vouch-star-fill: #22c55e;
   --vouch-star-empty: #9ca3af;
   color: inherit;
@@ -9,8 +9,8 @@
 
 .vouch-star-rating__stars,
 .vouch-reviews__stars {
-  letter-spacing: 0.08em;
-  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  font-size: 1.05rem;
 }
 
 .vouch-star {
@@ -25,122 +25,198 @@
   color: var(--vouch-star-empty);
 }
 
-.vouch-reviews__rating-value {
-  margin-left: 0.35em;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: inherit;
-}
-
 .vouch-reviews {
   display: grid;
-  gap: 1rem;
-  margin: 1.5rem 0;
+  gap: 1.25rem;
+  margin: 1.75rem 0;
+}
+
+.vouch-reviews__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
 }
 
 .vouch-reviews__heading {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
-.vouch-reviews__item {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 0.75rem 0;
+.vouch-reviews__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.vouch-star-rating__placeholder {
+  font-size: 0.95rem;
+}
+
+.vouch-reviews__rating-value,
+.vouch-reviews__summary-avg {
+  margin-left: 0.25em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.vouch-reviews__summary-count {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.vouch-reviews__write-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0.65rem 1.1rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: var(--vouch-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vouch-reviews__write-btn:hover {
+  filter: brightness(1.05);
+}
+
+.vouch-reviews__list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.vouch-reviews__empty {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.vouch-reviews__card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.vouch-reviews__card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.vouch-reviews__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--vouch-accent) 18%, #fff);
+  color: var(--vouch-accent);
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
 }
 
 .vouch-reviews__meta {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
   align-items: center;
-  font-size: 0.9rem;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
 }
 
-.vouch-reviews__form-wrap {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding-top: 1rem;
-}
-
-.vouch-reviews__form-wrap h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1.05rem;
-}
-
-.vouch-reviews__form-wrap label {
-  display: grid;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.vouch-reviews__form-wrap input,
-.vouch-reviews__form-wrap textarea,
-.vouch-reviews__form-wrap button {
-  font: inherit;
-}
-
-.vouch-reviews__form-wrap input,
-.vouch-reviews__form-wrap textarea {
-  width: 100%;
-  max-width: 28rem;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  border-radius: 0.35rem;
-}
-
-.vouch-reviews__rating {
-  border: 0;
-  margin: 0 0 0.85rem;
-  padding: 0;
-}
-
-.vouch-reviews__rating legend {
-  margin-bottom: 0.35rem;
+.vouch-reviews__author {
   font-weight: 600;
 }
 
-.vouch-reviews__star-picker-row {
+.vouch-reviews__badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--vouch-accent) 14%, #fff);
+  color: var(--vouch-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
-.vouch-reviews__star-picker {
-  display: inline-flex;
-  gap: 0.15rem;
+.vouch-reviews__badge--featured {
+  background: color-mix(in srgb, #b98900 16%, #fff);
+  color: #8a6700;
 }
 
-.vouch-reviews__star-btn {
-  appearance: none;
+.vouch-reviews__date {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 0.85rem;
+}
+
+.vouch-reviews__reply {
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--vouch-radius, 0.5rem);
+  border-left: 3px solid var(--vouch-accent);
+  background: color-mix(in srgb, var(--vouch-accent) 8%, #fff);
+}
+
+.vouch-reviews__reply-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--vouch-accent);
+}
+
+.vouch-reviews__reply-body {
   margin: 0;
-  padding: 0.1rem 0.15rem;
-  border: 0;
-  background: transparent;
-  color: transparent;
-  -webkit-text-stroke: 1.5px var(--vouch-star-empty);
-  paint-order: stroke fill;
-  font-size: 1.75rem;
-  line-height: 1;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.82);
+  white-space: pre-wrap;
+}
+
+.vouch-reviews__card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.vouch-reviews__card-body {
+  margin: 0;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.vouch-reviews__load-more {
+  appearance: none;
+  justify-self: center;
+  margin: 0.25rem 0 0;
+  padding: 0.6rem 1.15rem;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 0.45rem;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.vouch-reviews__star-btn.is-active,
-.vouch-reviews__star-btn.is-hover {
-  color: var(--vouch-star-fill);
-  -webkit-text-stroke: 0;
+.vouch-reviews__load-more:hover {
+  border-color: rgba(0, 0, 0, 0.3);
 }
 
-.vouch-reviews__star-btn:focus-visible {
-  outline: 2px solid var(--vouch-star-fill);
-  outline-offset: 2px;
-  border-radius: 0.2rem;
-}
-
-.vouch-reviews__submit {
-  padding: 0.55rem 1rem;
-  border: 0;
-  border-radius: 0.35rem;
-  background: var(--vouch-accent);
-  color: #fff;
-  cursor: pointer;
+.vouch-reviews__load-more:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .vouch-reviews__honeypot {
@@ -151,127 +227,489 @@
   opacity: 0;
 }
 
-.vouch-reviews__message {
-  margin-top: 0.75rem;
-}
-
-.vouch-reviews__message.is-success {
-  color: #0b6b3a;
-}
-
-.vouch-reviews__message.is-error {
-  color: #b42318;
-}
-
-.vouch-reviews__guest {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding-top: 1rem;
-}
-
-.vouch-reviews__write-btn {
-  appearance: none;
-  padding: 0.55rem 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  border-radius: 0.35rem;
-  background: #fff;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.vouch-reviews__write-btn:hover {
-  border-color: rgba(0, 0, 0, 0.35);
-}
-
-.vouch-reviews__author {
-  margin: 0 0 0.75rem;
-  font-size: 0.95rem;
-}
-
-.vouch-auth-wall {
+.vouch-modal {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
+  padding: 1rem;
 }
 
-.vouch-auth-wall[hidden] {
+.vouch-modal[hidden] {
   display: none;
 }
 
-.vouch-auth-wall__backdrop {
+.vouch-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(15, 23, 42, 0.45);
 }
 
-.vouch-auth-wall__panel {
+.vouch-modal__panel {
   position: relative;
   z-index: 1;
-  width: min(100%, 22rem);
-  padding: 1.75rem 1.5rem 1.5rem;
+  width: min(100%, 28rem);
+  max-height: min(90vh, 40rem);
+  overflow: auto;
+  padding: 1.5rem 1.35rem 1.25rem;
   border-radius: 1rem;
-  background: #3a3a3a;
-  color: #f5f5f5;
-  text-align: center;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
 }
 
-.vouch-auth-wall__close {
+.vouch-modal__close {
   position: absolute;
-  top: 0.65rem;
-  right: 0.75rem;
+  top: 0.55rem;
+  right: 0.7rem;
   appearance: none;
   margin: 0;
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.45rem;
   border: 0;
   background: transparent;
-  color: #f5f5f5;
+  color: rgba(0, 0, 0, 0.55);
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
 }
 
-.vouch-auth-wall__title {
-  margin: 0 0 0.5rem;
-  font-size: 1.15rem;
+.vouch-modal__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.3;
+  text-align: center;
 }
 
-.vouch-auth-wall__body {
-  margin: 0 0 1.25rem;
-  font-size: 0.9rem;
+.vouch-modal__sub {
+  margin: 0 0 1rem;
+  color: rgba(0, 0, 0, 0.58);
+  text-align: center;
   line-height: 1.45;
-  color: rgba(245, 245, 245, 0.78);
 }
 
-.vouch-auth-wall__signup {
-  display: block;
+.vouch-modal__product {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.vouch-modal__steps {
+  position: relative;
+}
+
+.vouch-modal__step {
+  animation: vouch-step-in 0.28s ease;
+}
+
+.vouch-modal__step[hidden] {
+  display: none;
+}
+
+@keyframes vouch-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.vouch-modal__star-picker {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.vouch-modal__star-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0.15rem 0.2rem;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--vouch-star-empty);
+  paint-order: stroke fill;
+  font-size: 2.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vouch-modal__star-btn.is-active,
+.vouch-modal__star-btn.is-hover {
+  color: var(--vouch-star-fill);
+  -webkit-text-stroke: 0;
+}
+
+.vouch-modal__star-labels {
+  display: flex;
+  justify-content: space-between;
+  max-width: 14rem;
+  margin: 0.35rem auto 0;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.85rem;
+}
+
+.vouch-modal__step-stars {
+  text-align: center;
+  margin-bottom: 0.85rem;
+  font-size: 1.35rem;
+}
+
+.vouch-modal__label {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.vouch-modal__label input,
+.vouch-modal__label textarea {
   width: 100%;
-  padding: 0.7rem 1rem;
-  border-radius: 0.5rem;
-  background: #0095f6;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 0.45rem;
+  font: inherit;
+  font-weight: 400;
+}
+
+.vouch-modal__hint {
+  margin: -0.35rem 0 0.5rem;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.82rem;
+}
+
+.vouch-modal__error {
+  margin: 0.5rem 0 0;
+  color: #b42318;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.vouch-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.15rem;
+}
+
+.vouch-modal__back {
+  appearance: none;
+  margin: 0;
+  padding: 0.45rem 0.2rem;
+  border: 0;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.65);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vouch-modal__next,
+.vouch-modal__done {
+  appearance: none;
+  margin-left: auto;
+  padding: 0.65rem 1.25rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: var(--vouch-accent);
   color: #fff;
+  font: inherit;
   font-weight: 600;
-  text-decoration: none;
+  cursor: pointer;
 }
 
-.vouch-auth-wall__signup:hover {
-  background: #1877f2;
+.vouch-modal__next:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
-.vouch-auth-wall__login {
-  display: inline-block;
-  margin-top: 0.85rem;
-  color: #0095f6;
+.vouch-reviews {
+  --vouch-btn: var(--vouch-accent);
+  --vouch-radius: 8px;
+}
+
+.vouch-reviews--dark {
+  color: #f5f5f5;
+}
+
+.vouch-reviews--dark .vouch-reviews__card,
+.vouch-reviews--dark .vouch-modal__panel {
+  background: #2a2a2a;
+  color: #f5f5f5;
+}
+
+.vouch-reviews--dark .vouch-reviews__reply {
+  background: color-mix(in srgb, var(--vouch-accent) 22%, #1f1f1f);
+}
+
+.vouch-reviews--dark .vouch-reviews__reply-body,
+.vouch-reviews--dark .vouch-reviews__card-body,
+.vouch-reviews--dark .vouch-reviews__date {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.vouch-reviews--dark .vouch-reviews__badge--featured {
+  background: color-mix(in srgb, #e3b448 28%, #1f1f1f);
+  color: #f0d078;
+}
+
+.vouch-reviews--grid .vouch-reviews__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.vouch-reviews--compact .vouch-reviews__card {
+  padding: 0.65rem 0.75rem;
+}
+
+.vouch-reviews--shadow .vouch-reviews__card {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.vouch-reviews__card {
+  border-radius: var(--vouch-radius);
+}
+
+.vouch-reviews__write-btn,
+.vouch-modal__next,
+.vouch-modal__done {
+  background: var(--vouch-btn, var(--vouch-accent));
+  border-radius: calc(var(--vouch-radius) / 2);
+}
+
+.vouch-star--filled {
+  color: var(--vouch-star-fill, #22c55e);
+}
+
+.vouch-reviews__media,
+.vouch-modal__media-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.vouch-reviews__media-item,
+.vouch-modal__media-thumb,
+.vouch-reviews__product-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 0.4rem;
+  overflow: hidden;
+  display: block;
+  background: #eee;
+}
+
+button.vouch-reviews__media-item {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.vouch-reviews__media-item img,
+.vouch-reviews__media-item video,
+.vouch-modal__media-thumb img,
+.vouch-modal__media-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.vouch-modal__media {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.vouch-modal__media-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border: 1px dashed rgba(0, 0, 0, 0.25);
+  border-radius: 0.5rem;
+  cursor: pointer;
   font-weight: 600;
-  text-decoration: none;
 }
 
-.vouch-auth-wall__login:hover {
-  text-decoration: underline;
+.vouch-modal__media-thumb {
+  position: relative;
+}
+
+.vouch-modal__media-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.vouch-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.vouch-lightbox[hidden] {
+  display: none;
+}
+
+.vouch-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.vouch-lightbox__panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(92vw, 960px);
+  max-height: 88vh;
+}
+
+.vouch-lightbox__stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 88vh;
+}
+
+.vouch-lightbox__media {
+  display: block;
+  max-width: min(90vw, 920px);
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.35rem;
+  background: #000;
+}
+
+.vouch-lightbox__close,
+.vouch-lightbox__nav {
+  appearance: none;
+  position: absolute;
+  z-index: 2;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+
+.vouch-lightbox__close {
+  top: -0.25rem;
+  right: -0.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.vouch-lightbox__nav {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.vouch-lightbox__nav--prev {
+  left: -0.35rem;
+}
+
+.vouch-lightbox__nav--next {
+  right: -0.35rem;
+}
+
+.vouch-lightbox__nav[hidden],
+.vouch-lightbox__counter[hidden] {
+  display: none;
+}
+
+.vouch-lightbox__counter {
+  position: absolute;
+  left: 50%;
+  bottom: -1.75rem;
+  margin: 0;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .vouch-reviews__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vouch-reviews__write-btn {
+    width: 100%;
+  }
+
+  .vouch-modal__panel {
+    padding: 1.25rem 1rem 1rem;
+  }
+
+  .vouch-lightbox {
+    padding: 0.75rem;
+  }
+
+  .vouch-lightbox__nav {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .vouch-lightbox__nav--prev {
+    left: 0.15rem;
+  }
+
+  .vouch-lightbox__nav--next {
+    right: 0.15rem;
+  }
+
+  .vouch-lightbox__close {
+    top: 0.15rem;
+    right: 0.15rem;
+  }
+
+  .vouch-lightbox__counter {
+    bottom: 0.35rem;
+  }
 }

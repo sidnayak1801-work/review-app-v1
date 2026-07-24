@@ -5,6 +5,66 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Moderation actions (Publish/Hide/Feature/Reply/Delete and Q&A Approve/Hide/
+  Answer/Delete) open Polaris confirmation or input modals with loading states,
+  inline errors, App Bridge success toasts, and local list updates without a
+  full page reload. Merchant reply max length is 1000 characters.
+- Phase 5.2 product Q&A: `Question` model (`PENDING` / `PUBLISHED` / `HIDDEN` /
+  `ANSWERED`), merchant `/app/questions` moderation page, shared moderation
+  toolbar utilities, storefront Q&A theme block, `/apps/reviews/qa` proxy API
+  with honeypot + rate limits, and merchant email alerts on new questions.
+- Product insight charts show month labels on the x-axis and rating/count ticks
+  on the y-axis.
+- Storefront widget shows Featured badges and merchant replies; public review
+  payloads include `featured`, `merchantReply`, and `merchantReplyAt`.
+- Phase 5.1 product health dashboard on `/app/products/:id`: summary stats,
+  rating mix, volume and rating trend charts, sidebar timeline, AI insight
+  placeholders, and in-page Publish/Hide/Feature/Reply/Delete (shared with
+  Reviews). No Products nav.
+- Added `Review.featured`, `merchantReply`, and `merchantReplyAt` for merchant
+  feature/reply workflows.
+- Simplified product insights: removed Products nav/list; product name links
+  open a thin `/app/products/:id` page (metadata, key stats, moderation).
+- Fixed review media thumbs breaking after tunnel restarts by rewriting
+  `/api/media/...` URLs to the current app origin at read time; new local
+  uploads store path-only media URLs.
+- Merchant Reviews (and Home recent reviews) show the product name with a link
+  to the product insights page. New storefront submissions snapshot
+  `productTitle`; older reviews are enriched via Admin GraphQL `nodes`.
+- Fixed embedded admin scrolling on mobile viewports (`html`/`body` overflow)
+  and redesigned Home into a Judge.me-like workspace: setup guide with progress,
+  pending/welcome callouts, richer overview stats, and card-style quick actions.
+- Improved merchant Home mobile layout: responsive stats/quick-actions grids,
+  stacked widget settings + preview under ~720px, and safer wrapping for long
+  product IDs / activity rows.
+- Merchant Reviews page: click review photo/video thumbnails to preview them
+  in a Polaris modal gallery (prev/next) before Publish/Hide.
+- Made merchant admin navigation feel faster: removed the global “Updating…”
+  banner, kept Home content visible during transitions, skipped redundant
+  parent-layout re-auth, and used the App Bridge loading indicator instead.
+- Storefront review photos/videos open in an in-page lightbox with prev/next
+  navigation instead of navigating to the raw media URL.
+- Fixed storefront review submit failing with “Unable to submit review” when
+  the widget POSTed multipart FormData (body was read twice after the media
+  upload branch was added).
+- Polished merchant admin UI (Home, Reviews, Requests, Imports, Billing,
+  Widget settings) toward a Judge.me-like visual standard: denser cards,
+  status badges, green stars, relative timestamps, and calmer headers.
+- Upgraded Reviews moderation UX: All/Pending/Published/Rejected tabs with
+  counts, richer review cards, bulk Publish/Hide bar, and clearer filters.
+- Redesigned the merchant home dashboard into a workspace: stats cards, quick
+  actions, recent reviews, synthesized activity feed, and embedded widget
+  settings with live preview.
+- Expanded `WidgetSettings` (layout, colors, radius, shadow, visibility
+  toggles, auto-publish, dark mode, reviews per page 5/10/20/50) and applied
+  them on the storefront widget.
+- Photo/video review media (`ReviewMedia` + R2 uploads, with local disk
+  fallback for development): widget media step, storefront display, and admin
+  thumbnails (max 5 images + 1 video, 10 MB each).
+- Pointed hosted app URL at Render (`review-app-v1.onrender.com`): updated
+  `shopify.app.toml`, added `render.yaml`, and rewrote `12_DEPLOYMENT.md` for
+  Render + Neon (Fly kept as optional always-on later). Disabled
+  `automatically_update_urls_on_dev` so local tunnel does not break install.
 - Storefront widget reviews require a signed-in Shopify customer
   (`logged_in_customer_id`); guests see a sign-in/sign-up wall. Review-request
   email token submissions remain allowed without storefront login. Removed the

@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
+  QuestionRecord,
+  QuestionRepository,
+} from "../../repositories/question.repository.server";
+import type {
   ReviewRecord,
   ReviewRepository,
 } from "../../repositories/review.repository.server";
@@ -40,6 +44,7 @@ const reviewRecord: ReviewRecord = {
   id: "review-1",
   shopId: shopRecord.id,
   shopifyProductId: "gid://shopify/Product/1",
+  productTitle: null,
   shopifyCustomerId: "191167",
   rating: 5,
   title: "Great",
@@ -49,6 +54,9 @@ const reviewRecord: ReviewRecord = {
   status: "APPROVED",
   source: "STOREFRONT",
   verifiedPurchase: true,
+  featured: false,
+  merchantReply: null,
+  merchantReplyAt: null,
   publishedAt: new Date("2026-07-18T00:00:00.000Z"),
   createdAt: new Date("2026-07-18T00:00:00.000Z"),
   updatedAt: new Date("2026-07-18T00:00:00.000Z"),
@@ -69,6 +77,22 @@ const requestRecord: ReviewRequestRecord = {
   submissionTokenHash: "hash",
   createdAt: new Date("2026-07-18T00:00:00.000Z"),
   updatedAt: new Date("2026-07-19T00:00:00.000Z"),
+};
+
+const questionRecord: QuestionRecord = {
+  id: "q-1",
+  shopId: shopRecord.id,
+  shopifyProductId: "gid://shopify/Product/1",
+  productTitle: null,
+  customerName: "John",
+  email: "john@example.com",
+  question: "Is this waterproof?",
+  answer: null,
+  status: "PENDING",
+  answeredAt: null,
+  publishedAt: null,
+  createdAt: new Date("2026-07-18T00:00:00.000Z"),
+  updatedAt: new Date("2026-07-18T00:00:00.000Z"),
 };
 
 function createShops(
@@ -95,9 +119,15 @@ function createReviews(
     findByIdsForShop: vi.fn(),
     findForCustomerPrivacy: vi.fn().mockResolvedValue([reviewRecord]),
     list: vi.fn(),
+    listProductsForShop: vi.fn(),
+    getProductStatsForShop: vi.fn(),
+    getProductReviewTrendForShop: vi.fn(),
+    getProductRatingTrendForShop: vi.fn(),
     countApprovedForShop: vi.fn(),
     countByStatusForShop: vi.fn(),
+    averageApprovedRatingForShop: vi.fn(),
     updateForShop: vi.fn(),
+    setProductTitlesForShop: vi.fn(),
     redactCustomerPii: vi.fn().mockResolvedValue(1),
     deleteForShop: vi.fn(),
     ...overrides,
@@ -124,13 +154,30 @@ function createRequests(
   };
 }
 
+function createQuestions(
+  overrides: Partial<QuestionRepository> = {},
+): QuestionRepository {
+  return {
+    create: vi.fn(),
+    findByIdForShop: vi.fn(),
+    list: vi.fn(),
+    countByStatusForShop: vi.fn(),
+    updateForShop: vi.fn(),
+    deleteForShop: vi.fn(),
+    findForCustomerPrivacy: vi.fn().mockResolvedValue([questionRecord]),
+    redactCustomerPii: vi.fn().mockResolvedValue(1),
+    ...overrides,
+  };
+}
+
 describe("PrivacyService", () => {
   it("exports matching customer data for data_request", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const shops = createShops();
     const reviews = createReviews();
     const requests = createRequests();
-    const service = new PrivacyService(shops, reviews, requests);
+    const questions = createQuestions();
+    const service = new PrivacyService(shops, reviews, requests, questions);
 
     await service.handleCustomersDataRequest(shopRecord.shopDomain, {
       customer: { id: 191167, email: "John@example.com" },
@@ -146,6 +193,10 @@ describe("PrivacyService", () => {
       shopRecord.id,
       { email: "john@example.com" },
     );
+    expect(questions.findForCustomerPrivacy).toHaveBeenCalledWith(
+      shopRecord.id,
+      { email: "john@example.com" },
+    );
   });
 
   it("redacts customer PII for customers/redact", async () => {
@@ -153,7 +204,8 @@ describe("PrivacyService", () => {
     const shops = createShops();
     const reviews = createReviews();
     const requests = createRequests();
-    const service = new PrivacyService(shops, reviews, requests);
+    const questions = createQuestions();
+    const service = new PrivacyService(shops, reviews, requests, questions);
 
     await service.handleCustomersRedact(shopRecord.shopDomain, {
       customer: { id: 191167, email: "john@example.com" },
@@ -162,6 +214,7 @@ describe("PrivacyService", () => {
 
     expect(reviews.redactCustomerPii).toHaveBeenCalled();
     expect(requests.redactCustomerPii).toHaveBeenCalled();
+    expect(questions.redactCustomerPii).toHaveBeenCalled();
   });
 
   it("deletes shop data for shop/redact", async () => {
@@ -171,6 +224,7 @@ describe("PrivacyService", () => {
       shops,
       createReviews(),
       createRequests(),
+      createQuestions(),
     );
 
     const deleted = await service.handleShopRedact(shopRecord.shopDomain, {
@@ -189,7 +243,8 @@ describe("PrivacyService", () => {
     });
     const reviews = createReviews();
     const requests = createRequests();
-    const service = new PrivacyService(shops, reviews, requests);
+    const questions = createQuestions();
+    const service = new PrivacyService(shops, reviews, requests, questions);
 
     await service.handleCustomersDataRequest("missing.myshopify.com", {
       customer: { email: "a@b.com" },

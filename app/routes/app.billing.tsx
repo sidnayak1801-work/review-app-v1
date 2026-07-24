@@ -175,6 +175,11 @@ export default function BillingRoute() {
 
   return (
     <s-page heading="Billing">
+      <s-stack direction="block" gap="large">
+        <s-text color="subdued">
+          Manage your plan and published-review allowances.
+        </s-text>
+
       {actionData?.message ? (
         <s-banner
           heading={actionData.ok ? "Updated" : "Could not update"}
@@ -184,93 +189,97 @@ export default function BillingRoute() {
         </s-banner>
       ) : null}
 
-      <s-section heading="Current plan">
-        <s-stack direction="block" gap="base">
-          <s-text type="strong">{isPro ? "Pro" : "Free"} plan</s-text>
-          <s-paragraph>
-            Billing status: {data.billingStatus ?? "Unknown"}
-          </s-paragraph>
-          {data.billingSyncedAt ? (
-            <s-paragraph>
-              Last synced: {new Date(data.billingSyncedAt).toLocaleString()}
-            </s-paragraph>
-          ) : null}
-          <s-paragraph>
+      <s-box padding="base" border="base" borderRadius="large" background="subdued">
+        <s-stack direction="block" gap="small">
+          <s-stack direction="inline" gap="small" alignItems="center">
+            <s-heading>{isPro ? "Pro" : "Free"}</s-heading>
+            <s-badge tone={isPro ? "success" : "info"}>
+              {data.billingStatus ?? "Active"}
+            </s-badge>
+          </s-stack>
+          <s-text>
             Published reviews: {data.usage.used}
-            {data.usage.limit !== null ? ` / ${data.usage.limit}` : ""}
-          </s-paragraph>
-          <s-paragraph>
+            {data.usage.limit !== null ? ` / ${data.usage.limit}` : " · unlimited"}
+          </s-text>
+          <s-text>
             Review-request emails this month: {data.reviewRequestUsage.used} /{" "}
             {data.reviewRequestUsage.limit}
-          </s-paragraph>
+          </s-text>
+          {data.billingSyncedAt ? (
+            <s-text color="subdued">
+              Last synced {new Date(data.billingSyncedAt).toLocaleString()}
+            </s-text>
+          ) : null}
           {data.isTest ? (
             <s-banner tone="info" heading="Test billing mode">
               Charges are created in Shopify test mode.
             </s-banner>
           ) : null}
         </s-stack>
-      </s-section>
+      </s-box>
 
       <s-section heading="Plans">
-        <s-stack direction="block" gap="base">
-          <s-box padding="base" borderWidth="base" borderRadius="base">
+        <s-grid gridTemplateColumns="1fr 1fr" gap="base">
+          <s-box padding="base" border="base" borderRadius="large">
             <s-stack direction="block" gap="small">
               <s-text type="strong">Free — $0</s-text>
-              <s-paragraph>
+              <s-text color="subdued">
                 Up to {data.plans.free.publishedReviews} published reviews and{" "}
-                {data.plans.free.reviewRequests} review-request emails per
-                month.
-              </s-paragraph>
+                {data.plans.free.reviewRequests} request emails / month.
+              </s-text>
+              {!isPro ? <s-badge tone="success">Current plan</s-badge> : null}
             </s-stack>
           </s-box>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
+          <s-box padding="base" border="base" borderRadius="large">
             <s-stack direction="block" gap="small">
               <s-text type="strong">
                 Pro — ${data.plans.pro.price}/month
               </s-text>
-              <s-paragraph>
+              <s-text color="subdued">
                 {data.plans.pro.trialDays}-day trial. Up to{" "}
                 {data.plans.pro.publishedReviews.toLocaleString()} published
                 reviews and {data.plans.pro.reviewRequests.toLocaleString()}{" "}
-                review-request emails per month.
-              </s-paragraph>
+                request emails / month.
+              </s-text>
+              {isPro ? <s-badge tone="success">Current plan</s-badge> : null}
             </s-stack>
           </s-box>
-        </s-stack>
+        </s-grid>
       </s-section>
 
       <s-section heading="Manage plan">
-        <s-stack direction="inline" gap="small">
-          {!isPro ? (
+        <s-stack direction="block" gap="base">
+          <s-stack direction="inline" gap="small">
+            {!isPro ? (
+              <Form method="post">
+                <input type="hidden" name="intent" value="upgrade" />
+                <s-button
+                  type="submit"
+                  variant="primary"
+                  disabled={navigation.state === "submitting"}
+                >
+                  Upgrade to Pro
+                </s-button>
+              </Form>
+            ) : null}
             <Form method="post">
-              <input type="hidden" name="intent" value="upgrade" />
+              <input type="hidden" name="intent" value="sync" />
               <s-button
                 type="submit"
-                variant="primary"
-                disabled={navigation.state !== "idle"}
+                variant="secondary"
+                disabled={navigation.state === "submitting"}
               >
-                Upgrade to Pro
+                Refresh billing status
               </s-button>
             </Form>
-          ) : null}
-          <Form method="post">
-            <input type="hidden" name="intent" value="sync" />
-            <s-button
-              type="submit"
-              variant="secondary"
-              disabled={navigation.state !== "idle"}
-            >
-              Refresh billing status
-            </s-button>
-          </Form>
+          </s-stack>
+          <s-text color="subdued">
+            Upgrade opens Shopify checkout. Downgrade or cancel in Shopify Admin
+            billing — existing published reviews stay visible.
+          </s-text>
         </s-stack>
-        <s-paragraph>
-          Upgrade sends you to Shopify to approve the Pro subscription. After
-          you approve, Shopify returns here and we sync your plan to unlock Pro
-          limits. To downgrade or cancel, change the plan in Shopify Admin
-          billing — existing approved reviews stay visible.
-        </s-paragraph>
       </s-section>
+      </s-stack>
     </s-page>
   );
 }

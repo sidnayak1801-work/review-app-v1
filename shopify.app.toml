@@ -2,12 +2,12 @@
 
 client_id = "5583660bf73cc180c986fcedf3977151"
 name = "review-app-v1"
-application_url = "https://example.com"
+application_url = "https://review-app-v1.onrender.com"
 embedded = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_orders"
+scopes = "read_orders,read_products"
 
 [webhooks]
 api_version = "2026-07"
@@ -29,7 +29,7 @@ api_version = "2026-07"
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://review-app-v1.onrender.com/api/auth" ]
 
 [app_proxy]
 url = "/api/storefront/reviews"
@@ -37,5 +37,6 @@ subpath = "reviews"
 prefix = "apps"
 
 [build]
-include_config_on_deploy = true
+# TEMP local testing: true so `shopify app dev` points App URL + proxy at the
+# tunnel (not Render). Set false + restore Render URLs before production again.
 automatically_update_urls_on_dev = true

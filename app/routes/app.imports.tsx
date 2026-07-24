@@ -107,7 +107,7 @@ export default function ImportsRoute() {
     <ImportsPage
       imports={data.imports}
       actionData={actionData}
-      isSubmitting={navigation.state !== "idle"}
+      isSubmitting={navigation.state === "submitting"}
     />
   );
 }

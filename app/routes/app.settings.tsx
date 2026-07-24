@@ -26,7 +26,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return {
     shopDomain: shop.shopDomain,
     settings: {
+      widgetEnabled: settings.widgetEnabled,
       accentColor: settings.accentColor,
+      primaryButtonColor: settings.primaryButtonColor,
+      starColor: settings.starColor,
+      borderRadius: settings.borderRadius,
+      cardShadow: settings.cardShadow,
+      layout: settings.layout,
+      showCustomerName: settings.showCustomerName,
+      showReviewDate: settings.showReviewDate,
+      showProductImages: settings.showProductImages,
+      showCustomerPhotos: settings.showCustomerPhotos,
+      autoPublishReviews: settings.autoPublishReviews,
+      darkMode: settings.darkMode,
       showReviewForm: settings.showReviewForm,
       reviewsPerPage: settings.reviewsPerPage,
     },
@@ -40,7 +52,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     await widgetSettingsService.updateForShop(shop.id, {
+      widgetEnabled: formData.get("widgetEnabled") === "on",
       accentColor: formData.get("accentColor"),
+      primaryButtonColor: formData.get("primaryButtonColor"),
+      starColor: formData.get("starColor"),
+      borderRadius: formData.get("borderRadius"),
+      cardShadow: formData.get("cardShadow") === "on",
+      layout: formData.get("layout"),
+      showCustomerName: formData.get("showCustomerName") === "on",
+      showReviewDate: formData.get("showReviewDate") === "on",
+      showProductImages: formData.get("showProductImages") === "on",
+      showCustomerPhotos: formData.get("showCustomerPhotos") === "on",
+      autoPublishReviews: formData.get("autoPublishReviews") === "on",
+      darkMode: formData.get("darkMode") === "on",
       showReviewForm: formData.get("showReviewForm") === "on",
       reviewsPerPage: formData.get("reviewsPerPage"),
     });
@@ -70,68 +94,151 @@ export default function WidgetSettingsRoute() {
 
   return (
     <s-page heading="Widget settings">
-      {actionData ? (
-        <s-banner
-          heading={actionData.ok ? "Saved" : "Could not save"}
-          tone={actionData.ok ? "success" : "critical"}
-        >
-          {actionData.message}
-          {actionData.issues?.length ? (
-            <s-unordered-list>
-              {actionData.issues.map((issue) => (
-                <s-list-item key={issue}>{issue}</s-list-item>
-              ))}
-            </s-unordered-list>
-          ) : null}
-        </s-banner>
-      ) : null}
+      <s-stack direction="block" gap="large">
+        <s-text color="subdued">
+          Customize how reviews appear on your storefront. You can also edit
+          these on the Home dashboard with a live preview.
+        </s-text>
 
-      <s-section heading="Display">
+        {actionData ? (
+          <s-banner
+            heading={actionData.ok ? "Saved" : "Could not save"}
+            tone={actionData.ok ? "success" : "critical"}
+          >
+            {actionData.message}
+            {actionData.issues?.length ? (
+              <s-unordered-list>
+                {actionData.issues.map((issue) => (
+                  <s-list-item key={issue}>{issue}</s-list-item>
+                ))}
+              </s-unordered-list>
+            ) : null}
+          </s-banner>
+        ) : null}
+
         <Form method="post">
           <s-stack direction="block" gap="base">
-            <s-text-field
-              label="Accent color"
-              name="accentColor"
-              value={settings.accentColor}
-              details="Hex color used by storefront widgets"
-            />
-            <s-text-field
-              label="Reviews per page"
-              name="reviewsPerPage"
-              value={String(settings.reviewsPerPage)}
-              details="Enter a number from 1 to 20"
-            />
-            <s-checkbox
-              name="showReviewForm"
-              label="Show review submission form"
-              checked={settings.showReviewForm}
-            />
+            <s-box padding="base" border="base" borderRadius="large" background="subdued">
+              <s-stack direction="block" gap="base">
+                <s-text type="strong">Display</s-text>
+                <s-checkbox
+                  name="widgetEnabled"
+                  label="Widget enabled"
+                  checked={settings.widgetEnabled}
+                />
+                <s-checkbox
+                  name="showReviewForm"
+                  label="Show review submission form"
+                  checked={settings.showReviewForm}
+                />
+                <s-checkbox
+                  name="showCustomerName"
+                  label="Show customer name"
+                  checked={settings.showCustomerName}
+                />
+                <s-checkbox
+                  name="showReviewDate"
+                  label="Show review date"
+                  checked={settings.showReviewDate}
+                />
+                <s-checkbox
+                  name="showProductImages"
+                  label="Show product images"
+                  checked={settings.showProductImages}
+                />
+                <s-checkbox
+                  name="showCustomerPhotos"
+                  label="Show customer photos"
+                  checked={settings.showCustomerPhotos}
+                />
+                <s-select
+                  label="Reviews per page"
+                  name="reviewsPerPage"
+                  value={String(settings.reviewsPerPage)}
+                >
+                  <s-option value="5">5</s-option>
+                  <s-option value="10">10</s-option>
+                  <s-option value="20">20</s-option>
+                  <s-option value="50">50</s-option>
+                </s-select>
+              </s-stack>
+            </s-box>
+
+            <s-box padding="base" border="base" borderRadius="large" background="subdued">
+              <s-stack direction="block" gap="base">
+                <s-text type="strong">Colors & style</s-text>
+                <s-text-field
+                  label="Accent color"
+                  name="accentColor"
+                  value={settings.accentColor}
+                />
+                <s-text-field
+                  label="Primary button color"
+                  name="primaryButtonColor"
+                  value={settings.primaryButtonColor}
+                />
+                <s-text-field
+                  label="Star color"
+                  name="starColor"
+                  value={settings.starColor}
+                />
+                <s-text-field
+                  label="Border radius (0–20)"
+                  name="borderRadius"
+                  value={String(settings.borderRadius)}
+                />
+                <s-checkbox
+                  name="cardShadow"
+                  label="Card shadow"
+                  checked={settings.cardShadow}
+                />
+                <s-checkbox
+                  name="darkMode"
+                  label="Dark mode"
+                  checked={settings.darkMode}
+                />
+              </s-stack>
+            </s-box>
+
+            <s-box padding="base" border="base" borderRadius="large" background="subdued">
+              <s-stack direction="block" gap="base">
+                <s-text type="strong">Layout & behavior</s-text>
+                <s-select label="Layout" name="layout" value={settings.layout}>
+                  <s-option value="STACKED">Stacked</s-option>
+                  <s-option value="COMPACT">Compact</s-option>
+                  <s-option value="GRID">Grid</s-option>
+                </s-select>
+                <s-checkbox
+                  name="autoPublishReviews"
+                  label="Auto publish reviews"
+                  checked={settings.autoPublishReviews}
+                />
+              </s-stack>
+            </s-box>
+
             <s-button
               type="submit"
               variant="primary"
-              disabled={navigation.state !== "idle"}
+              disabled={navigation.state === "submitting"}
             >
               Save settings
             </s-button>
           </s-stack>
         </Form>
-      </s-section>
 
-      <s-section heading="Theme setup">
-        <s-unordered-list>
-          <s-list-item>
-            Open Online Store → Themes → Customize → App embeds.
-          </s-list-item>
-          <s-list-item>
-            Enable the Review App embeds and add the Star Rating or Product
-            Reviews block to product templates.
-          </s-list-item>
-          <s-list-item>
-            Keep `shopify app dev` running so the extension appears in the
-            theme editor.
-          </s-list-item>
-        </s-unordered-list>
-      </s-section>
+        <s-box padding="base" border="base" borderRadius="large">
+          <s-stack direction="block" gap="small">
+            <s-text type="strong">Theme setup</s-text>
+            <s-text color="subdued">
+              Online Store → Themes → Customize → add Product Reviews / Star
+              Rating blocks to your product template.
+            </s-text>
+            <s-button href="/app" variant="secondary">
+              Edit with live preview on Home
+            </s-button>
+          </s-stack>
+        </s-box>
+      </s-stack>
     </s-page>
   );
 }

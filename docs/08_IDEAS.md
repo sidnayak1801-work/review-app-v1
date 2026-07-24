@@ -9,7 +9,6 @@ implementation cost are understood.
 - Store-level reviews
 - Merchant replies
 - Photo and video reviews
-- Questions and answers
 - Review syndication
 - Review export
 - Additional widget layouts

@@ -59,6 +59,7 @@ delay validation of the core product.
 
 - Store-level reviews
 - Merchant replies
+- Featured reviews
 - Photo reviews
 - Configurable review-request delay (Free: one global delay; Pro: domestic +
   international delays)
@@ -70,14 +71,16 @@ delay validation of the core product.
 - Basic SEO aggregate-rating markup
 - Widget translations
 - Additional layout controls
+- Product insights dashboard (per-product detail from review links; no catalog
+  nav)
+- Product Q&A (customer questions, merchant answers, storefront block)
 
 ## Nice to Have — Growth Improvements
 
-- Questions and answers
 - Coupons for completed reviews
 - Referral prompts
 - Multiple widget layouts
-- Review highlights and simple product insights
+- Review highlights and richer catalog-wide insights
 - Additional email templates
 - In-email interactive review forms
 - Multi-store agency conveniences

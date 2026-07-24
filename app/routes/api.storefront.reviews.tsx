@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
+import { reviewMediaService, toPublicMedia } from "../features/reviews/review-media.service.server";
 import { reviewService } from "../features/reviews/review.service.server";
 import { widgetSettingsService } from "../features/widget-settings/widget-settings.service.server";
 import {
@@ -16,6 +17,25 @@ function jsonResponse(body: unknown, status = 200): Response {
   return Response.json(body, { status });
 }
 
+function publicSettings(settings: Awaited<ReturnType<typeof widgetSettingsService.getForShop>>) {
+  return {
+    widgetEnabled: settings.widgetEnabled,
+    accentColor: settings.accentColor,
+    primaryButtonColor: settings.primaryButtonColor,
+    starColor: settings.starColor,
+    borderRadius: settings.borderRadius,
+    cardShadow: settings.cardShadow,
+    layout: settings.layout,
+    showCustomerName: settings.showCustomerName,
+    showReviewDate: settings.showReviewDate,
+    showProductImages: settings.showProductImages,
+    showCustomerPhotos: settings.showCustomerPhotos,
+    darkMode: settings.darkMode,
+    showReviewForm: settings.showReviewForm,
+    reviewsPerPage: settings.reviewsPerPage,
+  };
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.public.appProxy(request);
 
@@ -30,21 +50,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const settings = await widgetSettingsService.getForShop(shop.id);
 
-  try {
-    const result = await reviewService.listApprovedForStorefront(shop.id, {
-      shopifyProductId: url.searchParams.get("productId"),
-      cursor: url.searchParams.get("cursor") || undefined,
-      limit: url.searchParams.get("limit") || settings.reviewsPerPage,
+  if (!settings.widgetEnabled) {
+    return jsonResponse({
+      items: [],
+      pageInfo: { nextCursor: null, hasNextPage: false },
+      settings: publicSettings(settings),
     });
+  }
+
+  try {
+    const result = await reviewService.listApprovedForStorefront(
+      shop.id,
+      {
+        shopifyProductId: url.searchParams.get("productId"),
+        cursor: url.searchParams.get("cursor") || undefined,
+        limit: url.searchParams.get("limit") || settings.reviewsPerPage,
+      },
+      { includeMedia: settings.showCustomerPhotos },
+    );
 
     return jsonResponse({
-      items: result.items,
+      items: result.items.map((item) => ({
+        ...item,
+        media: settings.showCustomerPhotos ? item.media : [],
+      })),
       pageInfo: result.pageInfo,
-      settings: {
-        accentColor: settings.accentColor,
-        showReviewForm: settings.showReviewForm,
-        reviewsPerPage: settings.reviewsPerPage,
-      },
+      settings: publicSettings(settings),
     });
   } catch (error) {
     if (error instanceof ValidationError) {
@@ -90,22 +121,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   const shopifyCustomerId = loggedInCustomerIdFromRequest(request);
-  if (!shopifyCustomerId) {
-    return jsonResponse(
-      {
-        error: {
-          code: "AUTH_REQUIRED",
-          message: "Sign in to leave a review.",
-        },
-      },
-      401,
-    );
-  }
-
   const shop = await requireShopRecord(session.shop);
   const settings = await widgetSettingsService.getForShop(shop.id);
 
-  if (!settings.showReviewForm) {
+  if (!settings.widgetEnabled || !settings.showReviewForm) {
     return jsonResponse(
       {
         error: {
@@ -121,14 +140,46 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     assertWithinRateLimit(`storefront-review:${shop.id}:${clientIp(request)}`);
 
     const contentType = request.headers.get("content-type") ?? "";
-    const payload = contentType.includes("application/json")
-      ? await request.json()
-      : Object.fromEntries(await request.formData());
+    let payload: unknown;
+
+    if (contentType.includes("application/json")) {
+      payload = await request.json();
+    } else {
+      // Read the body once — multipart review submits reuse this FormData after
+      // the uploadMedia branch (request.formData() cannot be called twice).
+      const formData = await request.formData();
+      const intent = String(formData.get("intent") ?? "");
+
+      if (intent === "uploadMedia") {
+        assertWithinRateLimit(`storefront-media:${shop.id}:${clientIp(request)}`);
+        const file = formData.get("file");
+        if (!(file instanceof File)) {
+          throw new ValidationError("Invalid upload", ["File is required."]);
+        }
+        const bytes = Buffer.from(await file.arrayBuffer());
+        const media = await reviewMediaService.uploadForShop(shop.id, {
+          bytes,
+          mimeType: file.type || "application/octet-stream",
+          fileName: file.name,
+        });
+        return jsonResponse({ media: toPublicMedia(media) }, 201);
+      }
+
+      payload = Object.fromEntries(
+        [...formData.entries()].filter(
+          (entry): entry is [string, string] => typeof entry[1] === "string",
+        ),
+      );
+    }
 
     const review = await reviewService.createStorefrontReview(
       shop.id,
+      shop.plan,
       payload,
-      { shopifyCustomerId },
+      {
+        shopifyCustomerId,
+        autoPublish: settings.autoPublishReviews,
+      },
     );
 
     return jsonResponse({ review }, 201);

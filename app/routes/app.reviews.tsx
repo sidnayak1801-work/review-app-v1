@@ -13,7 +13,9 @@ import { billingEntitlementsService } from "../features/billing/billing.service.
 import { ReviewsPage } from "../features/reviews/components/reviews-page";
 import type { BulkUpdateReviewStatusResult } from "../features/reviews/review.service.server";
 import { reviewService } from "../features/reviews/review.service.server";
+import { reviewMediaService } from "../features/reviews/review-media.service.server";
 import { reviewStatusSchema } from "../features/reviews/review.schema";
+import { enrichReviewsWithProductTitles } from "../features/reviews/review-product-titles.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
 import { isBillingTestMode } from "../lib/billing-env.server";
 import {
@@ -21,11 +23,14 @@ import {
 } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
-function resolveQueueStatus(
+function resolveQueueFilter(
   value: string | null,
-): "PENDING" | "APPROVED" | "REJECTED" {
+): "ALL" | "PENDING" | "APPROVED" | "REJECTED" {
+  if (!value || value === "ALL") {
+    return "ALL";
+  }
   const parsed = reviewStatusSchema.safeParse(value);
-  return parsed.success ? parsed.data : "PENDING";
+  return parsed.success ? parsed.data : "ALL";
 }
 
 function buildBulkUpdateMessage(
@@ -62,18 +67,18 @@ function buildBulkUpdateMessage(
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
+  const { admin, billing, session } = await authenticate.admin(request);
   const shop = await requireShopWithBillingSync({
     shopDomain: session.shop,
     billing,
     isTest: isBillingTestMode(),
   });
   const url = new URL(request.url);
-  const queueStatus = resolveQueueStatus(url.searchParams.get("status"));
+  const queueFilter = resolveQueueFilter(url.searchParams.get("status"));
 
   const [result, queueCounts, publishedReviewUsage] = await Promise.all([
     reviewService.listForShop(shop.id, {
-      status: queueStatus,
+      status: queueFilter === "ALL" ? undefined : queueFilter,
       shopifyProductId: url.searchParams.get("productId") || undefined,
       cursor: url.searchParams.get("cursor") || undefined,
       limit: 20,
@@ -85,20 +90,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }),
   ]);
 
+  const mediaByReview = await reviewMediaService.listGroupedForReviews(
+    shop.id,
+    result.items.map((item) => item.id),
+  );
+
+  const enrichedReviews = await enrichReviewsWithProductTitles(
+    shop.id,
+    admin,
+    result.items,
+  );
+
   return {
     shopDomain: shop.shopDomain,
     shopPlan: shop.plan,
-    reviews: result.items.map((review) => ({
+    reviews: enrichedReviews.map((review) => ({
       ...review,
       publishedAt: review.publishedAt?.toISOString() ?? null,
+      merchantReplyAt: review.merchantReplyAt?.toISOString() ?? null,
       createdAt: review.createdAt.toISOString(),
       updatedAt: review.updatedAt.toISOString(),
+      media: mediaByReview.get(review.id) ?? [],
     })),
     pageInfo: result.pageInfo,
     queueCounts,
     publishedReviewUsage,
     filters: {
-      status: queueStatus,
+      status: queueFilter,
       productId: url.searchParams.get("productId") ?? "",
     },
   };
@@ -110,7 +128,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     shopDomain: session.shop,
     billing,
     isTest: isBillingTestMode(),
-    forceSync: true,
+    forceSync: false,
   });
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
@@ -118,10 +136,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     if (intent === "update-status") {
       const reviewId = String(formData.get("reviewId") ?? "");
+      const status = String(formData.get("status") ?? "");
       await reviewService.updateForShop(shop.id, shop.plan, reviewId, {
-        status: formData.get("status"),
+        status,
       });
-      return { ok: true as const, message: "Review status updated." };
+      return {
+        ok: true as const,
+        message: "Review status updated.",
+        patch: { reviewId, status },
+      };
     }
 
     if (intent === "bulk-update-status") {
@@ -158,7 +181,42 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (intent === "delete") {
       const reviewId = String(formData.get("reviewId") ?? "");
       await reviewService.deleteForShop(shop.id, reviewId);
-      return { ok: true as const, message: "Review deleted." };
+      return {
+        ok: true as const,
+        message: "Review deleted.",
+        patch: { reviewId, deleted: true as const },
+      };
+    }
+
+    if (intent === "set-featured") {
+      const reviewId = String(formData.get("reviewId") ?? "");
+      const featured = String(formData.get("featured") ?? "") === "true";
+      await reviewService.setFeaturedForShop(shop.id, {
+        reviewId,
+        featured,
+      });
+      return {
+        ok: true as const,
+        message: "Featured status updated.",
+        patch: { reviewId, featured },
+      };
+    }
+
+    if (intent === "set-reply") {
+      const reviewId = String(formData.get("reviewId") ?? "");
+      const reply = String(formData.get("merchantReply") ?? "").trim();
+      await reviewService.setMerchantReplyForShop(shop.id, {
+        reviewId,
+        merchantReply: reply,
+      });
+      return {
+        ok: true as const,
+        message: "Reply saved.",
+        patch: {
+          reviewId,
+          merchantReply: reply.length > 0 ? reply : null,
+        },
+      };
     }
 
     return { ok: false as const, message: "Unknown action." };
@@ -194,7 +252,7 @@ export default function ReviewsRoute() {
       publishedReviewUsage={data.publishedReviewUsage}
       shopPlan={data.shopPlan}
       actionData={actionData}
-      isSubmitting={navigation.state !== "idle"}
+      isSubmitting={navigation.state === "submitting"}
       nextHref={
         data.pageInfo.hasNextPage && data.pageInfo.nextCursor
           ? `?${new URLSearchParams({

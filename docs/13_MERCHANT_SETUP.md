@@ -2,12 +2,14 @@
 
 Short guide for a store installing this review app during the Phase 3 pilot.
 Operators should finish [12_DEPLOYMENT.md](12_DEPLOYMENT.md) first so the app
-URL is a stable Fly host (not a `shopify app dev` tunnel).
+URL is a stable host (Render: `https://review-app-v1.onrender.com`), not a
+`shopify app dev` tunnel.
 
 ## 1. Install
 
-1. Open the app install link from the Partner Dashboard (or custom distribution
-   link for the pilot).
+1. Open the app install link from the Partner Dashboard, or the hosted landing
+   page (`https://review-app-v1.onrender.com`) and enter an **allowed**
+   development shop domain (your Partner/dev store — not an arbitrary shop).
 2. Approve requested scopes (`read_orders` for review-request emails).
 3. Confirm the app Home shows shop status **INSTALLED** and a setup checklist.
 

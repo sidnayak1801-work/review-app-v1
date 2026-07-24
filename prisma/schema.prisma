@@ -48,6 +48,24 @@ enum ReviewRequestStatus {
   COMPLETED
 }
 
+enum WidgetLayout {
+  STACKED
+  COMPACT
+  GRID
+}
+
+enum ReviewMediaKind {
+  IMAGE
+  VIDEO
+}
+
+enum QuestionStatus {
+  PENDING
+  PUBLISHED
+  HIDDEN
+  ANSWERED
+}
+
 model Shop {
   id             String          @id @default(cuid())
   shopDomain     String          @unique
@@ -63,6 +81,8 @@ model Shop {
   reviews        Review[]
   reviewImports  ReviewImport[]
   reviewRequests ReviewRequest[]
+  reviewMedia    ReviewMedia[]
+  questions      Question[]
   widgetSettings WidgetSettings?
   reviewRequestSettings ReviewRequestSettings?
 
@@ -70,25 +90,53 @@ model Shop {
 }
 
 model Review {
-  id                String       @id @default(cuid())
+  id                String        @id @default(cuid())
   shopId            String
-  shop              Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop              Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopifyProductId  String
+  productTitle      String?
   shopifyCustomerId String?
   rating            Int
   title             String?
   body              String
   authorName        String
   authorEmail       String?
-  status            ReviewStatus @default(PENDING)
+  status            ReviewStatus  @default(PENDING)
   source            ReviewSource
-  verifiedPurchase  Boolean      @default(false)
+  verifiedPurchase  Boolean       @default(false)
+  featured          Boolean       @default(false)
+  merchantReply     String?
+  merchantReplyAt   DateTime?
   publishedAt       DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  media             ReviewMedia[]
 
   @@index([shopId, status, createdAt])
   @@index([shopId, shopifyProductId, status, createdAt])
+  @@index([shopId, shopifyProductId, featured])
+}
+
+model ReviewMedia {
+  id         String          @id @default(cuid())
+  shopId     String
+  shop       Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reviewId   String?
+  review     Review?         @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  kind       ReviewMediaKind
+  storageKey String
+  url        String
+  mimeType   String
+  sizeBytes  Int
+  width      Int?
+  height     Int?
+  position   Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([shopId, reviewId])
+  @@index([reviewId, position])
+  @@index([shopId, createdAt])
 }
 
 model ReviewImport {
@@ -150,15 +198,48 @@ model ReviewRequestSettings {
   updatedAt               DateTime @updatedAt
 }
 
+model Question {
+  id               String         @id @default(cuid())
+  shopId           String
+  shop             Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifyProductId String
+  productTitle     String?
+  customerName     String
+  email            String
+  question         String
+  answer           String?
+  status           QuestionStatus @default(PENDING)
+  answeredAt       DateTime?
+  publishedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([shopId, status, createdAt])
+  @@index([shopId, shopifyProductId, status, createdAt])
+  @@index([shopId, email])
+}
+
 model WidgetSettings {
-  id             String   @id @default(cuid())
-  shopId         String   @unique
-  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  accentColor    String   @default("#111111")
-  showReviewForm Boolean  @default(true)
-  reviewsPerPage Int      @default(5)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                   String       @id @default(cuid())
+  shopId               String       @unique
+  shop                 Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  widgetEnabled        Boolean      @default(true)
+  accentColor          String       @default("#111111")
+  primaryButtonColor   String       @default("#111111")
+  starColor            String       @default("#22c55e")
+  borderRadius         Int          @default(8)
+  cardShadow           Boolean      @default(true)
+  layout               WidgetLayout @default(STACKED)
+  showCustomerName     Boolean      @default(true)
+  showReviewDate       Boolean      @default(true)
+  showProductImages    Boolean      @default(false)
+  showCustomerPhotos   Boolean      @default(true)
+  autoPublishReviews   Boolean      @default(false)
+  darkMode             Boolean      @default(false)
+  showReviewForm       Boolean      @default(true)
+  reviewsPerPage       Int          @default(5)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
 }
 
 model Session {

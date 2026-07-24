@@ -76,29 +76,44 @@ These webhook routes use Shopify request verification.
 - `GET /api/storefront/reviews`
   - Requires verified storefront/app-proxy context
   - Requires a Shopify product ID
-  - Returns approved public review fields only
+  - Returns approved public review fields (including `featured`,
+    `merchantReply`, `merchantReplyAt`), optional media, and widget settings
+  - Featured reviews are sorted first within each page
 - `POST /api/storefront/reviews`
   - Requires verified storefront/app-proxy context
-  - Requires signed-in storefront customer (`logged_in_customer_id` on the
-    signed app-proxy query); otherwise returns `401 AUTH_REQUIRED`
-  - Creates a pending review attributed to that customer (name/email from the
-    logged-in customer; no guest email field)
+  - Creates a review (`PENDING`, or `APPROVED` when auto-publish is enabled and
+    under plan limits)
+  - Accepts optional `mediaIds` from prior uploads and optional `productTitle`
+    (snapshot for merchant admin)
   - Applies validation, rate limiting, and spam protection
+  - Multipart `intent=uploadMedia` uploads a photo/video and returns a media
+    record (up to 5 images + 1 video per review; each file ≤10 MB; JPEG/PNG/
+    WebP/GIF/MP4/WebM/MOV). Production uses R2; local dev falls back to disk
+    served at `GET /api/media/*`.
+- `GET /api/storefront/reviews/qa`
+  - Requires verified storefront/app-proxy context
+  - Requires a Shopify product ID
+  - Returns public Q&A fields only (`customerName`, `question`, `answer`,
+    timestamps) for `PUBLISHED` and `ANSWERED` statuses — never `email`
+  - Default page size 3 for collapsed lists; cursor pagination for “Show more”
+- `POST /api/storefront/reviews/qa`
+  - Creates a `PENDING` question
+  - Honeypot + IP rate limit (`storefront-qa:{shopId}:{ip}`)
+  - Notifies the merchant shop contact email via Resend/console provider
 
 The public storefront contract uses the Shopify app proxy:
 
-- Storefront path: `/apps/reviews`
-- App route: `/api/storefront/reviews`
+- Storefront path: `/apps/reviews` (reviews) and `/apps/reviews/qa` (Q&A)
+- App routes: `/api/storefront/reviews` and `/api/storefront/reviews/qa`
 - Authenticated with `authenticate.public.appProxy`
 - Query `productId` (numeric or GID) for approved reviews
-- POST requires `logged_in_customer_id` and creates a pending storefront review
-  with honeypot and rate limiting
-- Guests see an in-widget sign-in wall linking to Liquid
-  `routes.storefront_login_url` / `routes.account_register_url` (Shopify owns
-  account auth)
+- Widget settings drive layout, colors, visibility, and page size
+- Review-request email links use a separate public token API and do **not**
+  require storefront login
 
-Review-request email links use a separate public token API and do **not**
-require storefront login:
+Admin widget settings are saved via form actions on `/app` (dashboard) and
+`/app/settings` (same service). Documented REST admin widget-settings routes
+remain optional.
 
 - `GET/POST /api/review-request?token=...` — verified purchase email flow
 
@@ -209,13 +224,28 @@ Email delivery and import processing are service workflows, not public
 
 Do not build a custom checkout, card form, or public billing API.
 
+## Phase 5 — Product insights (admin UI)
+
+Authenticated merchant routes (loaders/actions, not a public REST API):
+
+- `GET /app/products/:productId` — product health dashboard (Shopify metadata,
+  summary stats, rating mix, volume/rating trends, AI insight placeholders,
+  product-scoped reviews)
+- `POST /app/products/:productId` — Publish/Hide/Feature/Reply/Delete intents
+  (same `reviewService` as `/app/reviews`)
+
+There is no Products catalog list or nav item. Entry is via product name links
+on Home and Reviews. Product IDs in the URL are numeric Shopify product IDs.
+
+Local `/api/media/...` URLs are rewritten to the current app origin when
+returned to admin/storefront clients so tunnel host changes do not break thumbs.
+
 ## Deferred APIs
 
 Do not implement these during MVP phases:
 
 - Replies
-- Media upload
-- Advanced analytics
+- Advanced analytics warehouse
 - Advanced usage metering
 - AI processing
 - Partner/public API access

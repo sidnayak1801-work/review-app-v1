@@ -1,5 +1,7 @@
 import { Form, Link, useNavigation } from "react-router";
 
+import { formatRelativeTime, statusBadgeTone } from "../../../lib/ui-format";
+
 type ReviewRequestStatus =
   | "SCHEDULED"
   | "SENT"
@@ -50,22 +52,6 @@ interface ReviewRequestsPageProps {
   };
 }
 
-function statusTone(
-  status: ReviewRequestStatus,
-): "success" | "warning" | "critical" | "info" {
-  switch (status) {
-    case "SENT":
-    case "COMPLETED":
-      return "success";
-    case "SCHEDULED":
-      return "info";
-    case "FAILED":
-      return "warning";
-    case "CANCELLED":
-      return "critical";
-  }
-}
-
 function statusLabel(status: ReviewRequestStatus): string {
   switch (status) {
     case "SCHEDULED":
@@ -99,18 +85,23 @@ export function ReviewRequestsPage({
   actionData,
 }: ReviewRequestsPageProps) {
   const navigation = useNavigation();
-  const isSubmitting = navigation.state !== "idle";
+  const isSubmitting = navigation.state === "submitting";
   const atLimit = reviewRequestUsage.used >= reviewRequestUsage.limit;
   const orderGroups = groupRequests(requests);
 
   return (
     <s-page heading="Review requests">
-      <s-section heading="Monthly usage">
+      <s-stack direction="block" gap="large">
+        <s-text color="subdued">
+          Schedule post-fulfillment emails and track monthly usage.
+        </s-text>
+
+      <s-box padding="base" border="base" borderRadius="large" background="subdued">
         <s-stack direction="block" gap="small">
-          <s-paragraph>
-            Review-request emails sent in {reviewRequestUsage.monthLabel}:{" "}
-            {reviewRequestUsage.used} / {reviewRequestUsage.limit}
-          </s-paragraph>
+          <s-text type="strong">
+            {reviewRequestUsage.used} / {reviewRequestUsage.limit} emails ·{" "}
+            {reviewRequestUsage.monthLabel}
+          </s-text>
           {atLimit ? (
             <s-banner tone="warning" heading="Monthly limit reached">
               {shopPlan === "FREE" ? (
@@ -125,13 +116,14 @@ export function ReviewRequestsPage({
                 </>
               )}
             </s-banner>
-          ) : null}
-          <s-paragraph>
-            One email is sent per order (Free lists up to 5 products; Pro lists
-            all). Each email uses one monthly credit.
-          </s-paragraph>
+          ) : (
+            <s-text color="subdued">
+              One email per order (Free ≤5 products listed; Pro all). Each email
+              uses one credit.
+            </s-text>
+          )}
         </s-stack>
-      </s-section>
+      </s-box>
 
       <s-section heading="Request settings">
         {actionData ? (
@@ -252,50 +244,57 @@ export function ReviewRequestsPage({
 
       <s-section heading="Recent requests">
         {orderGroups.length === 0 ? (
-          <s-paragraph>
-            No review requests yet. Fulfill an order to schedule the first
-            request.
-          </s-paragraph>
+          <s-box padding="base" border="base" borderRadius="large" background="subdued">
+            <s-text color="subdued">
+              No review requests yet. Fulfill an order to schedule the first request.
+            </s-text>
+          </s-box>
         ) : (
           <s-stack direction="block" gap="base">
             {orderGroups.map(([orderId, items]) => (
               <s-box
                 key={orderId}
                 padding="base"
-                borderWidth="base"
-                borderRadius="base"
+                border="base"
+                borderRadius="large"
               >
                 <s-stack direction="block" gap="small">
-                  <s-paragraph>
-                    <s-text type="strong">Order:</s-text> {orderId} ·{" "}
-                    {items.length} product{items.length === 1 ? "" : "s"}
-                  </s-paragraph>
+                  <s-stack
+                    direction="inline"
+                    gap="small"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <s-text type="strong">
+                      Order {orderId} · {items.length} product
+                      {items.length === 1 ? "" : "s"}
+                    </s-text>
+                    <s-text color="subdued">
+                      {formatRelativeTime(items[0]?.createdAt ?? items[0]!.scheduledAt)}
+                    </s-text>
+                  </s-stack>
                   {items.map((request) => (
-                    <s-box key={request.id} padding="small">
-                      <s-stack direction="block" gap="small">
-                        <s-stack direction="inline" gap="small">
-                          <s-badge tone={statusTone(request.status)}>
+                    <s-box key={request.id} padding="small" background="subdued" borderRadius="base">
+                      <s-stack direction="block" gap="small-200">
+                        <s-stack direction="inline" gap="small" alignItems="center">
+                          <s-badge tone={statusBadgeTone(request.status)}>
                             {statusLabel(request.status)}
                           </s-badge>
                           <s-text>{request.customerEmail}</s-text>
                         </s-stack>
-                        <s-paragraph>
+                        <s-text color="subdued">
                           Product: {request.shopifyProductId}
-                        </s-paragraph>
-                        <s-paragraph>
-                          Scheduled:{" "}
-                          {new Date(request.scheduledAt).toLocaleString()}
                           {request.sentAt
-                            ? ` · Sent: ${new Date(request.sentAt).toLocaleString()}`
-                            : ""}
+                            ? ` · Sent ${formatRelativeTime(request.sentAt)}`
+                            : ` · Scheduled ${formatRelativeTime(request.scheduledAt)}`}
                           {request.reminderSentAt
-                            ? ` · Reminder: ${new Date(request.reminderSentAt).toLocaleString()}`
+                            ? ` · Reminder ${formatRelativeTime(request.reminderSentAt)}`
                             : ""}
-                        </s-paragraph>
+                        </s-text>
                         {request.lastErrorCode ? (
-                          <s-paragraph>
+                          <s-text color="subdued">
                             Last error: {request.lastErrorCode}
-                          </s-paragraph>
+                          </s-text>
                         ) : null}
                       </s-stack>
                     </s-box>
@@ -306,6 +305,7 @@ export function ReviewRequestsPage({
           </s-stack>
         )}
       </s-section>
+      </s-stack>
     </s-page>
   );
 }

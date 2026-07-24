@@ -85,19 +85,75 @@ export const createStorefrontReviewSchema = z.object({
     .transform((value) => value || undefined),
   body: z.string().trim().min(1).max(5000),
   authorName: z.string().trim().min(1).max(100),
-  authorEmail: z.string().trim().email(),
+  authorEmail: z
+    .string()
+    .trim()
+    .email()
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || undefined),
+  productTitle: z
+    .string()
+    .trim()
+    .max(255)
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || undefined),
   website: z.string().optional().default(""),
+  mediaIds: z
+    .preprocess((value) => {
+      if (typeof value === "string" && value.trim()) {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return value.split(",").map((item) => item.trim()).filter(Boolean);
+        }
+      }
+      return value ?? [];
+    }, z.array(z.string().trim().min(1)).max(6))
+    .optional()
+    .default([]),
 });
 
 export const listStorefrontReviewsQuerySchema = z.object({
   shopifyProductId: shopifyProductIdSchema,
   cursor: z.string().trim().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(20).default(5),
+  limit: z.coerce.number().int().min(1).max(50).default(5),
 });
 
 export const bulkUpdateReviewStatusSchema = z.object({
   reviewIds: z.array(z.string().trim().min(1)).min(1).max(50),
   status: reviewStatusSchema,
+});
+
+export const setFeaturedReviewSchema = z.object({
+  reviewId: z.string().trim().min(1),
+  featured: z.preprocess((value) => {
+    if (typeof value === "boolean") {
+      return value;
+    }
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === "true" || normalized === "1") {
+        return true;
+      }
+      if (normalized === "false" || normalized === "0" || normalized === "") {
+        return false;
+      }
+    }
+    return value;
+  }, z.boolean()),
+});
+
+export const setMerchantReplySchema = z.object({
+  reviewId: z.string().trim().min(1),
+  merchantReply: z
+    .string()
+    .trim()
+    .max(1000)
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value && value.length > 0 ? value : null)),
 });
 
 export type CreateMerchantReviewInput = z.output<
@@ -107,3 +163,5 @@ export type UpdateReviewInput = z.output<typeof updateReviewSchema>;
 export type BulkUpdateReviewStatusInput = z.output<
   typeof bulkUpdateReviewStatusSchema
 >;
+export type SetFeaturedReviewInput = z.output<typeof setFeaturedReviewSchema>;
+export type SetMerchantReplyInput = z.output<typeof setMerchantReplySchema>;

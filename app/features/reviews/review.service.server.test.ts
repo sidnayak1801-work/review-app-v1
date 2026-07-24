@@ -37,6 +37,7 @@ const review: ReviewRecord = {
   id: "review-1",
   shopId: "shop-1",
   shopifyProductId: "gid://shopify/Product/1",
+  productTitle: null,
   shopifyCustomerId: null,
   rating: 5,
   title: "Great",
@@ -46,6 +47,9 @@ const review: ReviewRecord = {
   status: "APPROVED",
   source: "MERCHANT",
   verifiedPurchase: false,
+  featured: false,
+  merchantReply: null,
+  merchantReplyAt: null,
   publishedAt: new Date("2026-07-18T00:00:00.000Z"),
   createdAt: new Date("2026-07-18T00:00:00.000Z"),
   updatedAt: new Date("2026-07-18T00:00:00.000Z"),
@@ -63,13 +67,30 @@ function createRepository(
       items: [review],
       pageInfo: { nextCursor: null, hasNextPage: false },
     }),
+    listProductsForShop: vi.fn().mockResolvedValue({
+      items: [],
+      pageInfo: { nextCursor: null, hasNextPage: false },
+    }),
+    getProductStatsForShop: vi.fn().mockResolvedValue({
+      totalReviews: 0,
+      pendingReviews: 0,
+      approvedReviews: 0,
+      rejectedReviews: 0,
+      reviewsWithMedia: 0,
+      averageApprovedRating: null,
+      ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    }),
+    getProductReviewTrendForShop: vi.fn().mockResolvedValue([]),
+    getProductRatingTrendForShop: vi.fn().mockResolvedValue([]),
     countApprovedForShop: vi.fn().mockResolvedValue(0),
     countByStatusForShop: vi.fn().mockResolvedValue({
       PENDING: 0,
       APPROVED: 1,
       REJECTED: 0,
     }),
+    averageApprovedRatingForShop: vi.fn().mockResolvedValue(5),
     updateForShop: vi.fn().mockResolvedValue(review),
+    setProductTitlesForShop: vi.fn().mockResolvedValue(0),
     redactCustomerPii: vi.fn().mockResolvedValue(0),
     deleteForShop: vi.fn().mockResolvedValue(true),
     ...overrides,
@@ -108,7 +129,18 @@ describe("ReviewService", () => {
   it("lists only approved reviews for the storefront", async () => {
     const repository = createRepository();
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const media = {
+      resolveForAttach: vi.fn().mockResolvedValue([]),
+      attachToReview: vi.fn(),
+      listForReviews: vi.fn().mockResolvedValue([]),
+      listGroupedForReviews: vi.fn().mockResolvedValue(new Map()),
+      uploadForShop: vi.fn(),
+    };
+    const service = new ReviewService(
+      repository,
+      billing,
+      media as never,
+    );
 
     const result = await service.listApprovedForStorefront("shop-1", {
       shopifyProductId: "1",
@@ -122,16 +154,83 @@ describe("ReviewService", () => {
       }),
     );
     expect(result.items[0]).not.toHaveProperty("authorEmail");
+    expect(result.items[0]).toMatchObject({
+      featured: false,
+      merchantReply: null,
+      merchantReplyAt: null,
+    });
+  });
+
+  it("sorts featured storefront reviews first within a page", async () => {
+    const olderFeatured: ReviewRecord = {
+      ...review,
+      id: "review-featured",
+      featured: true,
+      merchantReply: "Thanks for the feedback!",
+      merchantReplyAt: new Date("2026-07-19T00:00:00.000Z"),
+      createdAt: new Date("2026-07-10T00:00:00.000Z"),
+    };
+    const newer: ReviewRecord = {
+      ...review,
+      id: "review-newer",
+      featured: false,
+      createdAt: new Date("2026-07-18T00:00:00.000Z"),
+    };
+    const repository = createRepository({
+      list: vi.fn().mockResolvedValue({
+        items: [newer, olderFeatured],
+        pageInfo: { nextCursor: null, hasNextPage: false },
+      }),
+    });
+    const billing = createBilling();
+    const media = {
+      resolveForAttach: vi.fn().mockResolvedValue([]),
+      attachToReview: vi.fn(),
+      listForReviews: vi.fn().mockResolvedValue([]),
+      listGroupedForReviews: vi.fn().mockResolvedValue(new Map()),
+      uploadForShop: vi.fn(),
+    };
+    const service = new ReviewService(
+      repository,
+      billing,
+      media as never,
+    );
+
+    const result = await service.listApprovedForStorefront("shop-1", {
+      shopifyProductId: "1",
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual([
+      "review-featured",
+      "review-newer",
+    ]);
+    expect(result.items[0]).toMatchObject({
+      featured: true,
+      merchantReply: "Thanks for the feedback!",
+      merchantReplyAt: "2026-07-19T00:00:00.000Z",
+    });
   });
 
   it("rejects honeypot storefront submissions", async () => {
     const repository = createRepository();
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const media = {
+      resolveForAttach: vi.fn().mockResolvedValue([]),
+      attachToReview: vi.fn(),
+      listForReviews: vi.fn(),
+      listGroupedForReviews: vi.fn(),
+      uploadForShop: vi.fn(),
+    };
+    const service = new ReviewService(
+      repository,
+      billing,
+      media as never,
+    );
 
     await expect(
       service.createStorefrontReview(
         "shop-1",
+        "FREE",
         {
           shopifyProductId: "1",
           rating: 5,
@@ -146,34 +245,60 @@ describe("ReviewService", () => {
     expect(repository.create).not.toHaveBeenCalled();
   });
 
-  it("rejects storefront submissions without a customer id", async () => {
+  it("allows guest storefront submissions without a customer id", async () => {
     const repository = createRepository();
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const media = {
+      resolveForAttach: vi.fn().mockResolvedValue([]),
+      attachToReview: vi.fn(),
+      listForReviews: vi.fn(),
+      listGroupedForReviews: vi.fn(),
+      uploadForShop: vi.fn(),
+    };
+    const service = new ReviewService(
+      repository,
+      billing,
+      media as never,
+    );
 
-    await expect(
-      service.createStorefrontReview(
-        "shop-1",
-        {
-          shopifyProductId: "1",
-          rating: 5,
-          body: "Great product",
-          authorName: "Ada",
-          authorEmail: "ada@example.com",
-        },
-        { shopifyCustomerId: "  " },
-      ),
-    ).rejects.toThrow("Sign in required");
-    expect(repository.create).not.toHaveBeenCalled();
+    await service.createStorefrontReview("shop-1", "FREE", {
+      shopifyProductId: "1",
+      productTitle: "The Collection Snowboard",
+      rating: 5,
+      body: "Great product",
+      authorName: "Ada",
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shopifyCustomerId: undefined,
+        authorName: "Ada",
+        productTitle: "The Collection Snowboard",
+        source: "STOREFRONT",
+        status: "PENDING",
+      }),
+    );
   });
 
   it("persists shopifyCustomerId and authorEmail on storefront create", async () => {
     const repository = createRepository();
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const media = {
+      resolveForAttach: vi.fn().mockResolvedValue([]),
+      attachToReview: vi.fn(),
+      listForReviews: vi.fn(),
+      listGroupedForReviews: vi.fn(),
+      uploadForShop: vi.fn(),
+    };
+    const service = new ReviewService(
+      repository,
+      billing,
+      media as never,
+    );
 
     await service.createStorefrontReview(
       "shop-1",
+      "FREE",
       {
         shopifyProductId: "1",
         rating: 5,
@@ -191,6 +316,50 @@ describe("ReviewService", () => {
         authorName: "Ada",
         source: "STOREFRONT",
         status: "PENDING",
+      }),
+    );
+  });
+
+  it("auto-publishes storefront reviews when enabled and under plan limit", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const repository = createRepository({
+      create: vi.fn().mockResolvedValue({
+        ...review,
+        status: "APPROVED",
+        source: "STOREFRONT",
+      }),
+    });
+    const billing = createBilling();
+    const media = {
+      resolveForAttach: vi.fn().mockResolvedValue([]),
+      attachToReview: vi.fn(),
+      listForReviews: vi.fn(),
+      listGroupedForReviews: vi.fn(),
+      uploadForShop: vi.fn(),
+    };
+    const service = new ReviewService(
+      repository,
+      billing,
+      media as never,
+    );
+
+    await service.createStorefrontReview(
+      "shop-1",
+      "FREE",
+      {
+        shopifyProductId: "1",
+        rating: 5,
+        body: "Great product",
+        authorName: "Ada",
+      },
+      { autoPublish: true },
+    );
+
+    expect(billing.assertCanApprovePublishedReview).toHaveBeenCalled();
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "APPROVED",
+        publishedAt: expect.any(Date),
       }),
     );
   });
@@ -354,5 +523,84 @@ describe("ReviewService", () => {
     expect(result.skippedCount).toBe(1);
     expect(repository.updateForShop).not.toHaveBeenCalled();
     expect(billing.assertCanApprovePublishedReview).not.toHaveBeenCalled();
+  });
+
+  it("sets featured without changing status", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const repository = createRepository({
+      updateForShop: vi.fn().mockResolvedValue({
+        ...review,
+        featured: true,
+      }),
+    });
+    const service = new ReviewService(repository, createBilling());
+
+    const updated = await service.setFeaturedForShop("shop-1", {
+      reviewId: "review-1",
+      featured: true,
+    });
+
+    expect(repository.updateForShop).toHaveBeenCalledWith("shop-1", "review-1", {
+      featured: true,
+    });
+    expect(updated.featured).toBe(true);
+  });
+
+  it("saves and clears merchant replies", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const repository = createRepository({
+      updateForShop: vi
+        .fn()
+        .mockResolvedValueOnce({
+          ...review,
+          merchantReply: "Thanks!",
+          merchantReplyAt: new Date(),
+        })
+        .mockResolvedValueOnce({
+          ...review,
+          merchantReply: null,
+          merchantReplyAt: null,
+        }),
+    });
+    const service = new ReviewService(repository, createBilling());
+
+    await service.setMerchantReplyForShop("shop-1", {
+      reviewId: "review-1",
+      merchantReply: "Thanks!",
+    });
+    expect(repository.updateForShop).toHaveBeenCalledWith(
+      "shop-1",
+      "review-1",
+      expect.objectContaining({
+        merchantReply: "Thanks!",
+        merchantReplyAt: expect.any(Date),
+      }),
+    );
+
+    await service.setMerchantReplyForShop("shop-1", {
+      reviewId: "review-1",
+      merchantReply: "",
+    });
+    expect(repository.updateForShop).toHaveBeenLastCalledWith(
+      "shop-1",
+      "review-1",
+      {
+        merchantReply: null,
+        merchantReplyAt: null,
+      },
+    );
+  });
+
+  it("rejects merchant replies longer than 1000 characters", async () => {
+    const repository = createRepository();
+    const service = new ReviewService(repository, createBilling());
+
+    await expect(
+      service.setMerchantReplyForShop("shop-1", {
+        reviewId: "review-1",
+        merchantReply: "x".repeat(1001),
+      }),
+    ).rejects.toThrow(/Invalid/);
+    expect(repository.updateForShop).not.toHaveBeenCalled();
   });
 });

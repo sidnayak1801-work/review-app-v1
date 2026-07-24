@@ -9,6 +9,11 @@ import {
   type ReviewRequestRepository,
 } from "../../repositories/review-request.repository.server";
 import {
+  questionRepository,
+  type QuestionRecord,
+  type QuestionRepository,
+} from "../../repositories/question.repository.server";
+import {
   shopRepository,
   type ShopRecord,
   type ShopRepository,
@@ -85,11 +90,27 @@ function toExportableReviewRequest(request: ReviewRequestRecord) {
   };
 }
 
+function toExportableQuestion(question: QuestionRecord) {
+  return {
+    id: question.id,
+    shopifyProductId: question.shopifyProductId,
+    customerName: question.customerName,
+    email: question.email,
+    question: question.question,
+    answer: question.answer,
+    status: question.status,
+    answeredAt: question.answeredAt?.toISOString() ?? null,
+    publishedAt: question.publishedAt?.toISOString() ?? null,
+    createdAt: question.createdAt.toISOString(),
+  };
+}
+
 export class PrivacyService {
   constructor(
     private readonly shops: ShopRepository,
     private readonly reviews: ReviewRepository,
     private readonly reviewRequests: ReviewRequestRepository,
+    private readonly questions: QuestionRepository,
   ) {}
 
   /**
@@ -103,23 +124,27 @@ export class PrivacyService {
     shop: ShopRecord | null;
     reviews: ReturnType<typeof toExportableReview>[];
     reviewRequests: ReturnType<typeof toExportableReviewRequest>[];
+    questions: ReturnType<typeof toExportableQuestion>[];
   }> {
     const shop = await this.shops.findByDomain(shopDomain);
     if (!shop) {
-      return { shop: null, reviews: [], reviewRequests: [] };
+      return { shop: null, reviews: [], reviewRequests: [], questions: [] };
     }
 
     const email = normalizeEmail(payload.customer?.email);
     const customerIds = customerIdCandidates(payload.customer?.id);
-    const [matchedReviews, matchedRequests] = await Promise.all([
-      this.reviews.findForCustomerPrivacy(shop.id, { email, customerIds }),
-      this.reviewRequests.findForCustomerPrivacy(shop.id, { email }),
-    ]);
+    const [matchedReviews, matchedRequests, matchedQuestions] =
+      await Promise.all([
+        this.reviews.findForCustomerPrivacy(shop.id, { email, customerIds }),
+        this.reviewRequests.findForCustomerPrivacy(shop.id, { email }),
+        this.questions.findForCustomerPrivacy(shop.id, { email }),
+      ]);
 
     return {
       shop,
       reviews: matchedReviews.map(toExportableReview),
       reviewRequests: matchedRequests.map(toExportableReviewRequest),
+      questions: matchedQuestions.map(toExportableQuestion),
     };
   }
 
@@ -144,8 +169,10 @@ export class PrivacyService {
       ordersRequestedCount: payload.orders_requested?.length ?? 0,
       reviewCount: exportResult.reviews.length,
       reviewRequestCount: exportResult.reviewRequests.length,
+      questionCount: exportResult.questions.length,
       reviewIds: exportResult.reviews.map((review) => review.id),
       reviewRequestIds: exportResult.reviewRequests.map((request) => request.id),
+      questionIds: exportResult.questions.map((question) => question.id),
     });
   }
 
@@ -161,10 +188,12 @@ export class PrivacyService {
 
     const email = normalizeEmail(payload.customer?.email);
     const customerIds = customerIdCandidates(payload.customer?.id);
-    const [redactedReviews, redactedRequests] = await Promise.all([
-      this.reviews.redactCustomerPii(shop.id, { email, customerIds }),
-      this.reviewRequests.redactCustomerPii(shop.id, { email }),
-    ]);
+    const [redactedReviews, redactedRequests, redactedQuestions] =
+      await Promise.all([
+        this.reviews.redactCustomerPii(shop.id, { email, customerIds }),
+        this.reviewRequests.redactCustomerPii(shop.id, { email }),
+        this.questions.redactCustomerPii(shop.id, { email }),
+      ]);
 
     logger.info("customers/redact processed", {
       shopId: shop.id,
@@ -172,6 +201,7 @@ export class PrivacyService {
       ordersToRedactCount: payload.orders_to_redact?.length ?? 0,
       redactedReviews,
       redactedRequests,
+      redactedQuestions,
     });
   }
 
@@ -205,4 +235,5 @@ export const privacyService = new PrivacyService(
   shopRepository,
   reviewRepository,
   reviewRequestRepository,
+  questionRepository,
 );

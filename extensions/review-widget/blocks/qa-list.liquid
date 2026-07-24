@@ -1,0 +1,119 @@
+{% liquid
+  assign product_resource = closest.product
+  if product_resource == blank
+    assign product_resource = product
+  endif
+
+  assign customer_name = ''
+  assign customer_email = ''
+
+  if customer
+    assign customer_email = customer.email
+    if customer.name != blank
+      assign customer_name = customer.name
+    elsif customer.first_name != blank or customer.last_name != blank
+      assign customer_name = customer.first_name | append: ' ' | append: customer.last_name | strip
+    endif
+  endif
+%}
+
+{% if product_resource %}
+  <div
+    class="vouch-qa"
+    data-vouch-qa
+    data-product-id="{{ product_resource.id }}"
+    data-product-title="{{ product_resource.title | escape }}"
+    data-proxy-url="/apps/reviews/qa"
+    data-page-size="3"
+    data-show-form="{{ block.settings.show_form }}"
+    style="--vouch-accent: {{ block.settings.accent_color }};"
+    {{ block.shopify_attributes }}
+  >
+    <div class="vouch-qa__header">
+      <h2 class="vouch-qa__heading">{{ block.settings.heading }}</h2>
+      <button
+        type="button"
+        class="vouch-qa__ask-btn"
+        data-vouch-qa-open
+        {% if block.settings.show_form == false %}hidden{% endif %}
+      >
+        Ask a question
+      </button>
+    </div>
+
+    <div class="vouch-qa__list" data-vouch-qa-list>
+      Loading questions…
+    </div>
+    <button type="button" class="vouch-qa__load-more" data-vouch-qa-more hidden>
+      Show more questions
+    </button>
+
+    <div
+      class="vouch-qa-modal"
+      data-vouch-qa-modal
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vouch-qa-modal-title"
+    >
+      <div class="vouch-qa-modal__backdrop" data-vouch-qa-close></div>
+      <div class="vouch-qa-modal__panel">
+        <button type="button" class="vouch-qa-modal__close" data-vouch-qa-close aria-label="Close">
+          ×
+        </button>
+        <form class="vouch-qa-modal__form" data-vouch-qa-form>
+          <input type="text" name="website" tabindex="-1" autocomplete="off" class="vouch-qa__honeypot" aria-hidden="true" />
+          <h3 id="vouch-qa-modal-title" class="vouch-qa-modal__title">Ask about this product</h3>
+          <p class="vouch-qa-modal__product">{{ product_resource.title | escape }}</p>
+          <label class="vouch-qa-modal__label">
+            Your question
+            <textarea name="question" rows="4" required maxlength="2000" placeholder="What would you like to know?"></textarea>
+          </label>
+          <label class="vouch-qa-modal__label">
+            Name
+            <input type="text" name="customerName" required maxlength="100" value="{{ customer_name | escape }}" autocomplete="name" />
+          </label>
+          <label class="vouch-qa-modal__label">
+            Email
+            <input type="email" name="email" required maxlength="255" value="{{ customer_email | escape }}" autocomplete="email" />
+          </label>
+          <p class="vouch-qa-modal__error" data-vouch-qa-error hidden></p>
+          <div class="vouch-qa-modal__actions">
+            <button type="button" class="vouch-qa-modal__cancel" data-vouch-qa-close>Cancel</button>
+            <button type="submit" class="vouch-qa-modal__submit" data-vouch-qa-submit>Submit question</button>
+          </div>
+          <p class="vouch-qa-modal__note">Questions are reviewed before they appear on the store.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Product Q&A",
+  "target": "section",
+  "stylesheet": "qa-widget.css",
+  "javascript": "qa-widget.js",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Questions & answers"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_form",
+      "label": "Show ask form",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#0f766e"
+    }
+  ]
+}
+{% endschema %}

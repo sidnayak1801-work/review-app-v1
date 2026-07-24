@@ -78,6 +78,7 @@ a generic billing or usage-metering subsystem.
 app/
   components/       Shared presentational UI used by multiple features
   features/         Feature services, schemas, and feature-owned UI
+                    (reviews, products insights, billing, imports, …)
   lib/              Small framework-independent utilities and errors
   repositories/     Prisma-backed database access
   routes/           HTTP loaders, actions, webhooks, and API entry points

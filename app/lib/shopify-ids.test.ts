@@ -4,6 +4,9 @@ import {
   decodeReviewCursor,
   encodeReviewCursor,
   normalizeShopifyProductId,
+  toAppProductHref,
+  toShopifyAdminProductHref,
+  toShopifyProductNumericId,
 } from "./shopify-ids";
 
 describe("shopify-ids helpers", () => {
@@ -12,6 +15,20 @@ describe("shopify-ids helpers", () => {
     expect(normalizeShopifyProductId("gid://shopify/Product/456")).toBe(
       "gid://shopify/Product/456",
     );
+  });
+
+  it("builds admin and in-app product links", () => {
+    expect(toShopifyProductNumericId("gid://shopify/Product/998")).toBe("998");
+    expect(toShopifyAdminProductHref("gid://shopify/Product/998")).toBe(
+      "shopify://admin/products/998",
+    );
+    expect(toShopifyAdminProductHref("998")).toBe(
+      "shopify://admin/products/998",
+    );
+    expect(toAppProductHref("gid://shopify/Product/998")).toBe(
+      "/app/products/998",
+    );
+    expect(toAppProductHref("998")).toBe("/app/products/998");
   });
 
   it("round-trips review cursors", () => {
