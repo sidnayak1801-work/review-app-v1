@@ -31,6 +31,7 @@ enum ReviewSource {
   STOREFRONT
   MERCHANT
   IMPORT
+  API
 }
 
 enum ReviewImportStatus {
@@ -66,6 +67,38 @@ enum QuestionStatus {
   ANSWERED
 }
 
+enum IncentiveCampaignType {
+  POST_REVIEW
+}
+
+enum IncentiveCampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum IntegrationProvider {
+  KLAVIYO
+  GORGIAS
+}
+
+enum IntegrationConnectionStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+}
+
+enum IntegrationEntityType {
+  REVIEW
+  REVIEW_REQUEST
+}
+
+enum IntegrationExternalType {
+  TICKET
+  EVENT
+}
+
 model Shop {
   id             String          @id @default(cuid())
   shopDomain     String          @unique
@@ -83,10 +116,30 @@ model Shop {
   reviewRequests ReviewRequest[]
   reviewMedia    ReviewMedia[]
   questions      Question[]
+  incentiveCampaigns IncentiveCampaign[]
+  integrationConnections IntegrationConnection[]
+  integrationExternalRefs IntegrationExternalRef[]
+  apiTokens      ApiToken[]
   widgetSettings WidgetSettings?
   reviewRequestSettings ReviewRequestSettings?
 
   @@index([status])
+}
+
+model ApiToken {
+  id          String    @id @default(cuid())
+  shopId      String
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name        String
+  tokenPrefix String
+  tokenHash   String    @unique
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([shopId, revokedAt])
+  @@index([tokenPrefix])
 }
 
 model Review {
@@ -105,6 +158,8 @@ model Review {
   source            ReviewSource
   verifiedPurchase  Boolean       @default(false)
   featured          Boolean       @default(false)
+  hasImage          Boolean       @default(false)
+  hasVideo          Boolean       @default(false)
   merchantReply     String?
   merchantReplyAt   DateTime?
   publishedAt       DateTime?
@@ -115,6 +170,9 @@ model Review {
   @@index([shopId, status, createdAt])
   @@index([shopId, shopifyProductId, status, createdAt])
   @@index([shopId, shopifyProductId, featured])
+  @@index([shopId, shopifyProductId, status, rating, createdAt])
+  @@index([shopId, shopifyProductId, status, hasImage, createdAt])
+  @@index([shopId, shopifyProductId, status, hasVideo, createdAt])
 }
 
 model ReviewMedia {
@@ -217,6 +275,69 @@ model Question {
   @@index([shopId, status, createdAt])
   @@index([shopId, shopifyProductId, status, createdAt])
   @@index([shopId, email])
+}
+
+model IncentiveCampaign {
+  id                  String                   @id @default(cuid())
+  shopId              String
+  shop                Shop                     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name                String                   @default("Post-review offer")
+  type                IncentiveCampaignType    @default(POST_REVIEW)
+  status              IncentiveCampaignStatus  @default(DRAFT)
+  couponEnabled       Boolean                  @default(false)
+  couponCode          String?
+  couponHeadline      String?
+  couponDescription   String?
+  referralEnabled     Boolean                  @default(false)
+  referralMessage     String?
+  referralCtaLabel    String?
+  referralCtaUrl      String?
+  thankYouTitle       String                   @default("Thanks for your review!")
+  thankYouBody        String                   @default("Thanks for your review! We are processing it and it will appear on the store once approved.")
+  weight              Int                      @default(100)
+  experimentKey       String?
+  startsAt            DateTime?
+  endsAt              DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  @@index([shopId, type, status])
+  @@index([shopId, experimentKey])
+}
+
+model IntegrationConnection {
+  id                   String                       @id @default(cuid())
+  shopId               String
+  shop                 Shop                         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  provider             IntegrationProvider
+  status               IntegrationConnectionStatus  @default(DISCONNECTED)
+  credentialsEncrypted String?
+  credentialsKeyVersion Int                         @default(1)
+  metadata             Json?
+  lastError            String?
+  lastSuccessAt        DateTime?
+  connectedAt          DateTime?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+
+  @@unique([shopId, provider])
+  @@index([shopId, status])
+}
+
+model IntegrationExternalRef {
+  id           String                  @id @default(cuid())
+  shopId       String
+  shop         Shop                    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  provider     IntegrationProvider
+  entityType   IntegrationEntityType
+  entityId     String
+  externalId   String
+  externalType IntegrationExternalType
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@unique([shopId, provider, entityType, entityId, externalType])
+  @@index([shopId, provider, entityType, entityId])
 }
 
 model WidgetSettings {

@@ -16,8 +16,7 @@ import { questionStatusSchema } from "../features/questions/question.schema";
 import { questionService } from "../features/questions/question.service.server";
 import { MODERATION_INTENTS } from "../features/moderation/moderation-intents";
 import { DomainError, ValidationError } from "../lib/domain-error";
-import { isBillingTestMode } from "../lib/billing-env.server";
-import { requireShopWithBillingSync } from "../lib/shop-context.server";
+import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
 type QuestionQueueFilter =
@@ -53,12 +52,8 @@ function actionErrorResponse(error: unknown) {
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
   const url = new URL(request.url);
   const queueFilter = resolveQueueFilter(url.searchParams.get("status"));
   const q = url.searchParams.get("q") ?? "";
@@ -100,12 +95,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
 
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");

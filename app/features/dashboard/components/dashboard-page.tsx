@@ -1,216 +1,165 @@
 import { useEffect, useState } from "react";
-import { Form } from "react-router";
+import { Form, Link } from "react-router";
 
-import type { ActivityFeedItem } from "../dashboard.activity";
 import type { WidgetSettingsInput } from "../../widget-settings/widget-settings.schema";
-import { ActivityFeed } from "./ActivityFeed";
-import { QuickActions } from "./QuickActions";
-import { RecentReviews } from "./RecentReviews";
-import { SetupGuide, isWidgetCustomized } from "./SetupGuide";
-import { StatsCards, type DashboardStats } from "./StatsCards";
+import { AnalyticsSnapshot } from "./reviewx/AnalyticsSnapshot";
+import { DashboardFooter } from "./reviewx/DashboardFooter";
+import { DashboardLayout } from "./reviewx/DashboardLayout";
+import { KPIGrid } from "./reviewx/KPIGrid";
+import { LatestReviewsTable } from "./reviewx/LatestReviewsTable";
+import { PendingModerationCard } from "./reviewx/PendingModerationCard";
+import { QuickActions } from "./reviewx/QuickActions";
+import { RatingDistribution } from "./reviewx/RatingDistribution";
+import { ReviewsChart } from "./reviewx/ReviewsChart";
+import type { ReviewXDashboardData } from "./reviewx/types";
+import { WelcomeSection } from "./reviewx/WelcomeSection";
+import { WidgetPreviewSection } from "./reviewx/WidgetPreviewSection";
 import { WidgetSettingsPanel } from "./WidgetSettings";
-
-const WELCOME_DISMISS_KEY = "vouch.welcome.dismissed";
+import styles from "./reviewx/dashboard.module.css";
 
 interface DashboardPageProps {
-  stats: DashboardStats;
-  recentReviews: Array<{
-    id: string;
-    authorName: string;
-    rating: number;
-    shopifyProductId: string;
-    productTitle?: string | null;
-    status: string;
-    createdAt: string;
-  }>;
-  activity: ActivityFeedItem[];
-  settings: WidgetSettingsInput;
-  hasReviewRequestActivity: boolean;
+  data: ReviewXDashboardData;
   actionMessage?: { ok: boolean; message: string };
   isSubmitting: boolean;
 }
 
+/**
+ * Spec section order (docs/15_DASHBOARD_UI_SPEC.md):
+ * Welcome → KPI → Chart/Rating → Pending/Latest → Quick actions →
+ * Analytics → Widget settings → Live preview → Footer
+ */
 export function DashboardPage({
-  stats,
-  recentReviews,
-  activity,
-  settings: initialSettings,
-  hasReviewRequestActivity,
+  data,
   actionMessage,
   isSubmitting,
 }: DashboardPageProps) {
-  const [settings, setSettings] = useState(initialSettings);
-  const [welcomeDismissed, setWelcomeDismissed] = useState(true);
+  const [settings, setSettings] = useState<WidgetSettingsInput>(data.settings);
 
   useEffect(() => {
-    setSettings(initialSettings);
-  }, [initialSettings]);
-
-  useEffect(() => {
-    setWelcomeDismissed(
-      window.localStorage.getItem(WELCOME_DISMISS_KEY) === "1",
-    );
-  }, []);
-
-  const widgetCustomized = isWidgetCustomized(settings);
-  const setupLikelyIncomplete =
-    !widgetCustomized ||
-    stats.totalReviews === 0 ||
-    stats.pendingReviews > 0 ||
-    !hasReviewRequestActivity;
-
-  function dismissWelcome() {
-    window.localStorage.setItem(WELCOME_DISMISS_KEY, "1");
-    setWelcomeDismissed(true);
-  }
+    setSettings(data.settings);
+  }, [data.settings]);
 
   return (
-    <s-page heading="Review App">
-      <s-stack direction="block" gap="large">
-        <s-box padding="base" border="base" borderRadius="large" background="subdued">
-          <s-stack direction="block" gap="small-200">
-            <s-heading>Build trust with product reviews</s-heading>
-            <s-text color="subdued">
-              Moderate feedback, customize your storefront widget, and grow
-              reviews with post-purchase emails — all in one place.
-            </s-text>
-          </s-stack>
-        </s-box>
+    <DashboardLayout>
+      {actionMessage ? (
+        <div
+          role="status"
+          className={styles.card}
+          style={{
+            padding: 16,
+            borderColor: actionMessage.ok
+              ? "rgba(0,128,96,0.35)"
+              : "rgba(215,44,13,0.35)",
+            color: actionMessage.ok ? "var(--rx-success)" : "var(--rx-danger)",
+          }}
+        >
+          {actionMessage.message}
+        </div>
+      ) : null}
 
-        {actionMessage ? (
-          <s-banner
-            heading={actionMessage.ok ? "Saved" : "Could not save"}
-            tone={actionMessage.ok ? "success" : "critical"}
-          >
-            {actionMessage.message}
-          </s-banner>
-        ) : null}
+      <WelcomeSection />
+      <KPIGrid kpis={data.kpis} />
+      <div className={styles.split}>
+        <ReviewsChart seriesByRange={data.chartSeriesByRange} />
+        <RatingDistribution summary={data.ratingSummary} />
+      </div>
+      <div className={styles.splitModeration}>
+        <PendingModerationCard reviews={data.pendingReviews} />
+        <LatestReviewsTable reviews={data.latestReviews} searchFilter="" />
+      </div>
+      <QuickActions />
+      <AnalyticsSnapshot data={data.analytics} />
 
-        {stats.pendingReviews > 0 ? (
-          <s-banner
-            heading={`${stats.pendingReviews} review${stats.pendingReviews === 1 ? "" : "s"} need moderation`}
-            tone="warning"
-          >
-            <s-stack direction="block" gap="small">
-              <s-text>
-                Publish great feedback and hide spam before it reaches your storefront.
-              </s-text>
-              <s-button href="/app/reviews?status=PENDING" variant="primary">
-                Review pending queue
-              </s-button>
-            </s-stack>
-          </s-banner>
-        ) : null}
-
-        {!welcomeDismissed &&
-        stats.pendingReviews === 0 &&
-        setupLikelyIncomplete ? (
-          <s-banner heading="Welcome — finish your setup guide" tone="info">
-            <s-stack direction="block" gap="small">
-              <s-text>
-                Install the widget, customize branding, and turn on review
-                requests to start collecting social proof.
-              </s-text>
-              <s-stack direction="inline" gap="small">
-                <s-button href="#setup-guide" variant="primary">
-                  View setup guide
-                </s-button>
-                <s-button type="button" variant="tertiary" onClick={dismissWelcome}>
-                  Dismiss
-                </s-button>
-              </s-stack>
-            </s-stack>
-          </s-banner>
-        ) : null}
-
-        <div id="setup-guide">
-          <SetupGuide
-            stats={stats}
-            hasReviewRequestActivity={hasReviewRequestActivity}
-            widgetCustomized={widgetCustomized}
+      <section
+        id="widget-settings"
+        className={`${styles.card} ${styles.settingsCard}`}
+      >
+        <div className={styles.cardHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>Widget settings</h2>
+            <p className={styles.body} style={{ marginTop: 8, marginBottom: 0 }}>
+              Customize storefront display, then save to publish.
+            </p>
+          </div>
+          <Link className={styles.viewAllLink} to="/app/settings">
+            Full settings ↗
+          </Link>
+        </div>
+        <Form method="post">
+          <input type="hidden" name="intent" value="saveWidgetSettings" />
+          <input
+            type="hidden"
+            name="widgetEnabled"
+            value={settings.widgetEnabled ? "true" : "false"}
           />
-        </div>
+          <input type="hidden" name="accentColor" value={settings.accentColor} />
+          <input
+            type="hidden"
+            name="primaryButtonColor"
+            value={settings.primaryButtonColor}
+          />
+          <input type="hidden" name="starColor" value={settings.starColor} />
+          <input
+            type="hidden"
+            name="borderRadius"
+            value={String(settings.borderRadius)}
+          />
+          <input
+            type="hidden"
+            name="cardShadow"
+            value={settings.cardShadow ? "true" : "false"}
+          />
+          <input type="hidden" name="layout" value={settings.layout} />
+          <input
+            type="hidden"
+            name="showCustomerName"
+            value={settings.showCustomerName ? "true" : "false"}
+          />
+          <input
+            type="hidden"
+            name="showReviewDate"
+            value={settings.showReviewDate ? "true" : "false"}
+          />
+          <input
+            type="hidden"
+            name="showProductImages"
+            value={settings.showProductImages ? "true" : "false"}
+          />
+          <input
+            type="hidden"
+            name="showCustomerPhotos"
+            value={settings.showCustomerPhotos ? "true" : "false"}
+          />
+          <input
+            type="hidden"
+            name="autoPublishReviews"
+            value={settings.autoPublishReviews ? "true" : "false"}
+          />
+          <input
+            type="hidden"
+            name="darkMode"
+            value={settings.darkMode ? "true" : "false"}
+          />
+          <input
+            type="hidden"
+            name="showReviewForm"
+            value={settings.showReviewForm ? "true" : "false"}
+          />
+          <input
+            type="hidden"
+            name="reviewsPerPage"
+            value={String(settings.reviewsPerPage)}
+          />
+          <WidgetSettingsPanel
+            settings={settings}
+            onChange={setSettings}
+            isSubmitting={isSubmitting}
+          />
+        </Form>
+      </section>
 
-        <StatsCards stats={stats} />
-        <QuickActions />
-        <RecentReviews reviews={recentReviews} />
-
-        <div id="widget-settings">
-          <Form method="post">
-            <input type="hidden" name="intent" value="saveWidgetSettings" />
-            <input
-              type="hidden"
-              name="widgetEnabled"
-              value={settings.widgetEnabled ? "true" : "false"}
-            />
-            <input type="hidden" name="accentColor" value={settings.accentColor} />
-            <input
-              type="hidden"
-              name="primaryButtonColor"
-              value={settings.primaryButtonColor}
-            />
-            <input type="hidden" name="starColor" value={settings.starColor} />
-            <input
-              type="hidden"
-              name="borderRadius"
-              value={String(settings.borderRadius)}
-            />
-            <input
-              type="hidden"
-              name="cardShadow"
-              value={settings.cardShadow ? "true" : "false"}
-            />
-            <input type="hidden" name="layout" value={settings.layout} />
-            <input
-              type="hidden"
-              name="showCustomerName"
-              value={settings.showCustomerName ? "true" : "false"}
-            />
-            <input
-              type="hidden"
-              name="showReviewDate"
-              value={settings.showReviewDate ? "true" : "false"}
-            />
-            <input
-              type="hidden"
-              name="showProductImages"
-              value={settings.showProductImages ? "true" : "false"}
-            />
-            <input
-              type="hidden"
-              name="showCustomerPhotos"
-              value={settings.showCustomerPhotos ? "true" : "false"}
-            />
-            <input
-              type="hidden"
-              name="autoPublishReviews"
-              value={settings.autoPublishReviews ? "true" : "false"}
-            />
-            <input
-              type="hidden"
-              name="darkMode"
-              value={settings.darkMode ? "true" : "false"}
-            />
-            <input
-              type="hidden"
-              name="showReviewForm"
-              value={settings.showReviewForm ? "true" : "false"}
-            />
-            <input
-              type="hidden"
-              name="reviewsPerPage"
-              value={String(settings.reviewsPerPage)}
-            />
-            <WidgetSettingsPanel
-              settings={settings}
-              onChange={setSettings}
-              isSubmitting={isSubmitting}
-            />
-          </Form>
-        </div>
-
-        <ActivityFeed items={activity} />
-      </s-stack>
-    </s-page>
+      <WidgetPreviewSection settings={settings} />
+      <DashboardFooter />
+    </DashboardLayout>
   );
 }

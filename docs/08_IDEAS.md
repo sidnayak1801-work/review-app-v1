@@ -54,16 +54,21 @@ quality measurement before production use.
 
 ## Integrations
 
+Shipped in Phase 5.4 (core connect + event/ticket sync):
+
 - Klaviyo
 - Gorgias
+
+Still ideas (build individually on merchant demand; do not create a generic
+integration platform first):
+
 - WhatsApp
 - Zapier
 - Instagram
 - TikTok
 - Loyalty platforms
-
-Build integrations individually in response to merchant demand. Do not create
-a generic integration platform first.
+- Klaviyo SMS sends
+- Gorgias inbound reply webhooks
 
 ## Community and Gamification
 

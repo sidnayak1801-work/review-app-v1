@@ -18,6 +18,10 @@ import {
   type ShopRecord,
   type ShopRepository,
 } from "../../repositories/shop.repository.server";
+import {
+  apiTokenRepository,
+  type ApiTokenRepository,
+} from "../../repositories/api-token.repository.server";
 import { sessionService } from "../../services/session.service.server";
 import { logger } from "../../services/logger.server";
 
@@ -111,6 +115,7 @@ export class PrivacyService {
     private readonly reviews: ReviewRepository,
     private readonly reviewRequests: ReviewRequestRepository,
     private readonly questions: QuestionRepository,
+    private readonly apiTokens: ApiTokenRepository = apiTokenRepository,
   ) {}
 
   /**
@@ -219,11 +224,14 @@ export class PrivacyService {
     }
 
     await sessionService.removeShopSessions(shop.shopDomain);
+    // ApiToken rows cascade on Shop delete; explicit delete keeps redact auditable.
+    const deletedApiTokens = await this.apiTokens.deleteAllForShop(shop.id);
     const deleted = await this.shops.deleteByDomain(shop.shopDomain);
 
     logger.info("shop/redact processed", {
       shopId: shop.id,
       shopDomain: shop.shopDomain,
+      deletedApiTokens,
       deleted: Boolean(deleted),
     });
 
@@ -236,4 +244,5 @@ export const privacyService = new PrivacyService(
   reviewRepository,
   reviewRequestRepository,
   questionRepository,
+  apiTokenRepository,
 );

@@ -8,7 +8,7 @@ export const PRO_MAX_PUBLISHED_REVIEWS = 5_000;
 export const FREE_MAX_REVIEW_REQUESTS_PER_MONTH = 50;
 export const PRO_MAX_REVIEW_REQUESTS_PER_MONTH = 1_000;
 
-export const BILLING_SYNC_MAX_AGE_MS = 15 * 60 * 1000;
+export const BILLING_SYNC_MAX_AGE_MS = 60 * 60 * 1000;
 
 export const PRO_TRIAL_DAYS = 14;
 export const PRO_MONTHLY_PRICE_USD = 19;

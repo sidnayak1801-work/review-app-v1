@@ -15,17 +15,12 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { ImportsPage } from "../features/review-imports/components/imports-page";
 import { reviewImportService } from "../features/review-imports/review-import.service.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
-import { isBillingTestMode } from "../lib/billing-env.server";
-import { requireShopWithBillingSync } from "../lib/shop-context.server";
+import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
 
   const imports = await reviewImportService.listRecentForShop(shop.id);
 
@@ -43,13 +38,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-    forceSync: true,
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 

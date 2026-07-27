@@ -2,9 +2,9 @@
 
 PostgreSQL is the application database. Prisma owns the schema and migrations.
 
-The schema should support the MVP only. Add tables when a roadmap phase needs
-them; do not pre-create tables for advanced billing, AI, media, loyalty,
-referrals, analytics, or integrations.
+The schema should support the active roadmap only. Add tables when a roadmap
+phase needs them; do not pre-create tables for advanced billing, AI, media,
+loyalty, referrals, or analytics ahead of an approved phase.
 
 ## Conventions
 
@@ -72,9 +72,10 @@ Planned fields:
 - `authorName`
 - `authorEmail` — optional and never exposed publicly
 - `status` — `PENDING`, `APPROVED`, or `REJECTED`
-- `source` — `STOREFRONT`, `MERCHANT`, or `IMPORT`
+- `source` — `STOREFRONT`, `MERCHANT`, `IMPORT`, or `API`
 - `verifiedPurchase`
 - `featured` — merchant highlight flag (Phase 5.1)
+- `hasImage` / `hasVideo` — denormalized media flags for storefront sort
 - `merchantReply` / `merchantReplyAt` — single merchant reply (Phase 5.1)
 - `publishedAt` — optional
 - `createdAt`
@@ -84,6 +85,9 @@ Required indexes:
 
 - `(shopId, status, createdAt)`
 - `(shopId, shopifyProductId, status, createdAt)`
+- `(shopId, shopifyProductId, status, rating, createdAt)`
+- `(shopId, shopifyProductId, status, hasImage, createdAt)`
+- `(shopId, shopifyProductId, status, hasVideo, createdAt)`
 
 Repository queries must always include `shopId`. Storefront reads return only
 approved reviews.
@@ -242,6 +246,78 @@ Storefront lists only `PUBLISHED` and `ANSWERED`. Customer submit creates
 `PENDING`. Approve → `PUBLISHED`. Answer sets `answer` and usually →
 `ANSWERED` (stays `HIDDEN` if already hidden). Hide → `HIDDEN`.
 
+## Phase 5.3 Tables
+
+### IncentiveCampaign
+
+Post-review growth offers (coupon code paste + referral prompt). Not a coupon
+engine — merchants enter an existing Shopify discount code.
+
+Fields:
+
+- `id`, `shopId`
+- `name` — merchant label (default “Post-review offer”)
+- `type` — `POST_REVIEW` (extensible for future campaign types)
+- `status` — `DRAFT`, `ACTIVE`, `PAUSED`, `ARCHIVED`
+- Coupon: `couponEnabled`, `couponCode`, `couponHeadline`, `couponDescription`
+- Referral: `referralEnabled`, `referralMessage`, `referralCtaLabel`,
+  `referralCtaUrl`
+- Thank-you: `thankYouTitle`, `thankYouBody`
+- Future A/B: `weight`, `experimentKey`, `startsAt`, `endsAt`
+- `createdAt`, `updatedAt`
+
+Indexes: `(shopId, type, status)`, `(shopId, experimentKey)`.
+
+MVP: at most one usable `POST_REVIEW` campaign per shop (service upserts a
+single row; master enable maps to `ACTIVE` / `PAUSED`). Coupon codes are never
+returned on storefront GET; they may appear only after a successful review
+submit.
+
+## Phase 5 — Integrations
+
+Tenant-scoped third-party connections (not a generic integration platform).
+
+### IntegrationConnection
+
+- `id`, `shopId`
+- `provider` — `KLAVIYO` | `GORGIAS`
+- `status` — `DISCONNECTED` | `CONNECTED` | `ERROR`
+- `credentialsEncrypted` — AES-256-GCM ciphertext (never returned to clients)
+- `credentialsKeyVersion`
+- `metadata` — non-secret JSON (e.g. account label, last tested at)
+- `lastError`, `lastSuccessAt`, `connectedAt`
+- `createdAt`, `updatedAt`
+
+Unique `(shopId, provider)`.
+
+### IntegrationExternalRef
+
+Links app entities to remote IDs (e.g. Gorgias tickets):
+
+- `provider`, `entityType` (`REVIEW` | `REVIEW_REQUEST`)
+- `entityId`, `externalId`, `externalType` (`TICKET` | `EVENT`)
+
+Unique `(shopId, provider, entityType, entityId, externalType)`.
+
+## Phase 5.5 — Public API tokens
+
+### ApiToken
+
+Per-shop API credentials for `/api/v1` (server-to-server):
+
+- `id`, `shopId`, `name`
+- `tokenPrefix` — display fragment (not the secret)
+- `tokenHash` — SHA-256 of the full Bearer token (never store plaintext)
+- `lastUsedAt`, `revokedAt`
+- `createdAt`, `updatedAt`
+
+Unique on `tokenHash`. Indexes: `(shopId, revokedAt)`, `tokenPrefix`.
+Cascade delete with `Shop` (also deleted explicitly on `shop/redact`).
+
+### ReviewSource
+
+Adds `API` for reviews submitted through the public REST API.
+
 ## Phase 4 Notes — Review-request settings
 
 `ReviewRequestSettings` (1:1 with Shop):
@@ -267,7 +343,6 @@ count distinct orders with `sentAt` in the UTC month plus reminder rows with
 - Subscription-history and generic usage-metering tables
 - Analytics aggregates
 - Integration credentials and deliveries
-- Loyalty, referral, and coupon records
 - AI outputs
 
 When a deferred feature is approved for a roadmap phase, document its access

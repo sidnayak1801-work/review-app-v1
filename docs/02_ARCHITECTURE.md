@@ -239,6 +239,18 @@ Theme App Extension blocks call the app proxy at `/apps/reviews`, which maps to
 `/api/storefront/reviews`. The proxy resolves the shop from Shopify verification,
 returns approved public reviews, and accepts pending storefront submissions.
 
+Customer identity, review `source`, verified-buyer determination, and
+guest/logged-in submission UX are defined in `14_REVIEW_SUBMISSION_SPEC.md`.
+Future submission changes must follow that specification and keep verification
+logic centralized in services (not duplicated in the widget or routes).
+
+## Phase 5 Integrations Runtime
+
+Third-party providers implement `IntegrationProvider` and register in
+`app/services/integrations/`. Per-shop credentials live in
+`IntegrationConnection` (AES-256-GCM encrypted). Domain services emit events
+through `IntegrationEventDispatcher` without blocking core workflows.
+
 ## Open MVP Risks
 
 - App-proxy storefront traffic and Theme App Extension loading should still be

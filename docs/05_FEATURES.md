@@ -74,11 +74,10 @@ delay validation of the core product.
 - Product insights dashboard (per-product detail from review links; no catalog
   nav)
 - Product Q&A (customer questions, merchant answers, storefront block)
+- Post-review incentives (Shopify discount code paste + referral prompt)
 
 ## Nice to Have — Growth Improvements
 
-- Coupons for completed reviews
-- Referral prompts
 - Multiple widget layouts
 - Review highlights and richer catalog-wide insights
 - Additional email templates
@@ -89,7 +88,7 @@ delay validation of the core product.
 
 - Video reviews
 - Advanced analytics and reports
-- Public or partner API access
+- Public or partner API access — Phase 5.5 REST `/api/v1` + token admin
 - Review syndication
 - Klaviyo, Gorgias, WhatsApp, Zapier, Instagram, and TikTok integrations
 - SMS or push review-request channels via compatible apps

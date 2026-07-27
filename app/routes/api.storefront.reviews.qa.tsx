@@ -35,7 +35,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       limit: url.searchParams.get("limit") || 3,
     });
 
-    return jsonResponse(result);
+    return Response.json(result, {
+      status: 200,
+      headers: { "Cache-Control": "private, max-age=30" },
+    });
   } catch (error) {
     if (error instanceof ValidationError) {
       return jsonResponse(

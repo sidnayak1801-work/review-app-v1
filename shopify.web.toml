@@ -3,5 +3,7 @@ roles = ["frontend", "backend"]
 webhooks_path = "/webhooks/app/uninstalled"
 
 [commands]
+# Generate client once before the first boot. Do not block the HTTP server on
+# migrate deploy — that left the admin iframe blank for 15–20s on every restart.
 predev = "npx prisma generate"
-dev = "npx prisma migrate deploy && npm exec react-router dev"
+dev = "npm exec react-router dev"

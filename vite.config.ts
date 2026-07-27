@@ -1,4 +1,5 @@
 import { reactRouter } from "@react-router/dev/vite";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type UserConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
@@ -49,13 +50,23 @@ export default defineConfig({
     },
   },
   plugins: [
+    tailwindcss(),
     reactRouter(),
     tsconfigPaths(),
   ],
+  resolve: {
+    dedupe: ["react", "react-dom", "react-router"],
+  },
   build: {
     assetsInlineLimit: 0,
   },
   optimizeDeps: {
-    include: ["@shopify/app-bridge-react"],
+    include: [
+      "@shopify/app-bridge-react",
+      "react",
+      "react-dom",
+      "react-router",
+      "framer-motion",
+    ],
   },
 }) satisfies UserConfig;

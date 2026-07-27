@@ -14,9 +14,12 @@ import { billingEntitlementsService } from "../billing/billing.service.server";
 import {
   bulkUpdateReviewStatusSchema,
   createMerchantReviewSchema,
+  createPublicApiReviewSchema,
   createStorefrontReviewSchema,
+  listPublicApiReviewsQuerySchema,
   listReviewsQuerySchema,
   listStorefrontReviewsQuerySchema,
+  publicApiProductIdQuerySchema,
   setFeaturedReviewSchema,
   setMerchantReplySchema,
   updateReviewSchema,
@@ -26,6 +29,11 @@ import {
   toPublicMedia,
   type ReviewMediaService,
 } from "./review-media.service.server";
+import {
+  integrationEventDispatcher,
+  type IntegrationEventDispatcher,
+} from "../../services/integrations/integration-dispatcher.server";
+import { getAppBaseUrl } from "../../lib/email-env.server";
 
 export interface BulkUpdateReviewStatusResult {
   updatedCount: number;
@@ -61,7 +69,61 @@ export class ReviewService {
     private readonly reviews: ReviewRepository,
     private readonly billing: BillingService,
     private readonly media: ReviewMediaService = reviewMediaService,
+    private readonly integrations: IntegrationEventDispatcher = integrationEventDispatcher,
   ) {}
+
+  private emitReviewPublished(review: ReviewRecord): void {
+    if (review.status !== "APPROVED") {
+      return;
+    }
+
+    let adminUrl: string | undefined;
+    try {
+      adminUrl = `${getAppBaseUrl()}/app/reviews`;
+    } catch {
+      adminUrl = undefined;
+    }
+
+    this.integrations.emitInBackground({
+      shopId: review.shopId,
+      event: {
+        type: "review.published",
+        data: {
+          reviewId: review.id,
+          shopifyProductId: review.shopifyProductId,
+          productTitle: review.productTitle,
+          rating: review.rating,
+          title: review.title,
+          body: review.body,
+          authorName: review.authorName,
+          authorEmail: review.authorEmail,
+          verifiedBuyer: review.verifiedPurchase,
+          adminUrl,
+        },
+      },
+    });
+  }
+
+  private emitMerchantReply(review: ReviewRecord): void {
+    if (!review.merchantReply?.trim()) {
+      return;
+    }
+
+    this.integrations.emitInBackground({
+      shopId: review.shopId,
+      event: {
+        type: "review.merchant_reply",
+        data: {
+          reviewId: review.id,
+          merchantReply: review.merchantReply,
+          authorEmail: review.authorEmail,
+          authorName: review.authorName,
+          rating: review.rating,
+          body: review.body,
+        },
+      },
+    });
+  }
 
   async listForShop(
     shopId: string,
@@ -77,6 +139,7 @@ export class ReviewService {
       shopId,
       status: filters.status,
       shopifyProductId: filters.shopifyProductId,
+      query: filters.q,
       cursor: filters.cursor,
       limit: filters.limit,
     });
@@ -100,6 +163,14 @@ export class ReviewService {
     shopId: string,
   ): Promise<number | null> {
     return this.reviews.averageApprovedRatingForShop(shopId);
+  }
+
+  async getApprovedSummaryForShop(shopId: string) {
+    return this.reviews.getApprovedSummaryForShop(shopId);
+  }
+
+  async getShopReviewVolumeSeries(shopId: string, days: number) {
+    return this.reviews.getShopReviewVolumeSeries(shopId, days);
   }
 
   async createMerchantReview(
@@ -141,6 +212,10 @@ export class ReviewService {
       reviewId: review.id,
       status: review.status,
     });
+
+    if (review.status === "APPROVED") {
+      this.emitReviewPublished(review);
+    }
 
     return review;
   }
@@ -186,6 +261,10 @@ export class ReviewService {
       reviewId,
       status: updated.status,
     });
+
+    if (nextStatus === "APPROVED" && existing.status !== "APPROVED") {
+      this.emitReviewPublished(updated);
+    }
 
     return updated;
   }
@@ -271,6 +350,10 @@ export class ReviewService {
 
       result.updatedCount += 1;
       reviewsById.set(reviewId, updated);
+
+      if (data.status === "APPROVED" && existing.status !== "APPROVED") {
+        this.emitReviewPublished(updated);
+      }
     }
 
     logger.info("Bulk review status update completed", {
@@ -350,6 +433,8 @@ export class ReviewService {
       hasReply: Boolean(data.merchantReply),
     });
 
+    this.emitMerchantReply(updated);
+
     return updated;
   }
 
@@ -367,10 +452,10 @@ export class ReviewService {
       "Invalid storefront review query",
     );
 
-    const result = await this.reviews.list({
+    const result = await this.reviews.listForStorefront({
       shopId,
       shopifyProductId: filters.shopifyProductId,
-      status: "APPROVED",
+      sort: filters.sort,
       cursor: filters.cursor,
       limit: filters.limit,
     });
@@ -383,13 +468,19 @@ export class ReviewService {
             result.items.map((item) => item.id),
           );
 
+    const items = result.items.map((review) =>
+      toPublicReview(review, grouped.get(review.id) ?? []),
+    );
+
+    // Featured first within the page only for the default recency sort.
+    if (filters.sort === "most_recent") {
+      items.sort(
+        (left, right) => Number(right.featured) - Number(left.featured),
+      );
+    }
+
     return {
-      items: result.items
-        .map((review) =>
-          toPublicReview(review, grouped.get(review.id) ?? []),
-        )
-        // Featured first within the page (storefront highlight).
-        .sort((left, right) => Number(right.featured) - Number(left.featured)),
+      items,
       pageInfo: result.pageInfo,
     };
   }
@@ -456,6 +547,8 @@ export class ReviewService {
       status,
       source: "STOREFRONT",
       verifiedPurchase: false,
+      hasImage: mediaRecords.some((item) => item.kind === "IMAGE"),
+      hasVideo: mediaRecords.some((item) => item.kind === "VIDEO"),
       publishedAt,
     });
 
@@ -465,6 +558,7 @@ export class ReviewService {
         review.id,
         mediaRecords.map((item) => item.id),
       );
+      await this.reviews.refreshMediaFlags(shopId, review.id);
     }
 
     logger.info("Storefront review submitted", {
@@ -475,10 +569,102 @@ export class ReviewService {
       mediaCount: mediaRecords.length,
     });
 
+    if (review.status === "APPROVED") {
+      this.emitReviewPublished(review);
+    }
+
     return toPublicReview(
       review,
       mediaRecords.map((item) => toPublicMedia(item)),
     );
+  }
+
+  async listApprovedForPublicApi(
+    shopId: string,
+    query: unknown,
+  ): Promise<{
+    items: ReturnType<typeof toPublicReview>[];
+    pageInfo: ListReviewsResult["pageInfo"];
+  }> {
+    const filters = parseWithSchema(
+      listPublicApiReviewsQuerySchema,
+      query,
+      "Invalid review query",
+    );
+
+    const result = await this.reviews.list({
+      shopId,
+      shopifyProductId: filters.productId,
+      status: "APPROVED",
+      cursor: filters.cursor,
+      limit: filters.limit,
+    });
+
+    return {
+      items: result.items.map((review) => toPublicReview(review)),
+      pageInfo: result.pageInfo,
+    };
+  }
+
+  async getPublicApiSummary(
+    shopId: string,
+    query: unknown = {},
+  ): Promise<{
+    approvedCount: number;
+    averageRating: number | null;
+    ratingDistribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  }> {
+    const filters = parseWithSchema(
+      publicApiProductIdQuerySchema,
+      query,
+      "Invalid summary query",
+    );
+    return this.reviews.getApprovedSummaryForShop(shopId, filters.productId);
+  }
+
+  async getPublicApiRating(
+    shopId: string,
+    query: unknown = {},
+  ): Promise<{ averageRating: number | null; approvedCount: number }> {
+    const summary = await this.getPublicApiSummary(shopId, query);
+    return {
+      averageRating: summary.averageRating,
+      approvedCount: summary.approvedCount,
+    };
+  }
+
+  async createPublicApiReview(
+    shopId: string,
+    input: unknown,
+  ): Promise<ReturnType<typeof toPublicReview>> {
+    const data = parseWithSchema(
+      createPublicApiReviewSchema,
+      input,
+      "Invalid review",
+    );
+
+    const review = await this.reviews.create({
+      shopId,
+      shopifyProductId: data.shopifyProductId,
+      rating: data.rating,
+      title: data.title,
+      productTitle: data.productTitle,
+      body: data.body,
+      authorName: data.authorName,
+      authorEmail: data.authorEmail,
+      status: "PENDING",
+      source: "API",
+      verifiedPurchase: false,
+      publishedAt: null,
+    });
+
+    logger.info("Public API review submitted", {
+      shopId,
+      reviewId: review.id,
+      status: review.status,
+    });
+
+    return toPublicReview(review);
   }
 }
 

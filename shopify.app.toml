@@ -1,13 +1,13 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "5583660bf73cc180c986fcedf3977151"
-name = "review-app-v1"
+name = "ReviewX"
 application_url = "https://review-app-v1.onrender.com"
 embedded = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_orders,read_products"
+scopes = "read_orders,read_products, write_products"
 
 [webhooks]
 api_version = "2026-07"

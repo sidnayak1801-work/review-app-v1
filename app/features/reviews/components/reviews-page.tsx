@@ -50,6 +50,7 @@ interface ReviewsPageProps {
   filters: {
     status: ReviewQueueFilter;
     productId: string;
+    q: string;
   };
   queueCounts: {
     PENDING: number;
@@ -147,6 +148,7 @@ function ReviewMediaThumb({ item }: { item: ReviewMediaItem }) {
 function buildQueueHref(
   status: ReviewQueueFilter,
   productId: string,
+  q = "",
 ): string {
   const params = new URLSearchParams();
   if (status !== "ALL") {
@@ -154,6 +156,9 @@ function buildQueueHref(
   }
   if (productId) {
     params.set("productId", productId);
+  }
+  if (q) {
+    params.set("q", q);
   }
   const query = params.toString();
   return query ? `?${query}` : "?";
@@ -184,6 +189,17 @@ function emptyQueueMessage(status: ReviewQueueFilter): string {
     case "REJECTED":
       return "No rejected reviews.";
   }
+}
+
+function emptySearchMessage(query: string): string {
+  return `No reviews found for “${query}”.`;
+}
+
+function clearSearchHref(filters: {
+  status: ReviewQueueFilter;
+  productId: string;
+}): string {
+  return buildQueueHref(filters.status, filters.productId);
 }
 
 export function ReviewsPage({
@@ -392,7 +408,11 @@ export function ReviewsPage({
           tabs={tabs}
           activeStatus={filters.status}
           buildHref={(status) =>
-            buildQueueHref(status as ReviewQueueFilter, filters.productId)
+            buildQueueHref(
+              status as ReviewQueueFilter,
+              filters.productId,
+              filters.q,
+            )
           }
           search={{
             name: "productId",
@@ -400,6 +420,9 @@ export function ReviewsPage({
             value: filters.productId,
             statusValue: filters.status,
             allStatusValue: "ALL",
+            preserveParams: filters.q
+              ? [{ name: "q", value: filters.q }]
+              : undefined,
           }}
         />
 
@@ -464,12 +487,33 @@ export function ReviewsPage({
             background="subdued"
           >
             <s-stack direction="block" gap="small">
-              <s-text type="strong">{emptyQueueMessage(filters.status)}</s-text>
-              <s-stack direction="inline" gap="small">
-                <s-button href="/app/imports" variant="primary">
-                  Import reviews
-                </s-button>
-              </s-stack>
+              {filters.q ? (
+                <>
+                  <s-text type="strong">
+                    {emptySearchMessage(filters.q)}
+                  </s-text>
+                  <s-text color="subdued">
+                    Try another customer name, product, or review text — or clear
+                    the search to see all reviews again.
+                  </s-text>
+                  <s-stack direction="inline" gap="small">
+                    <s-button href={clearSearchHref(filters)} variant="primary">
+                      Clear search
+                    </s-button>
+                  </s-stack>
+                </>
+              ) : (
+                <>
+                  <s-text type="strong">
+                    {emptyQueueMessage(filters.status)}
+                  </s-text>
+                  <s-stack direction="inline" gap="small">
+                    <s-button href="/app/imports" variant="primary">
+                      Import reviews
+                    </s-button>
+                  </s-stack>
+                </>
+              )}
             </s-stack>
           </s-box>
         ) : (

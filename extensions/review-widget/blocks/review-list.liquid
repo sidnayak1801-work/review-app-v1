@@ -23,6 +23,7 @@
     data-vouch-reviews
     data-product-id="{{ product_resource.id }}"
     data-product-title="{{ product_resource.title | escape }}"
+    data-product-url="{{ shop.url }}{{ product_resource.url }}"
     data-product-image="{% if product_resource.featured_image %}{{ product_resource.featured_image | image_url: width: 120 }}{% endif %}"
     data-proxy-url="/apps/reviews"
     data-show-form="{{ block.settings.show_form }}"
@@ -45,8 +46,53 @@
         data-vouch-open-modal
         {% if block.settings.show_form == false %}hidden{% endif %}
       >
-        Write a review
+        Add review
       </button>
+    </div>
+
+    <div class="vouch-reviews__toolbar" data-vouch-sort-toolbar>
+      <button
+        type="button"
+        class="vouch-reviews__filter-btn"
+        data-vouch-sort-toggle
+        aria-label="Filter and sort reviews"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        aria-controls="vouch-sort-menu-{{ block.id }}"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+      </button>
+      <div class="vouch-reviews__sort">
+        <button
+          type="button"
+          class="vouch-reviews__sort-trigger"
+          data-vouch-sort-toggle
+          aria-haspopup="listbox"
+          aria-expanded="false"
+          aria-controls="vouch-sort-menu-{{ block.id }}"
+        >
+          <span data-vouch-sort-label>Most recent</span>
+          <svg class="vouch-reviews__sort-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <ul
+          id="vouch-sort-menu-{{ block.id }}"
+          class="vouch-reviews__sort-menu"
+          data-vouch-sort-menu
+          role="listbox"
+          hidden
+        >
+          <li role="option" tabindex="-1" data-vouch-sort-option="most_recent" aria-selected="true">Most recent</li>
+          <li role="option" tabindex="-1" data-vouch-sort-option="highest_rating" aria-selected="false">Highest rating</li>
+          <li role="option" tabindex="-1" data-vouch-sort-option="lowest_rating" aria-selected="false">Lowest rating</li>
+          <li role="option" tabindex="-1" data-vouch-sort-option="only_pictures" aria-selected="false">Only pictures</li>
+          <li role="option" tabindex="-1" data-vouch-sort-option="pictures_first" aria-selected="false">Pictures first</li>
+          <li role="option" tabindex="-1" data-vouch-sort-option="videos_first" aria-selected="false">Videos first</li>
+        </ul>
+      </div>
     </div>
 
     <div class="vouch-reviews__list" data-vouch-reviews-list>
@@ -156,10 +202,14 @@
             </section>
 
             <section class="vouch-modal__step" data-vouch-step="4" hidden>
-              <h3 class="vouch-modal__title">Thanks for your review!</h3>
-              <p class="vouch-modal__sub">
-                We are processing it and it will appear on the store once approved.
+              <h3 class="vouch-modal__title" data-vouch-thankyou-title>Thanks for your review!</h3>
+              <p class="vouch-modal__sub" data-vouch-thankyou-body>
+                Thanks for your review! We are processing it and it will appear on the store once approved.
               </p>
+              <div class="vouch-incentive" data-vouch-incentive hidden>
+                <div class="vouch-incentive__coupon" data-vouch-incentive-coupon hidden></div>
+                <div class="vouch-incentive__referral" data-vouch-incentive-referral hidden></div>
+              </div>
             </section>
           </div>
 
@@ -212,6 +262,102 @@
           ›
         </button>
         <p class="vouch-lightbox__counter" data-vouch-lb-counter hidden></p>
+      </div>
+    </div>
+
+    <div
+      class="vouch-share-sheet"
+      data-vouch-share-sheet
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vouch-share-sheet-title-{{ block.id }}"
+    >
+      <div class="vouch-share-sheet__backdrop" data-vouch-share-close></div>
+      <div class="vouch-share-sheet__panel">
+        <header class="vouch-share-sheet__header">
+          <button
+            type="button"
+            class="vouch-share-sheet__close"
+            data-vouch-share-close
+            aria-label="Close share"
+          >
+            ×
+          </button>
+          <h3
+            class="vouch-share-sheet__title"
+            id="vouch-share-sheet-title-{{ block.id }}"
+          >
+            Share
+          </h3>
+        </header>
+        <div class="vouch-share-sheet__preview">
+          <img
+            class="vouch-share-sheet__thumb"
+            data-vouch-share-thumb
+            src="{% if product_resource.featured_image %}{{ product_resource.featured_image | image_url: width: 96 }}{% endif %}"
+            alt=""
+            width="48"
+            height="48"
+            {% unless product_resource.featured_image %}hidden{% endunless %}
+          />
+          <div class="vouch-share-sheet__preview-text">
+            <p class="vouch-share-sheet__product" data-vouch-share-product>
+              {{ product_resource.title | escape }}
+            </p>
+            <p class="vouch-share-sheet__hint">Share this product with friends</p>
+          </div>
+        </div>
+        <div class="vouch-share-sheet__grid" data-vouch-share-grid>
+          <button type="button" class="vouch-share-sheet__item" data-vouch-share-action="copy">
+            <span class="vouch-share-sheet__icon vouch-share-sheet__icon--copy" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </span>
+            <span class="vouch-share-sheet__label">Copy Link</span>
+          </button>
+          <button type="button" class="vouch-share-sheet__item" data-vouch-share-action="whatsapp">
+            <span class="vouch-share-sheet__icon vouch-share-sheet__icon--whatsapp" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+            </span>
+            <span class="vouch-share-sheet__label">WhatsApp</span>
+          </button>
+          <button type="button" class="vouch-share-sheet__item" data-vouch-share-action="facebook">
+            <span class="vouch-share-sheet__icon vouch-share-sheet__icon--facebook" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </span>
+            <span class="vouch-share-sheet__label">Facebook</span>
+          </button>
+          <button type="button" class="vouch-share-sheet__item" data-vouch-share-action="messenger">
+            <span class="vouch-share-sheet__icon vouch-share-sheet__icon--messenger" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.732 8.1l3.13 3.259L19.752 8.1l-6.559 6.863z"/></svg>
+            </span>
+            <span class="vouch-share-sheet__label">Messenger</span>
+          </button>
+          <button type="button" class="vouch-share-sheet__item" data-vouch-share-action="gmail">
+            <span class="vouch-share-sheet__icon vouch-share-sheet__icon--gmail" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg>
+            </span>
+            <span class="vouch-share-sheet__label">Gmail</span>
+          </button>
+          <button type="button" class="vouch-share-sheet__item" data-vouch-share-action="sms">
+            <span class="vouch-share-sheet__icon vouch-share-sheet__icon--sms" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h2v2H7V9zm4 0h2v2h-2V9zm4 0h2v2h-2V9z"/></svg>
+            </span>
+            <span class="vouch-share-sheet__label">SMS</span>
+          </button>
+          <button type="button" class="vouch-share-sheet__item" data-vouch-share-action="linkedin">
+            <span class="vouch-share-sheet__icon vouch-share-sheet__icon--linkedin" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            </span>
+            <span class="vouch-share-sheet__label">LinkedIn</span>
+          </button>
+          <button type="button" class="vouch-share-sheet__item" data-vouch-share-action="more">
+            <span class="vouch-share-sheet__icon vouch-share-sheet__icon--more" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </span>
+            <span class="vouch-share-sheet__label">More</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

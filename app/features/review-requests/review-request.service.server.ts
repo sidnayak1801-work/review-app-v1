@@ -26,7 +26,12 @@ import type { ShopPlan, ShopRepository } from "../../repositories/shop.repositor
 import { shopRepository } from "../../repositories/shop.repository.server";
 import type { EmailProvider } from "../../services/email-provider.server";
 import { EmailProviderError } from "../../services/email-provider.server";
+import {
+  integrationEventDispatcher,
+  type IntegrationEventDispatcher,
+} from "../../services/integrations/integration-dispatcher.server";
 import { logger } from "../../services/logger.server";
+import { getUtcMonthWindow } from "../billing/billing.constants";
 import type { BillingService } from "../billing/billing.service.server";
 import { billingEntitlementsService } from "../billing/billing.service.server";
 import {
@@ -128,10 +133,22 @@ export class ReviewRequestService {
     private readonly billing: BillingService,
     private readonly emailProvider: EmailProvider,
     private readonly settings: ReviewRequestSettingsRepository,
+    private readonly integrations: IntegrationEventDispatcher = integrationEventDispatcher,
   ) {}
 
-  async listRecentForShop(shopId: string): Promise<ReviewRequestRecord[]> {
-    return this.requests.listForShop(shopId, 50);
+  async listRecentForShop(
+    shopId: string,
+    limit = 50,
+  ): Promise<ReviewRequestRecord[]> {
+    return this.requests.listForShop(shopId, limit);
+  }
+
+  async countSentInUtcMonth(
+    shopId: string,
+    reference: Date = new Date(),
+  ): Promise<number> {
+    const { start, end } = getUtcMonthWindow(reference);
+    return this.requests.countSentForShopInUtcMonth(shopId, start, end);
   }
 
   async getSettingsForShop(
@@ -509,6 +526,21 @@ export class ReviewRequestService {
           lastErrorCode: null,
         },
       );
+
+      for (const request of input.requests) {
+        this.integrations.emitInBackground({
+          shopId: request.shopId,
+          event: {
+            type: "review_request.sent",
+            data: {
+              reviewRequestId: request.id,
+              shopifyOrderId: request.shopifyOrderId,
+              shopifyProductId: request.shopifyProductId,
+              customerEmail: request.customerEmail,
+            },
+          },
+        });
+      }
     } catch (error) {
       const errorCode =
         error instanceof EmailProviderError
@@ -588,6 +620,19 @@ export class ReviewRequestService {
 
     await this.requests.updateForShop(request.shopId, request.id, {
       status: "COMPLETED",
+    });
+
+    this.integrations.emitInBackground({
+      shopId: request.shopId,
+      event: {
+        type: "review_request.completed",
+        data: {
+          reviewRequestId: request.id,
+          reviewId: review.id,
+          shopifyProductId: request.shopifyProductId,
+          customerEmail: request.customerEmail,
+        },
+      },
     });
 
     return { reviewId: review.id };

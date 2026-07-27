@@ -1,14 +1,24 @@
 import type { PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import prisma from "../db.server";
 import {
   decodeReviewCursor,
   encodeReviewCursor,
 } from "../lib/shopify-ids";
+import {
+  decodeStorefrontReviewCursor,
+  encodeStorefrontReviewCursor,
+} from "../lib/storefront-review-cursor.server";
+import type { StorefrontReviewSort } from "../features/reviews/review.schema";
+import {
+  buildDailyReviewVolumeSeriesFromCounts,
+  type VolumeSeriesPoint,
+} from "../lib/daily-review-volume";
 import { buildMonthlyRatingTrend, buildMonthlyReviewTrend } from "../lib/monthly-review-trend";
 
 export type ReviewStatus = "PENDING" | "APPROVED" | "REJECTED";
-export type ReviewSource = "STOREFRONT" | "MERCHANT" | "IMPORT";
+export type ReviewSource = "STOREFRONT" | "MERCHANT" | "IMPORT" | "API";
 
 export interface ReviewRecord {
   id: string;
@@ -25,6 +35,8 @@ export interface ReviewRecord {
   source: ReviewSource;
   verifiedPurchase: boolean;
   featured: boolean;
+  hasImage: boolean;
+  hasVideo: boolean;
   merchantReply: string | null;
   merchantReplyAt: Date | null;
   publishedAt: Date | null;
@@ -45,7 +57,17 @@ export interface CreateReviewRecordInput {
   status: ReviewStatus;
   source: ReviewSource;
   verifiedPurchase?: boolean;
+  hasImage?: boolean;
+  hasVideo?: boolean;
   publishedAt?: Date | null;
+}
+
+export interface ListStorefrontReviewsInput {
+  shopId: string;
+  shopifyProductId: string;
+  sort: StorefrontReviewSort;
+  cursor?: string;
+  limit: number;
 }
 
 export interface UpdateReviewRecordInput {
@@ -67,6 +89,8 @@ export interface ListReviewsInput {
   shopId: string;
   status?: ReviewStatus;
   shopifyProductId?: string;
+  /** Case-insensitive match on author, title, body, or product title. */
+  query?: string;
   cursor?: string;
   limit: number;
 }
@@ -135,6 +159,12 @@ export interface ProductRatingTrendPoint {
   averageRating: number | null;
 }
 
+export interface ApprovedReviewSummary {
+  approvedCount: number;
+  averageRating: number | null;
+  ratingDistribution: Record<1 | 2 | 3 | 4 | 5, number>;
+}
+
 export interface ReviewRepository {
   create(input: CreateReviewRecordInput): Promise<ReviewRecord>;
   findByIdForShop(
@@ -147,6 +177,8 @@ export interface ReviewRepository {
     match: ReviewCustomerMatchInput,
   ): Promise<ReviewRecord[]>;
   list(input: ListReviewsInput): Promise<ListReviewsResult>;
+  listForStorefront(input: ListStorefrontReviewsInput): Promise<ListReviewsResult>;
+  refreshMediaFlags(shopId: string, reviewId: string): Promise<void>;
   listProductsForShop(
     input: ListProductsForShopInput,
   ): Promise<ListProductsForShopResult>;
@@ -167,6 +199,14 @@ export interface ReviewRepository {
   countApprovedForShop(shopId: string): Promise<number>;
   countByStatusForShop(shopId: string): Promise<ReviewStatusCounts>;
   averageApprovedRatingForShop(shopId: string): Promise<number | null>;
+  getApprovedSummaryForShop(
+    shopId: string,
+    shopifyProductId?: string,
+  ): Promise<ApprovedReviewSummary>;
+  getShopReviewVolumeSeries(
+    shopId: string,
+    days: number,
+  ): Promise<VolumeSeriesPoint[]>;
   updateForShop(
     shopId: string,
     reviewId: string,
@@ -198,6 +238,8 @@ const REVIEW_SELECT = {
   source: true,
   verifiedPurchase: true,
   featured: true,
+  hasImage: true,
+  hasVideo: true,
   merchantReply: true,
   merchantReplyAt: true,
   publishedAt: true,
@@ -245,6 +287,201 @@ type ReviewModel = {
 
 function reviewModel(database: PrismaClient): ReviewModel {
   return (database as unknown as { review: ReviewModel }).review;
+}
+
+/** Each whitespace token must match at least one searchable text field. */
+function buildReviewTextSearchFilter(
+  query: string,
+): Record<string, unknown> | null {
+  const tokens = query
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length > 0)
+    .slice(0, 8);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  const fieldMatchForToken = (token: string) => ({
+    OR: [
+      { authorName: { contains: token, mode: "insensitive" as const } },
+      { title: { contains: token, mode: "insensitive" as const } },
+      { body: { contains: token, mode: "insensitive" as const } },
+      { productTitle: { contains: token, mode: "insensitive" as const } },
+    ],
+  });
+
+  if (tokens.length === 1) {
+    return fieldMatchForToken(tokens[0]!);
+  }
+
+  return { AND: tokens.map(fieldMatchForToken) };
+}
+
+function buildStorefrontCursorFilter(
+  sort: StorefrontReviewSort,
+  cursor: string | undefined,
+): Record<string, unknown> | null {
+  if (!cursor) {
+    return null;
+  }
+
+  const decoded = decodeStorefrontReviewCursor(cursor, sort);
+  if (!decoded) {
+    return null;
+  }
+
+  const createdAt = new Date(decoded.createdAt);
+  const id = decoded.id;
+
+  if (sort === "highest_rating") {
+    const rating = decoded.rating;
+    if (typeof rating !== "number") {
+      return null;
+    }
+    return {
+      OR: [
+        { rating: { lt: rating } },
+        {
+          AND: [
+            { rating },
+            { createdAt: { lt: createdAt } },
+          ],
+        },
+        {
+          AND: [{ rating }, { createdAt }, { id: { lt: id } }],
+        },
+      ],
+    };
+  }
+
+  if (sort === "lowest_rating") {
+    const rating = decoded.rating;
+    if (typeof rating !== "number") {
+      return null;
+    }
+    return {
+      OR: [
+        { rating: { gt: rating } },
+        {
+          AND: [
+            { rating },
+            { createdAt: { lt: createdAt } },
+          ],
+        },
+        {
+          AND: [{ rating }, { createdAt }, { id: { lt: id } }],
+        },
+      ],
+    };
+  }
+
+  if (sort === "pictures_first") {
+    if (typeof decoded.hasImage !== "boolean") {
+      return null;
+    }
+    // ORDER BY hasImage DESC — after a true row, remaining trues then falses.
+    if (decoded.hasImage) {
+      return {
+        OR: [
+          { hasImage: false },
+          {
+            AND: [{ hasImage: true }, { createdAt: { lt: createdAt } }],
+          },
+          {
+            AND: [{ hasImage: true }, { createdAt }, { id: { lt: id } }],
+          },
+        ],
+      };
+    }
+    return {
+      OR: [
+        {
+          AND: [{ hasImage: false }, { createdAt: { lt: createdAt } }],
+        },
+        {
+          AND: [{ hasImage: false }, { createdAt }, { id: { lt: id } }],
+        },
+      ],
+    };
+  }
+
+  if (sort === "videos_first") {
+    if (typeof decoded.hasVideo !== "boolean") {
+      return null;
+    }
+    if (decoded.hasVideo) {
+      return {
+        OR: [
+          { hasVideo: false },
+          {
+            AND: [{ hasVideo: true }, { createdAt: { lt: createdAt } }],
+          },
+          {
+            AND: [{ hasVideo: true }, { createdAt }, { id: { lt: id } }],
+          },
+        ],
+      };
+    }
+    return {
+      OR: [
+        {
+          AND: [{ hasVideo: false }, { createdAt: { lt: createdAt } }],
+        },
+        {
+          AND: [{ hasVideo: false }, { createdAt }, { id: { lt: id } }],
+        },
+      ],
+    };
+  }
+
+  // most_recent + only_pictures
+  return {
+    OR: [
+      { createdAt: { lt: createdAt } },
+      {
+        AND: [{ createdAt }, { id: { lt: id } }],
+      },
+    ],
+  };
+}
+
+function storefrontOrderBy(
+  sort: StorefrontReviewSort,
+): Array<Record<string, "asc" | "desc">> {
+  switch (sort) {
+    case "highest_rating":
+      return [{ rating: "desc" }, { createdAt: "desc" }, { id: "desc" }];
+    case "lowest_rating":
+      return [{ rating: "asc" }, { createdAt: "desc" }, { id: "desc" }];
+    case "pictures_first":
+      return [{ hasImage: "desc" }, { createdAt: "desc" }, { id: "desc" }];
+    case "videos_first":
+      return [{ hasVideo: "desc" }, { createdAt: "desc" }, { id: "desc" }];
+    case "only_pictures":
+    case "most_recent":
+    default:
+      return [{ createdAt: "desc" }, { id: "desc" }];
+  }
+}
+
+function encodeStorefrontPageCursor(
+  sort: StorefrontReviewSort,
+  review: ReviewRecord,
+): string {
+  return encodeStorefrontReviewCursor({
+    v: 1,
+    sort,
+    createdAt: review.createdAt.toISOString(),
+    id: review.id,
+    rating:
+      sort === "highest_rating" || sort === "lowest_rating"
+        ? review.rating
+        : undefined,
+    hasImage: sort === "pictures_first" ? review.hasImage : undefined,
+    hasVideo: sort === "videos_first" ? review.hasVideo : undefined,
+  });
 }
 
 export class PrismaReviewRepository implements ReviewRepository {
@@ -303,32 +540,44 @@ export class PrismaReviewRepository implements ReviewRepository {
   }
 
   async list(input: ListReviewsInput): Promise<ListReviewsResult> {
-    const where: Record<string, unknown> = {
-      shopId: input.shopId,
-    };
+    const andFilters: Array<Record<string, unknown>> = [];
 
     if (input.status) {
-      where.status = input.status;
+      andFilters.push({ status: input.status });
     }
 
     if (input.shopifyProductId) {
-      where.shopifyProductId = input.shopifyProductId;
+      andFilters.push({ shopifyProductId: input.shopifyProductId });
+    }
+
+    if (input.query) {
+      const searchFilter = buildReviewTextSearchFilter(input.query);
+      if (searchFilter) {
+        andFilters.push(searchFilter);
+      }
     }
 
     if (input.cursor) {
       const decoded = decodeReviewCursor(input.cursor);
       if (decoded) {
-        where.OR = [
-          { createdAt: { lt: decoded.createdAt } },
-          {
-            AND: [
-              { createdAt: decoded.createdAt },
-              { id: { lt: decoded.id } },
-            ],
-          },
-        ];
+        andFilters.push({
+          OR: [
+            { createdAt: { lt: decoded.createdAt } },
+            {
+              AND: [
+                { createdAt: decoded.createdAt },
+                { id: { lt: decoded.id } },
+              ],
+            },
+          ],
+        });
       }
     }
+
+    const where: Record<string, unknown> = {
+      shopId: input.shopId,
+      ...(andFilters.length > 0 ? { AND: andFilters } : {}),
+    };
 
     const rows = await reviewModel(this.database).findMany({
       where,
@@ -350,6 +599,61 @@ export class PrismaReviewRepository implements ReviewRepository {
           : null,
       },
     };
+  }
+
+  async listForStorefront(
+    input: ListStorefrontReviewsInput,
+  ): Promise<ListReviewsResult> {
+    const andFilters: Array<Record<string, unknown>> = [
+      { status: "APPROVED" },
+      { shopifyProductId: input.shopifyProductId },
+    ];
+
+    if (input.sort === "only_pictures") {
+      andFilters.push({ hasImage: true });
+    }
+
+    const cursorFilter = buildStorefrontCursorFilter(input.sort, input.cursor);
+    if (cursorFilter) {
+      andFilters.push(cursorFilter);
+    }
+
+    const rows = await reviewModel(this.database).findMany({
+      where: {
+        shopId: input.shopId,
+        AND: andFilters,
+      },
+      orderBy: storefrontOrderBy(input.sort),
+      take: input.limit + 1,
+      select: REVIEW_SELECT,
+    });
+
+    const hasNextPage = rows.length > input.limit;
+    const items = hasNextPage ? rows.slice(0, input.limit) : rows;
+    const last = items[items.length - 1];
+
+    return {
+      items,
+      pageInfo: {
+        hasNextPage,
+        nextCursor: last ? encodeStorefrontPageCursor(input.sort, last) : null,
+      },
+    };
+  }
+
+  async refreshMediaFlags(shopId: string, reviewId: string): Promise<void> {
+    const mediaRows = await this.database.reviewMedia.findMany({
+      where: { shopId, reviewId },
+      select: { kind: true },
+    });
+
+    const hasImage = mediaRows.some((row) => row.kind === "IMAGE");
+    const hasVideo = mediaRows.some((row) => row.kind === "VIDEO");
+
+    await this.database.review.updateMany({
+      where: { id: reviewId, shopId },
+      data: { hasImage, hasVideo },
+    });
   }
 
   async listProductsForShop(
@@ -640,6 +944,92 @@ export class PrismaReviewRepository implements ReviewRepository {
     }
 
     return Math.round(result._avg.rating * 10) / 10;
+  }
+
+  async getShopReviewVolumeSeries(
+    shopId: string,
+    days: number,
+  ): Promise<VolumeSeriesPoint[]> {
+    const dayCount = Math.min(Math.max(days, 1), 366);
+    const now = new Date();
+    const start = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() - (dayCount - 1),
+      ),
+    );
+
+    const rows = await this.database.$queryRaw<
+      Array<{ date_key: Date; count: bigint | number }>
+    >(Prisma.sql`
+      SELECT
+        date_trunc('day', "createdAt" AT TIME ZONE 'UTC') AS date_key,
+        COUNT(*)::int AS count
+      FROM "Review"
+      WHERE "shopId" = ${shopId}
+        AND "createdAt" >= ${start}
+      GROUP BY 1
+      ORDER BY 1 ASC
+    `);
+
+    const dayCounts = rows.map((row) => {
+      const date =
+        row.date_key instanceof Date ? row.date_key : new Date(row.date_key);
+      return {
+        dateKey: date.toISOString().slice(0, 10),
+        count: Number(row.count),
+      };
+    });
+
+    return buildDailyReviewVolumeSeriesFromCounts(dayCounts, dayCount, now);
+  }
+
+  async getApprovedSummaryForShop(
+    shopId: string,
+    shopifyProductId?: string,
+  ): Promise<ApprovedReviewSummary> {
+    const where = {
+      shopId,
+      status: "APPROVED" as const,
+      ...(shopifyProductId ? { shopifyProductId } : {}),
+    };
+
+    const [aggregate, ratingRows] = await Promise.all([
+      this.database.review.aggregate({
+        where,
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
+      this.database.review.groupBy({
+        by: ["rating"],
+        where,
+        _count: { _all: true },
+      }),
+    ]);
+
+    const ratingDistribution: ApprovedReviewSummary["ratingDistribution"] = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
+    for (const row of ratingRows) {
+      const rating = row.rating as 1 | 2 | 3 | 4 | 5;
+      if (rating >= 1 && rating <= 5) {
+        ratingDistribution[rating] = row._count._all;
+      }
+    }
+
+    return {
+      approvedCount: aggregate._count._all,
+      averageRating:
+        aggregate._avg.rating == null
+          ? null
+          : Math.round(aggregate._avg.rating * 10) / 10,
+      ratingDistribution,
+    };
   }
 
   async updateForShop(

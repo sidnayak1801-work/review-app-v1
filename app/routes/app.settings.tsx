@@ -97,7 +97,7 @@ export default function WidgetSettingsRoute() {
       <s-stack direction="block" gap="large">
         <s-text color="subdued">
           Customize how reviews appear on your storefront. You can also edit
-          these on the Home dashboard with a live preview.
+          these from the Home dashboard widget settings card.
         </s-text>
 
         {actionData ? (

@@ -86,6 +86,126 @@
   filter: brightness(1.05);
 }
 
+.vouch-reviews__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.15rem 0 0.35rem;
+}
+
+.vouch-reviews__filter-btn,
+.vouch-reviews__sort-trigger {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--vouch-accent, #16a34a) 35%, #d1d5db);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.vouch-reviews__filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border-radius: calc(var(--vouch-radius, 12px) * 0.45);
+  color: color-mix(in srgb, var(--vouch-accent, #16a34a) 85%, #14532d);
+}
+
+.vouch-reviews__filter-btn:hover,
+.vouch-reviews__sort-trigger:hover {
+  border-color: var(--vouch-accent, #16a34a);
+  background: color-mix(in srgb, var(--vouch-accent, #16a34a) 8%, #fff);
+}
+
+.vouch-reviews__sort {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 16rem;
+}
+
+.vouch-reviews__sort-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.vouch-reviews__sort-chevron {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.vouch-reviews__sort-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border: 1px solid color-mix(in srgb, var(--vouch-accent, #16a34a) 28%, #d1d5db);
+  border-radius: calc(var(--vouch-radius, 12px) * 0.65);
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(16, 85, 60, 0.12);
+}
+
+.vouch-reviews__sort-menu[hidden] {
+  display: none;
+}
+
+.vouch-reviews__sort-menu [data-vouch-sort-option] {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: calc(var(--vouch-radius, 12px) * 0.45);
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.vouch-reviews__sort-menu [data-vouch-sort-option]:hover {
+  background: color-mix(in srgb, var(--vouch-accent, #16a34a) 10%, #fff);
+}
+
+.vouch-reviews__sort-menu [data-vouch-sort-option][aria-selected="true"] {
+  background: var(--vouch-accent, #16a34a);
+  color: #fff;
+  font-weight: 600;
+}
+
+.vouch-reviews--dark .vouch-reviews__filter-btn,
+.vouch-reviews--dark .vouch-reviews__sort-trigger,
+.vouch-reviews--dark .vouch-reviews__sort-menu {
+  background: color-mix(in srgb, var(--vouch-accent, #16a34a) 12%, #111827);
+  border-color: color-mix(in srgb, var(--vouch-accent, #16a34a) 40%, #374151);
+  color: #f3f4f6;
+}
+
+.vouch-reviews--dark .vouch-reviews__filter-btn:hover,
+.vouch-reviews--dark .vouch-reviews__sort-trigger:hover,
+.vouch-reviews--dark .vouch-reviews__sort-menu [data-vouch-sort-option]:hover {
+  background: color-mix(in srgb, var(--vouch-accent, #16a34a) 22%, #111827);
+}
+
+.vouch-reviews--dark .vouch-reviews__sort-menu [data-vouch-sort-option][aria-selected="true"] {
+  background: var(--vouch-accent, #16a34a);
+  color: #fff;
+}
+
 .vouch-reviews__list {
   display: grid;
   gap: 0.85rem;
@@ -683,6 +803,15 @@ button.vouch-reviews__media-item {
     width: 100%;
   }
 
+  .vouch-reviews__toolbar {
+    flex-wrap: wrap;
+  }
+
+  .vouch-reviews__sort {
+    max-width: none;
+    flex: 1 1 calc(100% - 3rem);
+  }
+
   .vouch-modal__panel {
     padding: 1.25rem 1rem 1rem;
   }
@@ -711,5 +840,321 @@ button.vouch-reviews__media-item {
 
   .vouch-lightbox__counter {
     bottom: 0.35rem;
+  }
+}
+
+.vouch-incentive {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.vouch-incentive__card {
+  padding: 0.85rem 1rem;
+  border-radius: var(--vouch-radius, 8px);
+  border: 1px solid color-mix(in srgb, var(--vouch-accent, #0f766e) 28%, #e5e7eb);
+  background: color-mix(in srgb, var(--vouch-accent, #0f766e) 8%, #fff);
+}
+
+.vouch-incentive__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vouch-accent, #0f766e);
+}
+
+.vouch-incentive__headline {
+  margin: 0 0 0.35rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.vouch-incentive__desc {
+  margin: 0 0 0.65rem;
+  color: rgba(0, 0, 0, 0.65);
+  line-height: 1.4;
+}
+
+.vouch-incentive__code-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.vouch-incentive__code {
+  display: inline-block;
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.4rem;
+  background: #111;
+  color: #fff;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+.vouch-incentive__copy,
+.vouch-incentive__cta {
+  appearance: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  text-decoration: none;
+}
+
+.vouch-incentive__copy {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  color: inherit;
+}
+
+.vouch-incentive__cta {
+  display: inline-flex;
+  border: 0;
+  background: var(--vouch-btn, var(--vouch-accent, #0f766e));
+  color: #fff;
+}
+
+.vouch-incentive__referral-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.vouch-incentive__share-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 55%, #7c3aed 100%);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vouch-incentive__share-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.34);
+}
+
+.vouch-incentive__share-btn:active {
+  transform: translateY(0);
+}
+
+.vouch-incentive__share-icon {
+  display: inline-flex;
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.vouch-incentive__share-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.vouch-share-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.vouch-share-sheet[hidden] {
+  display: none;
+}
+
+.vouch-share-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.vouch-share-sheet__panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 26rem);
+  max-height: min(90vh, 36rem);
+  overflow: auto;
+  margin: 0;
+  padding: 0.75rem 1rem 1.25rem;
+  border-radius: 1.1rem 1.1rem 0 0;
+  background: #fff;
+  box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.18);
+  animation: vouch-share-up 0.22s ease-out;
+}
+
+@keyframes vouch-share-up {
+  from {
+    transform: translateY(1.25rem);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.vouch-share-sheet__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.vouch-share-sheet__close {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #111;
+  padding: 0.25rem 0.45rem;
+}
+
+.vouch-share-sheet__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.vouch-share-sheet__preview {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.vouch-share-sheet__thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #e2e8f0;
+}
+
+.vouch-share-sheet__preview-text {
+  min-width: 0;
+}
+
+.vouch-share-sheet__product {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vouch-share-sheet__hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.vouch-share-sheet__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem 0.5rem;
+}
+
+.vouch-share-sheet__item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.25rem;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.vouch-share-sheet__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 999px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.vouch-share-sheet__icon--copy {
+  background: linear-gradient(145deg, #38bdf8, #2563eb);
+}
+
+.vouch-share-sheet__icon--whatsapp {
+  background: #25d366;
+}
+
+.vouch-share-sheet__icon--facebook {
+  background: #1877f2;
+}
+
+.vouch-share-sheet__icon--messenger {
+  background: linear-gradient(135deg, #00b2ff, #a033ff 55%, #ff4d8d);
+}
+
+.vouch-share-sheet__icon--gmail {
+  background: #ea4335;
+}
+
+.vouch-share-sheet__icon--sms {
+  background: #0ea5e9;
+}
+
+.vouch-share-sheet__icon--linkedin {
+  background: #0a66c2;
+  border-radius: 0.65rem;
+}
+
+.vouch-share-sheet__icon--more {
+  background: #94a3b8;
+}
+
+.vouch-share-sheet__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  .vouch-share-sheet {
+    align-items: center;
+  }
+
+  .vouch-share-sheet__panel {
+    border-radius: 1rem;
+    margin: 1rem;
   }
 }

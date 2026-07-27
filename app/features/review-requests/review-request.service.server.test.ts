@@ -77,6 +77,8 @@ function createReviews(
     findByIdsForShop: vi.fn(),
     findForCustomerPrivacy: vi.fn(),
     list: vi.fn(),
+    listForStorefront: vi.fn(),
+    refreshMediaFlags: vi.fn(),
     listProductsForShop: vi.fn(),
     getProductStatsForShop: vi.fn(),
     getProductReviewTrendForShop: vi.fn(),
@@ -84,6 +86,8 @@ function createReviews(
     countApprovedForShop: vi.fn(),
     countByStatusForShop: vi.fn(),
     averageApprovedRatingForShop: vi.fn(),
+    getApprovedSummaryForShop: vi.fn(),
+    getShopReviewVolumeSeries: vi.fn().mockResolvedValue([]),
     updateForShop: vi.fn(),
     setProductTitlesForShop: vi.fn(),
     redactCustomerPii: vi.fn(),
@@ -163,6 +167,10 @@ function createService(input?: {
     input?.billing ?? createBilling(),
     input?.email ?? createEmailProvider(),
     input?.settings ?? createSettings(),
+    {
+      emit: vi.fn().mockResolvedValue(undefined),
+      emitInBackground: vi.fn(),
+    } as never,
   );
 }
 

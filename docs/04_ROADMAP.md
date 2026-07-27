@@ -286,7 +286,12 @@ Definition of done:
 
 ## Phase 5 — Insights and Ecosystem
 
-Status: 🚧 In Progress (Phase 5.2 Q&A shipped; further ecosystem candidates open)
+Status: 🚧 In Progress (Phase 5.5 public API shipped; further ecosystem candidates open)
+
+Review submission identity, verified-buyer rules, guest/logged-in flows, and
+related merchant permission settings are specified in
+`14_REVIEW_SUBMISSION_SPEC.md`. Implement submission changes against that
+document; do not invent parallel identity or verification rules.
 
 Candidate scope:
 
@@ -299,9 +304,15 @@ Candidate scope:
   moderation (Approve/Hide/Answer/Delete), storefront Q&A block +
   `/apps/reviews/qa` proxy, merchant email on new questions, shared
   moderation utilities
-- Coupons and referral prompts
-- Klaviyo and Gorgias integrations (including SMS-oriented channels)
-- Public or partner API
+- [x] Coupons and referral prompts — Phase 5.3: `IncentiveCampaign`,
+  `/app/incentives` settings, thank-you coupon/referral after review submit
+  (Shopify discount code paste only; no coupon engine)
+- [x] Klaviyo and Gorgias integrations — Phase 5.4: encrypted connections,
+  provider interface + registry, Klaviyo events, Gorgias tickets + outbound
+  reply sync, `/app/integrations` admin UI (SMS / inbound webhooks deferred)
+- [x] Public or partner API — Phase 5.5: `/api/v1` REST (list/submit/summary/
+  rating/product reviews), per-shop Bearer tokens (generate/rotate/revoke),
+  rate-limit architecture (in-memory; Redis-ready), `/app/api` docs + tokens
 - Review syndication
 - ~~Video reviews~~ (shipped with photo reviews in Phase 4 growth)
 

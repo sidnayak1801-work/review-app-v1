@@ -31,8 +31,11 @@ export class ReviewImportService {
     private readonly billing: BillingService,
   ) {}
 
-  async listRecentForShop(shopId: string): Promise<ReviewImportRecord[]> {
-    return this.imports.listRecentForShop(shopId, 20);
+  async listRecentForShop(
+    shopId: string,
+    limit = 20,
+  ): Promise<ReviewImportRecord[]> {
+    return this.imports.listRecentForShop(shopId, limit);
   }
 
   async getForShop(

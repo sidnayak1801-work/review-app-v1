@@ -15,12 +15,8 @@ import type { BulkUpdateReviewStatusResult } from "../features/reviews/review.se
 import { reviewService } from "../features/reviews/review.service.server";
 import { reviewMediaService } from "../features/reviews/review-media.service.server";
 import { reviewStatusSchema } from "../features/reviews/review.schema";
-import { enrichReviewsWithProductTitles } from "../features/reviews/review-product-titles.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
-import { isBillingTestMode } from "../lib/billing-env.server";
-import {
-  requireShopWithBillingSync,
-} from "../lib/shop-context.server";
+import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
 function resolveQueueFilter(
@@ -67,19 +63,17 @@ function buildBulkUpdateMessage(
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
   const url = new URL(request.url);
   const queueFilter = resolveQueueFilter(url.searchParams.get("status"));
+  const searchQuery = url.searchParams.get("q")?.trim() || undefined;
 
   const [result, queueCounts, publishedReviewUsage] = await Promise.all([
     reviewService.listForShop(shop.id, {
       status: queueFilter === "ALL" ? undefined : queueFilter,
       shopifyProductId: url.searchParams.get("productId") || undefined,
+      q: searchQuery,
       cursor: url.searchParams.get("cursor") || undefined,
       limit: 20,
     }),
@@ -90,21 +84,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }),
   ]);
 
+  // Media only — do not block list on Admin GraphQL product-title enrichment.
   const mediaByReview = await reviewMediaService.listGroupedForReviews(
     shop.id,
     result.items.map((item) => item.id),
   );
 
-  const enrichedReviews = await enrichReviewsWithProductTitles(
-    shop.id,
-    admin,
-    result.items,
-  );
-
   return {
     shopDomain: shop.shopDomain,
     shopPlan: shop.plan,
-    reviews: enrichedReviews.map((review) => ({
+    reviews: result.items.map((review) => ({
       ...review,
       publishedAt: review.publishedAt?.toISOString() ?? null,
       merchantReplyAt: review.merchantReplyAt?.toISOString() ?? null,
@@ -118,18 +107,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     filters: {
       status: queueFilter,
       productId: url.searchParams.get("productId") ?? "",
+      q: searchQuery ?? "",
     },
   };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-    forceSync: false,
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 

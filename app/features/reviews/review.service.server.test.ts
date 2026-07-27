@@ -48,6 +48,8 @@ const review: ReviewRecord = {
   source: "MERCHANT",
   verifiedPurchase: false,
   featured: false,
+  hasImage: false,
+  hasVideo: false,
   merchantReply: null,
   merchantReplyAt: null,
   publishedAt: new Date("2026-07-18T00:00:00.000Z"),
@@ -67,6 +69,11 @@ function createRepository(
       items: [review],
       pageInfo: { nextCursor: null, hasNextPage: false },
     }),
+    listForStorefront: vi.fn().mockResolvedValue({
+      items: [review],
+      pageInfo: { nextCursor: null, hasNextPage: false },
+    }),
+    refreshMediaFlags: vi.fn().mockResolvedValue(undefined),
     listProductsForShop: vi.fn().mockResolvedValue({
       items: [],
       pageInfo: { nextCursor: null, hasNextPage: false },
@@ -89,6 +96,12 @@ function createRepository(
       REJECTED: 0,
     }),
     averageApprovedRatingForShop: vi.fn().mockResolvedValue(5),
+    getApprovedSummaryForShop: vi.fn().mockResolvedValue({
+      approvedCount: 1,
+      averageRating: 5,
+      ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 1 },
+    }),
+    getShopReviewVolumeSeries: vi.fn().mockResolvedValue([]),
     updateForShop: vi.fn().mockResolvedValue(review),
     setProductTitlesForShop: vi.fn().mockResolvedValue(0),
     redactCustomerPii: vi.fn().mockResolvedValue(0),
@@ -97,12 +110,22 @@ function createRepository(
   };
 }
 
+const noopIntegrations = {
+  emit: vi.fn().mockResolvedValue(undefined),
+  emitInBackground: vi.fn(),
+};
+
 describe("ReviewService", () => {
   it("creates a merchant review as approved by default", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const repository = createRepository();
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const service = new ReviewService(
+      repository,
+      billing,
+      undefined,
+      noopIntegrations as never,
+    );
 
     await service.createMerchantReview("shop-1", "FREE", {
       shopifyProductId: "1",
@@ -126,6 +149,30 @@ describe("ReviewService", () => {
     });
   });
 
+  it("passes free-text search to the repository list", async () => {
+    const repository = createRepository();
+    const billing = createBilling();
+    const service = new ReviewService(
+      repository,
+      billing,
+      undefined,
+      noopIntegrations as never,
+    );
+
+    await service.listForShop("shop-1", {
+      q: "virat kohli",
+      limit: 20,
+    });
+
+    expect(repository.list).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shopId: "shop-1",
+        query: "virat kohli",
+        limit: 20,
+      }),
+    );
+  });
+
   it("lists only approved reviews for the storefront", async () => {
     const repository = createRepository();
     const billing = createBilling();
@@ -140,16 +187,17 @@ describe("ReviewService", () => {
       repository,
       billing,
       media as never,
+      noopIntegrations as never,
     );
 
     const result = await service.listApprovedForStorefront("shop-1", {
       shopifyProductId: "1",
     });
 
-    expect(repository.list).toHaveBeenCalledWith(
+    expect(repository.listForStorefront).toHaveBeenCalledWith(
       expect.objectContaining({
         shopId: "shop-1",
-        status: "APPROVED",
+        sort: "most_recent",
         shopifyProductId: "gid://shopify/Product/1",
       }),
     );
@@ -177,7 +225,7 @@ describe("ReviewService", () => {
       createdAt: new Date("2026-07-18T00:00:00.000Z"),
     };
     const repository = createRepository({
-      list: vi.fn().mockResolvedValue({
+      listForStorefront: vi.fn().mockResolvedValue({
         items: [newer, olderFeatured],
         pageInfo: { nextCursor: null, hasNextPage: false },
       }),
@@ -194,10 +242,12 @@ describe("ReviewService", () => {
       repository,
       billing,
       media as never,
+      noopIntegrations as never,
     );
 
     const result = await service.listApprovedForStorefront("shop-1", {
       shopifyProductId: "1",
+      sort: "most_recent",
     });
 
     expect(result.items.map((item) => item.id)).toEqual([
@@ -209,6 +259,84 @@ describe("ReviewService", () => {
       merchantReply: "Thanks for the feedback!",
       merchantReplyAt: "2026-07-19T00:00:00.000Z",
     });
+  });
+
+  it("does not featured-bump when a non-default storefront sort is active", async () => {
+    const olderFeatured: ReviewRecord = {
+      ...review,
+      id: "review-featured",
+      featured: true,
+      rating: 3,
+      createdAt: new Date("2026-07-10T00:00:00.000Z"),
+    };
+    const newerHigh: ReviewRecord = {
+      ...review,
+      id: "review-high",
+      featured: false,
+      rating: 5,
+      createdAt: new Date("2026-07-18T00:00:00.000Z"),
+    };
+    const repository = createRepository({
+      listForStorefront: vi.fn().mockResolvedValue({
+        items: [newerHigh, olderFeatured],
+        pageInfo: { nextCursor: null, hasNextPage: false },
+      }),
+    });
+    const media = {
+      resolveForAttach: vi.fn().mockResolvedValue([]),
+      attachToReview: vi.fn(),
+      listForReviews: vi.fn().mockResolvedValue([]),
+      listGroupedForReviews: vi.fn().mockResolvedValue(new Map()),
+      uploadForShop: vi.fn(),
+    };
+    const service = new ReviewService(
+      repository,
+      createBilling(),
+      media as never,
+      noopIntegrations as never,
+    );
+
+    const result = await service.listApprovedForStorefront("shop-1", {
+      shopifyProductId: "1",
+      sort: "highest_rating",
+    });
+
+    expect(repository.listForStorefront).toHaveBeenCalledWith(
+      expect.objectContaining({ sort: "highest_rating" }),
+    );
+    expect(result.items.map((item) => item.id)).toEqual([
+      "review-high",
+      "review-featured",
+    ]);
+  });
+
+  it("passes only_pictures sort through to the storefront list", async () => {
+    const repository = createRepository();
+    const media = {
+      resolveForAttach: vi.fn().mockResolvedValue([]),
+      attachToReview: vi.fn(),
+      listForReviews: vi.fn().mockResolvedValue([]),
+      listGroupedForReviews: vi.fn().mockResolvedValue(new Map()),
+      uploadForShop: vi.fn(),
+    };
+    const service = new ReviewService(
+      repository,
+      createBilling(),
+      media as never,
+      noopIntegrations as never,
+    );
+
+    await service.listApprovedForStorefront("shop-1", {
+      shopifyProductId: "1",
+      sort: "only_pictures",
+    });
+
+    expect(repository.listForStorefront).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sort: "only_pictures",
+        shopifyProductId: "gid://shopify/Product/1",
+      }),
+    );
   });
 
   it("rejects honeypot storefront submissions", async () => {
@@ -225,6 +353,7 @@ describe("ReviewService", () => {
       repository,
       billing,
       media as never,
+      noopIntegrations as never,
     );
 
     await expect(
@@ -259,6 +388,7 @@ describe("ReviewService", () => {
       repository,
       billing,
       media as never,
+      noopIntegrations as never,
     );
 
     await service.createStorefrontReview("shop-1", "FREE", {
@@ -294,6 +424,7 @@ describe("ReviewService", () => {
       repository,
       billing,
       media as never,
+      noopIntegrations as never,
     );
 
     await service.createStorefrontReview(
@@ -341,6 +472,7 @@ describe("ReviewService", () => {
       repository,
       billing,
       media as never,
+      noopIntegrations as never,
     );
 
     await service.createStorefrontReview(
@@ -367,7 +499,7 @@ describe("ReviewService", () => {
   it("does not call billing when updating an already approved review", async () => {
     const repository = createRepository();
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
 
     await service.updateForShop(
       "shop-1",
@@ -396,7 +528,7 @@ describe("ReviewService", () => {
     });
 
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
 
     await service.updateForShop(
       "shop-1",
@@ -440,7 +572,7 @@ describe("ReviewService", () => {
     });
 
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
 
     const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
       reviewIds: ["review-pending"],
@@ -491,7 +623,7 @@ describe("ReviewService", () => {
           ),
         ),
     });
-    const service = new ReviewService(repository, billing);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
 
     const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
       reviewIds: ["review-2", "review-3"],
@@ -512,7 +644,7 @@ describe("ReviewService", () => {
     });
 
     const billing = createBilling();
-    const service = new ReviewService(repository, billing);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
 
     const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
       reviewIds: ["review-1"],
@@ -533,7 +665,7 @@ describe("ReviewService", () => {
         featured: true,
       }),
     });
-    const service = new ReviewService(repository, createBilling());
+    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never);
 
     const updated = await service.setFeaturedForShop("shop-1", {
       reviewId: "review-1",
@@ -562,7 +694,7 @@ describe("ReviewService", () => {
           merchantReplyAt: null,
         }),
     });
-    const service = new ReviewService(repository, createBilling());
+    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never);
 
     await service.setMerchantReplyForShop("shop-1", {
       reviewId: "review-1",
@@ -593,7 +725,7 @@ describe("ReviewService", () => {
 
   it("rejects merchant replies longer than 1000 characters", async () => {
     const repository = createRepository();
-    const service = new ReviewService(repository, createBilling());
+    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never);
 
     await expect(
       service.setMerchantReplyForShop("shop-1", {

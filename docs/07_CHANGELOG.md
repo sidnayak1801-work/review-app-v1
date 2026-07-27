@@ -5,6 +5,65 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Dashboard Open queue / Full settings use SPA `Link`s; Reviews list no longer
+  blocks on Admin GraphQL product-title enrichment (media still loads).
+- Merchant admin navigations: overlay subtitle is “Please wait…”, no 900ms
+  minimum hold; home volume chart uses SQL day aggregation; Reviews /
+  Questions / Imports / Review requests skip live billing sync on load.
+- Storefront review sort/filter toolbar (Most recent, Highest/Lowest rating,
+  Only pictures, Pictures first, Videos first) under Add review; app-proxy
+  `sort` + sort-aware cursors; `Review.hasImage` / `hasVideo` denormalized flags.
+- Marketing theme uses `@theme inline` + `data-theme` so light/dark toggles
+  the full page palette; nav/CTAs use a sage/emerald look instead of black.
+- Rebuilt the ReviewX marketing site end-to-end: Tailwind + Framer Motion
+  (LazyMotion), light/dark theme, sticky glass navbar, hero with floating
+  cards, logo marquee, feature grid (Coming soon badges for AI/SEO/video),
+  interactive dashboard preview, social proof counters, how-it-works, Free/Pro
+  pricing, FAQ, install CTA, and multi-column footer. Marketing CSS stays
+  scoped to public routes so Polaris admin is unaffected.
+- Partner app display name set to ReviewX.
+- Reviews search: top-bar `q` filters the moderation queue by customer name,
+  review text, and product title; empty results show a clear “not found” state
+  with a Clear search action.
+- Rebuilt the merchant home dashboard to match `15_DASHBOARD_UI_SPEC.md`
+  end-to-end: sticky sidebar/top bar, Shopify-green theme, 8px spacing,
+  1400px content, sections in spec order (welcome → KPI → chart → rating →
+  latest → pending → quick actions → widget preview → analytics), expandable
+  reviews table with inline approve/hide/delete, empty/loading states, and
+  responsive breakpoints.
+- Dashboard polish: smooth Catmull-Rom volume chart with axis labels, chart +
+  rating distribution side-by-side, and a Free-plan “Upgrade to Pro” sidebar
+  card linking to Billing.
+- Latest reviews + pending moderation restyled (avatar list, status dots,
+  Approve/Hide/Delete); Pro “View plans” button sizing fixed; concise dashboard
+  footer with Plans / API / Settings links.
+- Dashboard moderation actions use compact icon controls with confirmation
+  modals; latest/pending cards scroll internally so sibling layout stays stable.
+- Phase 5.5 public API foundation: versioned REST `/api/v1` (list/submit
+  reviews, summary, rating, product reviews), per-shop Bearer `ApiToken`
+  generate/rotate/revoke (hash-at-rest), in-memory rate-limit architecture with
+  Redis-ready interface, and merchant `/app/api` docs + token UI (Free + Pro).
+- Faster local admin/storefront loads: `shopify.web.toml` no longer blocks the
+  React Router server on `prisma migrate deploy` each restart (use
+  `npm run db:migrate` when schema changes); home loader drops non-critical
+  activity queries; Integrations/Incentives skip billing sync; billing cache
+  TTL 1h; storefront review GET uses short Cache-Control.
+- Phase 5.4 integrations: pluggable provider registry with encrypted
+  `IntegrationConnection` credentials, Klaviyo event sync (published / request
+  sent / completed), Gorgias ticket create + outbound merchant-reply sync,
+  and `/app/integrations` admin connect/test/disconnect UI. SMS and inbound
+  Gorgias webhooks remain deferred.
+- Adopted `14_REVIEW_SUBMISSION_SPEC.md` as the source of truth for review
+  submission identity, verified-buyer rules, and guest/logged-in flows; linked
+  from Phase 5 roadmap, TODO (next vertical slice), and `AGENTS.md`.
+- Thank-you referral step: Share product button opens a Flipkart-style share
+  sheet (Copy Link, WhatsApp, Facebook, Messenger, Gmail, SMS, LinkedIn, More).
+- Admin home loads faster: layout skips duplicate auth, dashboard skips
+  blocking Admin GraphQL title enrichment, and activity queries use smaller
+  recent limits.
+- Phase 5.3 post-review incentives: `IncentiveCampaign` model, `/app/incentives`
+  admin settings (coupon code paste + referral prompt), and thank-you step UI
+  fed from review submit `201` (`incentive` payload). No coupon engine.
 - Moderation actions (Publish/Hide/Feature/Reply/Delete and Q&A Approve/Hide/
   Answer/Delete) open Polaris confirmation or input modals with loading states,
   inline errors, App Bridge success toasts, and local list updates without a

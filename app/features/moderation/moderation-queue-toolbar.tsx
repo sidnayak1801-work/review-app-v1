@@ -18,6 +18,8 @@ interface ModerationQueueToolbarProps {
     statusFieldName?: string;
     statusValue?: string;
     allStatusValue?: string;
+    /** Extra GET params to keep (e.g. text search `q`). */
+    preserveParams?: Array<{ name: string; value: string }>;
   };
 }
 
@@ -54,6 +56,16 @@ export function ModerationQueueToolbar({
               value={search.statusValue}
             />
           ) : null}
+          {search.preserveParams?.map((param) =>
+            param.value ? (
+              <input
+                key={param.name}
+                type="hidden"
+                name={param.name}
+                value={param.value}
+              />
+            ) : null,
+          )}
           <s-stack direction="inline" gap="small" alignItems="end">
             <s-text-field
               name={search.name}

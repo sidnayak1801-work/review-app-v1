@@ -9,6 +9,7 @@ export const reviewSourceSchema = z.enum([
   "STOREFRONT",
   "MERCHANT",
   "IMPORT",
+  "API",
 ]);
 
 export const shopifyProductIdSchema = z
@@ -69,6 +70,13 @@ export const updateReviewSchema = z.object({
 export const listReviewsQuerySchema = z.object({
   status: reviewStatusSchema.optional(),
   shopifyProductId: shopifyProductIdSchema.optional(),
+  /** Free-text search: customer name, review title/body, product title. */
+  q: z
+    .string()
+    .trim()
+    .max(100)
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value : undefined)),
   cursor: z.string().trim().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
@@ -115,11 +123,66 @@ export const createStorefrontReviewSchema = z.object({
     .default([]),
 });
 
+export const storefrontReviewSortSchema = z.enum([
+  "most_recent",
+  "highest_rating",
+  "lowest_rating",
+  "only_pictures",
+  "pictures_first",
+  "videos_first",
+]);
+
+export type StorefrontReviewSort = z.infer<typeof storefrontReviewSortSchema>;
+
 export const listStorefrontReviewsQuerySchema = z.object({
   shopifyProductId: shopifyProductIdSchema,
   cursor: z.string().trim().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(5),
+  sort: storefrontReviewSortSchema.default("most_recent"),
 });
+
+/** Public API list: product filter optional. */
+export const listPublicApiReviewsQuerySchema = z.object({
+  productId: shopifyProductIdSchema.optional(),
+  cursor: z.string().trim().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export const publicApiProductIdQuerySchema = z.object({
+  productId: shopifyProductIdSchema.optional(),
+});
+
+export const createPublicApiReviewSchema = z.object({
+  shopifyProductId: shopifyProductIdSchema,
+  rating: z.coerce.number().int().min(1).max(5),
+  title: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || undefined),
+  body: z.string().trim().min(1).max(5000),
+  authorName: z.string().trim().min(1).max(100),
+  authorEmail: z
+    .string()
+    .trim()
+    .email()
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || undefined),
+  productTitle: z
+    .string()
+    .trim()
+    .max(255)
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || undefined),
+});
+
+export type CreatePublicApiReviewInput = z.output<
+  typeof createPublicApiReviewSchema
+>;
 
 export const bulkUpdateReviewStatusSchema = z.object({
   reviewIds: z.array(z.string().trim().min(1)).min(1).max(50),

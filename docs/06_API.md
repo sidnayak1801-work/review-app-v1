@@ -60,6 +60,10 @@ These webhook routes use Shopify request verification.
 - `GET /api/admin/reviews`
   - Cursor-paginated reviews for the authenticated shop
   - Optional product and moderation-status filters
+- `GET /app/reviews`
+  - Merchant moderation queue (cursor-paginated)
+  - Optional `status`, `productId`, and free-text `q` (customer name, review
+    title/body, product title; case-insensitive, tokenized AND)
 - `POST /api/admin/reviews`
   - Create a merchant-entered review
 - `PATCH /api/admin/reviews/:reviewId`
@@ -76,9 +80,14 @@ These webhook routes use Shopify request verification.
 - `GET /api/storefront/reviews`
   - Requires verified storefront/app-proxy context
   - Requires a Shopify product ID
+  - Optional `sort` (default `most_recent`): `most_recent`,
+    `highest_rating`, `lowest_rating`, `only_pictures`, `pictures_first`,
+    `videos_first`
+  - Optional `cursor` / `limit` for sort-aware keyset pagination (cursor must
+    match the active `sort`)
   - Returns approved public review fields (including `featured`,
     `merchantReply`, `merchantReplyAt`), optional media, and widget settings
-  - Featured reviews are sorted first within each page
+  - Featured reviews are sorted first within each page only for `most_recent`
 - `POST /api/storefront/reviews`
   - Requires verified storefront/app-proxy context
   - Creates a review (`PENDING`, or `APPROVED` when auto-publish is enabled and
@@ -90,6 +99,10 @@ These webhook routes use Shopify request verification.
     record (up to 5 images + 1 video per review; each file ≤10 MB; JPEG/PNG/
     WebP/GIF/MP4/WebM/MOV). Production uses R2; local dev falls back to disk
     served at `GET /api/media/*`.
+  - On success (`201`), may include `incentive` (thank-you copy + optional
+    coupon code/headline and referral CTA). Coupon codes are **not** exposed
+    on GET list settings — only after a successful submit when an ACTIVE
+    post-review campaign is configured.
 - `GET /api/storefront/reviews/qa`
   - Requires verified storefront/app-proxy context
   - Requires a Shopify product ID
@@ -107,6 +120,7 @@ The public storefront contract uses the Shopify app proxy:
 - App routes: `/api/storefront/reviews` and `/api/storefront/reviews/qa`
 - Authenticated with `authenticate.public.appProxy`
 - Query `productId` (numeric or GID) for approved reviews
+- Query `sort` for storefront list ordering / media filters (widget toolbar)
 - Widget settings drive layout, colors, visibility, and page size
 - Review-request email links use a separate public token API and do **not**
   require storefront login
@@ -240,16 +254,64 @@ on Home and Reviews. Product IDs in the URL are numeric Shopify product IDs.
 Local `/api/media/...` URLs are rewritten to the current app origin when
 returned to admin/storefront clients so tunnel host changes do not break thumbs.
 
+## Integrations (admin)
+
+Authenticated admin route: `/app/integrations`.
+
+- Connect / reconnect / disconnect / test for Klaviyo and Gorgias
+- Credentials accepted on write only; responses never include secrets
+- Requires `INTEGRATIONS_ENCRYPTION_KEY` (32-byte AES key)
+
+Domain events (fire-and-forget; failures do not block review workflows):
+
+- `review.published` — Klaviyo event + Gorgias ticket
+- `review.merchant_reply` — Gorgias outbound ticket message when a ticket ref exists
+- `review_request.sent` / `review_request.completed` — Klaviyo events
+
+## Phase 5.5 — Public API (`/api/v1`)
+
+Server-to-server REST API. No CORS. Available on Free and Pro.
+
+### Authentication
+
+- Header: `Authorization: Bearer <token>`
+- Tokens are per-shop (`ApiToken`); plaintext shown once on create/rotate
+- Soft revoke via `revokedAt`; auth rejects revoked/unknown tokens identically
+- Max 5 active tokens per shop; rotate creates a replacement then revokes the old
+
+Merchant admin: `/app/api` — docs, generate, copy (once), revoke, rotate.
+
+### Endpoints
+
+- `GET /api/v1/reviews` — cursor-paginated approved reviews
+  (`productId?`, `cursor?`, `limit?`)
+- `POST /api/v1/reviews` — submit review (`source: API`, status `PENDING`)
+- `GET /api/v1/reviews/summary` — `approvedCount`, `averageRating`,
+  `ratingDistribution` (`productId?`)
+- `GET /api/v1/rating` — `averageRating`, `approvedCount` (`productId?`)
+- `GET /api/v1/products/:productId/reviews` — product-scoped approved list
+
+List responses omit reviewer email. Errors use `{ error: { code, message } }`.
+
+### Rate limiting
+
+Architecture only: `RateLimiter` interface with in-memory fixed-window
+implementation (default 120 req/min per token). Plan-aware policy hook exists
+for future Free/Pro divergence. Response headers:
+`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+Swap in Redis later without changing route adapters. Shared
+`handlePublicApi` / `authenticateBearer` are GraphQL-ready.
+
 ## Deferred APIs
 
-Do not implement these during MVP phases:
+Do not implement these until their roadmap phase is active:
 
-- Replies
+- Replies inbound from Gorgias webhooks
 - Advanced analytics warehouse
 - Advanced usage metering
 - AI processing
-- Partner/public API access
-- Third-party integrations
+- Public GraphQL API (reuse v1 auth + rate-limit modules)
+- Additional third-party channels (Zapier, WhatsApp, etc.)
 
 Add each contract when its feature enters the active roadmap phase.
 

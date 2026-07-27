@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import {
+  Link,
   Outlet,
   useLoaderData,
   useNavigation,
@@ -10,45 +11,67 @@ import { NavMenu, useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
+import { AppNavigationPending } from "../components/app-navigation-pending";
+import { MerchantAppShell } from "../features/dashboard/components/reviewx/MerchantAppShell";
+import { shopService } from "../features/shops/shop.service.server";
+import type { ShopPlan } from "../repositories/shop.repository.server";
 import { authenticate, shopifyApiKey } from "../shopify.server";
 
+/**
+ * Parent authenticates once per document load so App Bridge session tokens
+ * work. shouldRevalidate=false keeps child navigations from re-running this.
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
-
-  return { apiKey: shopifyApiKey };
+  const { session } = await authenticate.admin(request);
+  const shop = await shopService.findByDomain(session.shop);
+  const plan: ShopPlan = shop?.plan ?? "FREE";
+  return {
+    apiKey: shopifyApiKey,
+    shopDomain: session.shop,
+    plan,
+  };
 };
 
-/** Parent only returns a static apiKey — skip re-auth on every child nav. */
+/** Parent only returns static shell data — skip revalidation on every child nav. */
 export function shouldRevalidate() {
   return false;
 }
 
 function AppNavigationChrome() {
+  const { shopDomain, plan } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const shopify = useAppBridge();
+  const isNavigating =
+    navigation.state === "loading" || navigation.state === "submitting";
 
   useEffect(() => {
-    const busy = navigation.state !== "idle";
-    shopify.loading(busy);
+    shopify.loading(isNavigating);
     return () => {
       shopify.loading(false);
     };
-  }, [navigation.state, shopify]);
+  }, [isNavigating, shopify]);
 
   return (
     <>
       <NavMenu>
-        <a href="/app" rel="home">
-          Home
-        </a>
-        <a href="/app/reviews">Reviews</a>
-        <a href="/app/questions">Q&A</a>
-        <a href="/app/review-requests">Review requests</a>
-        <a href="/app/imports">Imports</a>
-        <a href="/app/billing">Billing</a>
-        <a href="/app/settings">Widget settings</a>
+        <Link to="/app" rel="home">
+          Dashboard
+        </Link>
+        <Link to="/app/reviews">Reviews</Link>
+        <Link to="/app/questions">Q&A</Link>
+        <Link to="/app/review-requests">Review requests</Link>
+        <Link to="/app/incentives">Incentives</Link>
+        <Link to="/app/integrations">Integrations</Link>
+        <Link to="/app/api">API</Link>
+        <Link to="/app/imports">Imports</Link>
+        <Link to="/app/billing">Billing</Link>
+        <Link to="/app/settings">Widget settings</Link>
       </NavMenu>
-      <Outlet />
+      <MerchantAppShell shopDomain={shopDomain} plan={plan}>
+        <AppNavigationPending>
+          <Outlet />
+        </AppNavigationPending>
+      </MerchantAppShell>
     </>
   );
 }

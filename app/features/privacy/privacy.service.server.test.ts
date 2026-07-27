@@ -55,6 +55,8 @@ const reviewRecord: ReviewRecord = {
   source: "STOREFRONT",
   verifiedPurchase: true,
   featured: false,
+  hasImage: false,
+  hasVideo: false,
   merchantReply: null,
   merchantReplyAt: null,
   publishedAt: new Date("2026-07-18T00:00:00.000Z"),
@@ -119,6 +121,8 @@ function createReviews(
     findByIdsForShop: vi.fn(),
     findForCustomerPrivacy: vi.fn().mockResolvedValue([reviewRecord]),
     list: vi.fn(),
+    listForStorefront: vi.fn(),
+    refreshMediaFlags: vi.fn(),
     listProductsForShop: vi.fn(),
     getProductStatsForShop: vi.fn(),
     getProductReviewTrendForShop: vi.fn(),
@@ -126,6 +130,8 @@ function createReviews(
     countApprovedForShop: vi.fn(),
     countByStatusForShop: vi.fn(),
     averageApprovedRatingForShop: vi.fn(),
+    getApprovedSummaryForShop: vi.fn(),
+    getShopReviewVolumeSeries: vi.fn().mockResolvedValue([]),
     updateForShop: vi.fn(),
     setProductTitlesForShop: vi.fn(),
     redactCustomerPii: vi.fn().mockResolvedValue(1),
@@ -220,11 +226,22 @@ describe("PrivacyService", () => {
   it("deletes shop data for shop/redact", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const shops = createShops();
+    const apiTokens = {
+      create: vi.fn(),
+      listForShop: vi.fn(),
+      countActiveForShop: vi.fn(),
+      findActiveByHash: vi.fn(),
+      findByIdForShop: vi.fn(),
+      revokeForShop: vi.fn(),
+      touchLastUsed: vi.fn(),
+      deleteAllForShop: vi.fn().mockResolvedValue(2),
+    };
     const service = new PrivacyService(
       shops,
       createReviews(),
       createRequests(),
       createQuestions(),
+      apiTokens,
     );
 
     const deleted = await service.handleShopRedact(shopRecord.shopDomain, {
@@ -232,6 +249,7 @@ describe("PrivacyService", () => {
       shop_domain: shopRecord.shopDomain,
     });
 
+    expect(apiTokens.deleteAllForShop).toHaveBeenCalledWith(shopRecord.id);
     expect(shops.deleteByDomain).toHaveBeenCalledWith(shopRecord.shopDomain);
     expect(deleted).toEqual(shopRecord);
   });

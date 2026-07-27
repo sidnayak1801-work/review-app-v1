@@ -15,17 +15,12 @@ import { ReviewRequestsPage } from "../features/review-requests/components/revie
 import { reviewRequestService } from "../features/review-requests/review-request.service.server";
 import { billingEntitlementsService } from "../features/billing/billing.service.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
-import { isBillingTestMode } from "../lib/billing-env.server";
-import { requireShopWithBillingSync } from "../lib/shop-context.server";
+import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
 
   const [requests, reviewRequestUsage, settings] = await Promise.all([
     reviewRequestService.listRecentForShop(shop.id),
@@ -68,12 +63,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
 
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");

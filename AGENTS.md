@@ -17,8 +17,11 @@ The default decision rule is:
 2. Read `docs/02_ARCHITECTURE.md`.
 3. Read the active phase in `docs/04_ROADMAP.md`.
 4. Read the relevant feature, database, API, or billing document.
-5. Follow all applicable rules in `.cursor/rules/`.
-6. Inspect the existing implementation before proposing a change.
+5. For review submission, customer identity, verified-buyer, or guest/logged-in
+   storefront flow work, also read `docs/14_REVIEW_SUBMISSION_SPEC.md` (source of
+   truth for those rules).
+6. Follow all applicable rules in `.cursor/rules/`.
+7. Inspect the existing implementation before proposing a change.
 
 If documentation conflicts, pause and resolve the conflict before
 implementation. If code and documentation differ, determine whether the code

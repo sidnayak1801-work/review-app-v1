@@ -1,0 +1,268 @@
+@import "tailwindcss";
+
+/*
+  Marketing-only Tailwind entry. Import from public landing routes only —
+  never from /app* so Polaris admin styles stay untouched.
+*/
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+  @theme inline so utilities emit var(--mkt-*) directly. Those resolve on the
+  element (inherited from #marketing-root), so data-theme toggles the palette.
+*/
+@theme inline {
+  --font-sans: "Satoshi", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui,
+    sans-serif;
+  --color-background: var(--mkt-background);
+  --color-foreground: var(--mkt-foreground);
+  --color-muted: var(--mkt-muted);
+  --color-muted-foreground: var(--mkt-muted-foreground);
+  --color-accent: var(--mkt-accent);
+  --color-accent-foreground: var(--mkt-accent-foreground);
+  --color-primary: var(--mkt-primary);
+  --color-primary-foreground: var(--mkt-primary-foreground);
+  --color-secondary: var(--mkt-secondary);
+  --color-secondary-foreground: var(--mkt-secondary-foreground);
+  --color-destructive: var(--mkt-destructive);
+  --color-destructive-foreground: var(--mkt-destructive-foreground);
+  --color-border: var(--mkt-border);
+  --color-input: var(--mkt-input);
+  --color-ring: var(--mkt-ring);
+  --color-brand: var(--mkt-brand);
+  --color-brand-foreground: var(--mkt-brand-foreground);
+  --color-surface: var(--mkt-surface);
+  --color-nav: var(--mkt-nav);
+  --color-nav-foreground: var(--mkt-nav-foreground);
+  --color-nav-muted: var(--mkt-nav-muted);
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+}
+
+@layer base {
+  :root {
+    --mkt-background: hsl(140 25% 98%);
+    --mkt-foreground: hsl(160 30% 12%);
+    --mkt-muted: hsl(140 20% 94%);
+    --mkt-muted-foreground: hsl(160 10% 38%);
+    --mkt-accent: hsl(152 45% 93%);
+    --mkt-accent-foreground: hsl(152 70% 22%);
+    --mkt-primary: hsl(160 30% 12%);
+    --mkt-primary-foreground: hsl(140 25% 98%);
+    --mkt-secondary: hsl(140 20% 94%);
+    --mkt-secondary-foreground: hsl(160 30% 12%);
+    --mkt-destructive: hsl(0 84% 60%);
+    --mkt-destructive-foreground: hsl(0 0% 98%);
+    --mkt-border: hsl(150 16% 86%);
+    --mkt-input: hsl(150 16% 86%);
+    --mkt-ring: hsl(152 70% 36%);
+    --mkt-brand: hsl(152 70% 36%);
+    --mkt-brand-foreground: hsl(0 0% 100%);
+    --mkt-surface: hsl(0 0% 100%);
+    --mkt-glow: hsl(152 65% 42%);
+    --mkt-nav: hsl(152 42% 94% / 0.92);
+    --mkt-nav-foreground: hsl(160 30% 14%);
+    --mkt-nav-muted: hsl(160 12% 36%);
+  }
+
+  html:has(#marketing-root) {
+    background-color: var(--mkt-background);
+    color-scheme: light;
+  }
+
+  html:has(#marketing-root[data-theme="dark"]) {
+    color-scheme: dark;
+  }
+
+  #marketing-root {
+    --mkt-background: hsl(140 25% 98%);
+    --mkt-foreground: hsl(160 30% 12%);
+    --mkt-muted: hsl(140 20% 94%);
+    --mkt-muted-foreground: hsl(160 10% 38%);
+    --mkt-accent: hsl(152 45% 93%);
+    --mkt-accent-foreground: hsl(152 70% 22%);
+    --mkt-primary: hsl(160 30% 12%);
+    --mkt-primary-foreground: hsl(140 25% 98%);
+    --mkt-secondary: hsl(140 20% 94%);
+    --mkt-secondary-foreground: hsl(160 30% 12%);
+    --mkt-destructive: hsl(0 84% 60%);
+    --mkt-destructive-foreground: hsl(0 0% 98%);
+    --mkt-border: hsl(150 16% 86%);
+    --mkt-input: hsl(150 16% 86%);
+    --mkt-ring: hsl(152 70% 36%);
+    --mkt-brand: hsl(152 70% 36%);
+    --mkt-brand-foreground: hsl(0 0% 100%);
+    --mkt-surface: hsl(0 0% 100%);
+    --mkt-glow: hsl(152 65% 42%);
+    /* Soft sage glass nav — not black */
+    --mkt-nav: hsl(152 42% 94% / 0.92);
+    --mkt-nav-foreground: hsl(160 30% 14%);
+    --mkt-nav-muted: hsl(160 12% 36%);
+    font-family: var(--font-sans);
+    color: var(--mkt-foreground);
+    background-color: var(--mkt-background);
+    min-height: 100vh;
+  }
+
+  #marketing-root[data-theme="dark"] {
+    --mkt-background: hsl(160 28% 8%);
+    --mkt-foreground: hsl(140 20% 96%);
+    --mkt-muted: hsl(160 22% 13%);
+    --mkt-muted-foreground: hsl(150 14% 70%);
+    --mkt-accent: hsl(152 28% 16%);
+    --mkt-accent-foreground: hsl(152 55% 72%);
+    --mkt-primary: hsl(140 20% 96%);
+    --mkt-primary-foreground: hsl(160 28% 10%);
+    --mkt-secondary: hsl(160 22% 13%);
+    --mkt-secondary-foreground: hsl(140 20% 96%);
+    --mkt-border: hsl(160 18% 20%);
+    --mkt-input: hsl(160 18% 20%);
+    --mkt-ring: hsl(152 55% 45%);
+    --mkt-brand: hsl(152 58% 42%);
+    --mkt-brand-foreground: hsl(0 0% 100%);
+    --mkt-surface: hsl(160 24% 11%);
+    --mkt-glow: hsl(152 50% 40%);
+    /* Deep forest glass nav */
+    --mkt-nav: hsl(160 26% 14% / 0.94);
+    --mkt-nav-foreground: hsl(140 20% 96%);
+    --mkt-nav-muted: hsl(150 14% 72%);
+  }
+
+  #marketing-root.mkt-theme-ready {
+    transition:
+      background-color 0.4s ease,
+      color 0.4s ease;
+  }
+
+  #marketing-root.mkt-theme-ready :where(
+      header,
+      nav,
+      main,
+      footer,
+      section,
+      article,
+      a,
+      button,
+      p,
+      h1,
+      h2,
+      h3,
+      span,
+      li,
+      div
+    ) {
+    transition:
+      background-color 0.4s ease,
+      color 0.4s ease,
+      border-color 0.4s ease,
+      box-shadow 0.4s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #marketing-root.mkt-theme-ready,
+    #marketing-root.mkt-theme-ready :where(
+        header,
+        nav,
+        main,
+        footer,
+        section,
+        article,
+        a,
+        button,
+        p,
+        h1,
+        h2,
+        h3,
+        span,
+        li,
+        div
+      ) {
+      transition: none !important;
+    }
+  }
+
+  #marketing-root * {
+    border-color: var(--mkt-border);
+  }
+
+  #marketing-root :focus-visible {
+    outline: 2px solid var(--mkt-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Soft grid + peach/sage atmosphere */
+#marketing-root .mkt-page-grid {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--mkt-foreground) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--mkt-foreground) 4%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 56px 56px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 75%);
+}
+
+#marketing-root .mkt-hero-glow {
+  background:
+    radial-gradient(ellipse 55% 45% at 85% 8%, rgba(251, 191, 146, 0.4), transparent 58%),
+    radial-gradient(ellipse 50% 40% at 8% 75%, rgba(167, 243, 208, 0.4), transparent 55%),
+    radial-gradient(ellipse 40% 35% at 50% 0%, color-mix(in oklab, var(--mkt-glow) 18%, transparent), transparent 50%);
+}
+
+#marketing-root[data-theme="dark"] .mkt-hero-glow {
+  background:
+    radial-gradient(ellipse 55% 45% at 85% 8%, rgba(251, 146, 100, 0.08), transparent 58%),
+    radial-gradient(ellipse 50% 40% at 8% 75%, rgba(52, 211, 153, 0.12), transparent 55%),
+    radial-gradient(ellipse 40% 35% at 50% 0%, color-mix(in oklab, var(--mkt-glow) 16%, transparent), transparent 50%);
+}
+
+@keyframes mkt-gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+#marketing-root .mkt-animated-gradient {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklab, var(--mkt-glow) 18%, transparent),
+    hsl(200 90% 60% / 0.1),
+    color-mix(in oklab, var(--mkt-glow) 12%, transparent),
+    hsl(160 60% 40% / 0.1)
+  );
+  background-size: 200% 200%;
+  animation: mkt-gradient-shift 14s ease infinite;
+}
+
+@keyframes mkt-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+#marketing-root .mkt-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: mkt-marquee 40s linear infinite;
+}
+
+#marketing-root .mkt-marquee:hover .mkt-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #marketing-root .mkt-animated-gradient,
+  #marketing-root .mkt-marquee-track {
+    animation: none !important;
+  }
+}

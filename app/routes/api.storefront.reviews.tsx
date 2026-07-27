@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
 import { reviewMediaService, toPublicMedia } from "../features/reviews/review-media.service.server";
 import { reviewService } from "../features/reviews/review.service.server";
+import { incentiveService } from "../features/incentives/incentive.service.server";
 import { widgetSettingsService } from "../features/widget-settings/widget-settings.service.server";
 import {
   DomainError,
@@ -48,6 +49,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const shop = await requireShopRecord(session.shop);
   const url = new URL(request.url);
+
   const settings = await widgetSettingsService.getForShop(shop.id);
 
   if (!settings.widgetEnabled) {
@@ -65,18 +67,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         shopifyProductId: url.searchParams.get("productId"),
         cursor: url.searchParams.get("cursor") || undefined,
         limit: url.searchParams.get("limit") || settings.reviewsPerPage,
+        sort: url.searchParams.get("sort") || undefined,
       },
       { includeMedia: settings.showCustomerPhotos },
     );
 
-    return jsonResponse({
-      items: result.items.map((item) => ({
-        ...item,
-        media: settings.showCustomerPhotos ? item.media : [],
-      })),
-      pageInfo: result.pageInfo,
-      settings: publicSettings(settings),
-    });
+    return Response.json(
+      {
+        items: result.items.map((item) => ({
+          ...item,
+          media: settings.showCustomerPhotos ? item.media : [],
+        })),
+        pageInfo: result.pageInfo,
+        settings: publicSettings(settings),
+      },
+      {
+        status: 200,
+        headers: {
+          // Short private cache cuts repeated widget loads on the same page.
+          "Cache-Control": "private, max-age=30",
+        },
+      },
+    );
   } catch (error) {
     if (error instanceof ValidationError) {
       return jsonResponse(
@@ -182,7 +194,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     );
 
-    return jsonResponse({ review }, 201);
+    const incentive = await incentiveService.getPublicOfferForShop(shop.id);
+
+    return jsonResponse({ review, incentive }, 201);
   } catch (error) {
     if (error instanceof RateLimitError) {
       return jsonResponse(
