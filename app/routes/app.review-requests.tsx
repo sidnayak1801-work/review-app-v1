@@ -85,7 +85,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return {
       ok: true as const,
-      message: "Review request settings saved.",
+      message: "Settings saved successfully!",
     };
   } catch (error) {
     if (error instanceof ValidationError) {

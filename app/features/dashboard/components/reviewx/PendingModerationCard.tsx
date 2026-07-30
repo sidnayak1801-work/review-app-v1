@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import { Stars } from "../../../../components/stars";
 import { toShopifyProductNumericId } from "../../../../lib/shopify-ids";
 import styles from "./dashboard.module.css";
-import { ReviewActionIcons } from "./review-action-icons";
+import {
+  ReviewActionIcons,
+  type ReviewModerationResult,
+} from "./review-action-icons";
 import type { DashboardReviewRow } from "./types";
 
 function productLabel(review: DashboardReviewRow): string {
@@ -29,11 +32,18 @@ interface PendingModerationCardProps {
 
 /** Spec § Section 6 — Compact pending list with icon actions + internal scroll */
 export function PendingModerationCard({ reviews }: PendingModerationCardProps) {
-  const [actionMessage, setActionMessage] = useState<{
-    ok: boolean;
-    message: string;
-  } | null>(null);
-  const items = reviews.slice(0, 8);
+  const [rows, setRows] = useState(reviews);
+
+  useEffect(() => {
+    setRows(reviews);
+  }, [reviews]);
+
+  function applyModeration(result: ReviewModerationResult) {
+    if (!result.ok) return;
+    setRows((prev) => prev.filter((row) => row.id !== result.reviewId));
+  }
+
+  const items = rows.slice(0, 8);
 
   if (items.length === 0) {
     return null;
@@ -50,27 +60,13 @@ export function PendingModerationCard({ reviews }: PendingModerationCardProps) {
             Pending moderation
           </h2>
           <p className={styles.body} style={{ marginTop: 8, marginBottom: 0 }}>
-            {reviews.length} waiting for a decision
+            {rows.length} waiting for a decision
           </p>
         </div>
         <Link className={styles.viewAllLink} to="/app/reviews?status=PENDING">
           Open queue ↗
         </Link>
       </div>
-
-      {actionMessage ? (
-        <p
-          className={styles.caption}
-          style={{
-            marginTop: 0,
-            marginBottom: 12,
-            color: actionMessage.ok ? "var(--rx-success)" : "var(--rx-danger)",
-          }}
-          role="status"
-        >
-          {actionMessage.message}
-        </p>
-      ) : null}
 
       <div className={styles.pendingScroll}>
         {items.map((review) => (
@@ -92,7 +88,7 @@ export function PendingModerationCard({ reviews }: PendingModerationCardProps) {
               <Stars rating={review.rating} />
             </div>
             <p className={styles.pendingPreview}>{review.body}</p>
-            <ReviewActionIcons review={review} onResult={setActionMessage} />
+            <ReviewActionIcons review={review} onResult={applyModeration} />
           </div>
         ))}
       </div>

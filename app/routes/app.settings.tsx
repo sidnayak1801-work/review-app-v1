@@ -4,7 +4,6 @@ import type {
   LoaderFunctionArgs,
 } from "react-router";
 import {
-  Form,
   isRouteErrorResponse,
   useActionData,
   useLoaderData,
@@ -13,10 +12,16 @@ import {
 } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
+import { reasonsFromFormData } from "../features/uninstall/uninstall.schema";
+import { uninstallFeedbackService } from "../features/uninstall/uninstall.service.server";
+import { SettingsPage } from "../features/widget-settings/components/settings-page";
 import { widgetSettingsService } from "../features/widget-settings/widget-settings.service.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
 import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
+import { SaveSuccessModal } from "../components/save-success-modal";
+import { useSaveSuccessModal } from "../components/use-save-success-modal";
+import styles from "../features/dashboard/components/reviewx/dashboard.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -49,38 +54,57 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = await requireShopRecord(session.shop);
   const formData = await request.formData();
+  const intent = String(formData.get("intent") ?? "saveWidgetSettings");
 
   try {
+    if (intent === "uninstallFeedback") {
+      await uninstallFeedbackService.submit(shop.id, {
+        reasons: reasonsFromFormData(formData),
+        details: formData.get("details"),
+      });
+      return { ok: true as const, intent: "uninstallFeedback" as const };
+    }
+
+    // Schema accepts both "on"/"true" form booleans (Home + Settings).
     await widgetSettingsService.updateForShop(shop.id, {
-      widgetEnabled: formData.get("widgetEnabled") === "on",
+      widgetEnabled: formData.get("widgetEnabled"),
       accentColor: formData.get("accentColor"),
       primaryButtonColor: formData.get("primaryButtonColor"),
       starColor: formData.get("starColor"),
       borderRadius: formData.get("borderRadius"),
-      cardShadow: formData.get("cardShadow") === "on",
+      cardShadow: formData.get("cardShadow"),
       layout: formData.get("layout"),
-      showCustomerName: formData.get("showCustomerName") === "on",
-      showReviewDate: formData.get("showReviewDate") === "on",
-      showProductImages: formData.get("showProductImages") === "on",
-      showCustomerPhotos: formData.get("showCustomerPhotos") === "on",
-      autoPublishReviews: formData.get("autoPublishReviews") === "on",
-      darkMode: formData.get("darkMode") === "on",
-      showReviewForm: formData.get("showReviewForm") === "on",
+      showCustomerName: formData.get("showCustomerName"),
+      showReviewDate: formData.get("showReviewDate"),
+      showProductImages: formData.get("showProductImages"),
+      showCustomerPhotos: formData.get("showCustomerPhotos"),
+      autoPublishReviews: formData.get("autoPublishReviews"),
+      darkMode: formData.get("darkMode"),
+      showReviewForm: formData.get("showReviewForm"),
       reviewsPerPage: formData.get("reviewsPerPage"),
     });
 
-    return { ok: true as const, message: "Widget settings saved." };
+    return {
+      ok: true as const,
+      intent: "saveWidgetSettings" as const,
+      message: "Widget changes saved successfully!",
+    };
   } catch (error) {
     if (error instanceof ValidationError) {
       return {
         ok: false as const,
+        intent: intent as "uninstallFeedback" | "saveWidgetSettings",
         message: error.message,
         issues: error.issues,
       };
     }
 
     if (error instanceof DomainError) {
-      return { ok: false as const, message: error.message };
+      return {
+        ok: false as const,
+        intent: intent as "uninstallFeedback" | "saveWidgetSettings",
+        message: error.message,
+      };
     }
 
     throw error;
@@ -88,158 +112,54 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function WidgetSettingsRoute() {
-  const { settings } = useLoaderData<typeof loader>();
+  const { settings, shopDomain } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const isSubmitting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "saveWidgetSettings";
+
+  const saveActionData =
+    actionData && actionData.intent !== "uninstallFeedback"
+      ? actionData
+      : undefined;
+
+  const saveFeedback = saveActionData
+    ? {
+        ok: saveActionData.ok,
+        message:
+          "message" in saveActionData && saveActionData.message
+            ? saveActionData.message
+            : saveActionData.ok
+              ? "Widget changes saved successfully!"
+              : "Could not save settings.",
+        issues:
+          "issues" in saveActionData ? saveActionData.issues : undefined,
+      }
+    : undefined;
+
+  const saveSuccess = useSaveSuccessModal(
+    saveFeedback,
+    isSubmitting,
+    "Widget changes saved successfully!",
+  );
 
   return (
-    <s-page heading="Widget settings">
-      <s-stack direction="block" gap="large">
-        <s-text color="subdued">
-          Customize how reviews appear on your storefront. You can also edit
-          these from the Home dashboard widget settings card.
-        </s-text>
-
-        {actionData ? (
-          <s-banner
-            heading={actionData.ok ? "Saved" : "Could not save"}
-            tone={actionData.ok ? "success" : "critical"}
-          >
-            {actionData.message}
-            {actionData.issues?.length ? (
-              <s-unordered-list>
-                {actionData.issues.map((issue) => (
-                  <s-list-item key={issue}>{issue}</s-list-item>
-                ))}
-              </s-unordered-list>
-            ) : null}
-          </s-banner>
-        ) : null}
-
-        <Form method="post">
-          <s-stack direction="block" gap="base">
-            <s-box padding="base" border="base" borderRadius="large" background="subdued">
-              <s-stack direction="block" gap="base">
-                <s-text type="strong">Display</s-text>
-                <s-checkbox
-                  name="widgetEnabled"
-                  label="Widget enabled"
-                  checked={settings.widgetEnabled}
-                />
-                <s-checkbox
-                  name="showReviewForm"
-                  label="Show review submission form"
-                  checked={settings.showReviewForm}
-                />
-                <s-checkbox
-                  name="showCustomerName"
-                  label="Show customer name"
-                  checked={settings.showCustomerName}
-                />
-                <s-checkbox
-                  name="showReviewDate"
-                  label="Show review date"
-                  checked={settings.showReviewDate}
-                />
-                <s-checkbox
-                  name="showProductImages"
-                  label="Show product images"
-                  checked={settings.showProductImages}
-                />
-                <s-checkbox
-                  name="showCustomerPhotos"
-                  label="Show customer photos"
-                  checked={settings.showCustomerPhotos}
-                />
-                <s-select
-                  label="Reviews per page"
-                  name="reviewsPerPage"
-                  value={String(settings.reviewsPerPage)}
-                >
-                  <s-option value="5">5</s-option>
-                  <s-option value="10">10</s-option>
-                  <s-option value="20">20</s-option>
-                  <s-option value="50">50</s-option>
-                </s-select>
-              </s-stack>
-            </s-box>
-
-            <s-box padding="base" border="base" borderRadius="large" background="subdued">
-              <s-stack direction="block" gap="base">
-                <s-text type="strong">Colors & style</s-text>
-                <s-text-field
-                  label="Accent color"
-                  name="accentColor"
-                  value={settings.accentColor}
-                />
-                <s-text-field
-                  label="Primary button color"
-                  name="primaryButtonColor"
-                  value={settings.primaryButtonColor}
-                />
-                <s-text-field
-                  label="Star color"
-                  name="starColor"
-                  value={settings.starColor}
-                />
-                <s-text-field
-                  label="Border radius (0–20)"
-                  name="borderRadius"
-                  value={String(settings.borderRadius)}
-                />
-                <s-checkbox
-                  name="cardShadow"
-                  label="Card shadow"
-                  checked={settings.cardShadow}
-                />
-                <s-checkbox
-                  name="darkMode"
-                  label="Dark mode"
-                  checked={settings.darkMode}
-                />
-              </s-stack>
-            </s-box>
-
-            <s-box padding="base" border="base" borderRadius="large" background="subdued">
-              <s-stack direction="block" gap="base">
-                <s-text type="strong">Layout & behavior</s-text>
-                <s-select label="Layout" name="layout" value={settings.layout}>
-                  <s-option value="STACKED">Stacked</s-option>
-                  <s-option value="COMPACT">Compact</s-option>
-                  <s-option value="GRID">Grid</s-option>
-                </s-select>
-                <s-checkbox
-                  name="autoPublishReviews"
-                  label="Auto publish reviews"
-                  checked={settings.autoPublishReviews}
-                />
-              </s-stack>
-            </s-box>
-
-            <s-button
-              type="submit"
-              variant="primary"
-              disabled={navigation.state === "submitting"}
-            >
-              Save settings
-            </s-button>
-          </s-stack>
-        </Form>
-
-        <s-box padding="base" border="base" borderRadius="large">
-          <s-stack direction="block" gap="small">
-            <s-text type="strong">Theme setup</s-text>
-            <s-text color="subdued">
-              Online Store → Themes → Customize → add Product Reviews / Star
-              Rating blocks to your product template.
-            </s-text>
-            <s-button href="/app" variant="secondary">
-              Edit with live preview on Home
-            </s-button>
-          </s-stack>
-        </s-box>
-      </s-stack>
-    </s-page>
+    <>
+      <SettingsPage
+        shopDomain={shopDomain}
+        initialSettings={settings}
+        actionMessage={
+          saveFeedback && !saveFeedback.ok ? saveFeedback : undefined
+        }
+        isSubmitting={isSubmitting}
+      />
+      <SaveSuccessModal
+        open={saveSuccess.open}
+        message={saveSuccess.message}
+        onClose={saveSuccess.close}
+      />
+    </>
   );
 }
 
@@ -250,11 +170,22 @@ export function ErrorBoundary() {
     : "Widget settings could not be loaded.";
 
   return (
-    <s-page heading="Widget settings">
-      <s-banner heading="Unavailable" tone="critical">
-        {message}
-      </s-banner>
-    </s-page>
+    <div className={styles.content}>
+      <div
+        className={styles.card}
+        style={{
+          padding: 20,
+          borderColor: "rgba(215,44,13,0.35)",
+          color: "var(--rx-danger)",
+        }}
+        role="alert"
+      >
+        <h1 className={styles.sectionTitle}>Widget settings</h1>
+        <p className={styles.body} style={{ marginTop: 8, color: "inherit" }}>
+          {message}
+        </p>
+      </div>
+    </div>
   );
 }
 

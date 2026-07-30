@@ -78,6 +78,12 @@ Admin load performance:
 - Home volume series SQL `GROUP BY` day; dropped redundant avg query
 - Reviews / Questions / Imports / Review requests use cached shop (no live billing sync)
 
+Uninstall survey + mobile nav:
+
+- Settings → Uninstall ReviewX modal (multi-select reasons + details)
+- Saves `UninstallFeedback`, then redirects to Shopify Admin apps
+- ≤800px: hamburger + off-canvas sidebar drawer
+
 ## Next
 
 1. Submission-identity vertical slice (per `14_REVIEW_SUBMISSION_SPEC.md`):

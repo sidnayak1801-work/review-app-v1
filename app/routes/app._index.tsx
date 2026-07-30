@@ -2,6 +2,7 @@ import type {
   ActionFunctionArgs,
   HeadersFunction,
   LoaderFunctionArgs,
+  ShouldRevalidateFunctionArgs,
 } from "react-router";
 import {
   isRouteErrorResponse,
@@ -14,17 +15,30 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 
 import { DashboardPage } from "../features/dashboard/components/dashboard-page";
 import { buildReviewXDashboardData } from "../features/dashboard/dashboard.data";
-import {
-  buildActivityFeed,
-} from "../features/dashboard/dashboard.activity";
 import { reviewRequestService } from "../features/review-requests/review-request.service.server";
 import { reviewService } from "../features/reviews/review.service.server";
 import { widgetSettingsService } from "../features/widget-settings/widget-settings.service.server";
 import type { WidgetSettingsInput } from "../features/widget-settings/widget-settings.schema";
-import { isBillingTestMode } from "../lib/billing-env.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
-import { requireShopWithBillingSync } from "../lib/shop-context.server";
+import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
+import { SaveSuccessModal } from "../components/save-success-modal";
+import { useSaveSuccessModal } from "../components/use-save-success-modal";
+
+/** Skip heavy Home reload after moderation fetchers; lists update optimistically. */
+export function shouldRevalidate({
+  formMethod,
+  formData,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  if (formMethod?.toUpperCase() === "POST") {
+    const intent = formData?.get("intent");
+    if (intent === "update-status" || intent === "delete") {
+      return false;
+    }
+  }
+  return defaultShouldRevalidate;
+}
 
 function toSettingsInput(settings: {
   widgetEnabled: boolean;
@@ -85,79 +99,56 @@ function mapReviewRow(review: {
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-    forceSync: false,
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
 
-  const previousMonthRef = new Date();
-  previousMonthRef.setUTCMonth(previousMonthRef.getUTCMonth() - 1);
-
+  // Critical path only: 90d chart (365d loads lazily via /app/dashboard-chart).
+  // Email MoM + activity feed deferred — not needed for first paint.
   const [
     latest,
     pending,
     queueCounts,
     settings,
     ratingSummary,
-    series365d,
+    series90d,
     emailsSentThisMonth,
-    emailsSentPreviousMonth,
-    recentRequests,
   ] = await Promise.all([
     reviewService.listForShop(shop.id, { limit: 20 }),
     reviewService.listForShop(shop.id, { status: "PENDING", limit: 8 }),
     reviewService.getStatusCountsForShop(shop.id),
     widgetSettingsService.getForShop(shop.id),
     reviewService.getApprovedSummaryForShop(shop.id),
-    reviewService.getShopReviewVolumeSeries(shop.id, 365),
+    reviewService.getShopReviewVolumeSeries(shop.id, 90),
     reviewRequestService.countSentInUtcMonth(shop.id),
-    reviewRequestService.countSentInUtcMonth(shop.id, previousMonthRef),
-    reviewRequestService.listRecentForShop(shop.id, 10),
   ]);
 
-  const series90d = series365d.slice(-90);
-  const series30d = series365d.slice(-30);
-  const series7d = series365d.slice(-7);
-
-  const activity = buildActivityFeed({
-    reviews: latest.items,
-    imports: [],
-    requests: recentRequests,
-    limit: 10,
-  });
+  const series30d = series90d.slice(-30);
+  const series7d = series90d.slice(-7);
 
   const data = buildReviewXDashboardData({
     shopDomain: shop.shopDomain,
     queueCounts,
     averageRating: ratingSummary.averageRating,
     emailsSentThisMonth,
-    emailsSentPreviousMonth,
+    emailsSentPreviousMonth: 0,
     ratingSummary,
     series7d,
     series30d,
     series90d,
-    series365d,
+    series365d: [],
     latestReviews: latest.items.map(mapReviewRow),
     pendingReviews: pending.items.map(mapReviewRow),
-    activity,
+    activity: [],
     settings: toSettingsInput(settings),
-    hasReviewRequestActivity: recentRequests.length > 0,
+    hasReviewRequestActivity: emailsSentThisMonth > 0,
   });
 
   return { data };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
-  const shop = await requireShopWithBillingSync({
-    shopDomain: session.shop,
-    billing,
-    isTest: isBillingTestMode(),
-    forceSync: false,
-  });
+  const { session } = await authenticate.admin(request);
+  const shop = await requireShopRecord(session.shop);
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 
@@ -204,7 +195,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         reviewsPerPage: formData.get("reviewsPerPage"),
       });
 
-      return { ok: true as const, message: "Widget settings saved." };
+      return { ok: true as const, message: "Widget changes saved successfully!" };
     }
 
     return { ok: false as const, message: "Unknown action." };
@@ -233,16 +224,36 @@ export default function AppIndex() {
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === "saveWidgetSettings";
 
+  const widgetActionData =
+    actionData &&
+    (actionData.message === "Widget changes saved successfully!" ||
+      (!actionData.ok && !actionData.message.startsWith("Review ")))
+      ? actionData
+      : undefined;
+
+  const saveSuccess = useSaveSuccessModal(
+    widgetActionData,
+    isSubmitting,
+    "Widget changes saved successfully!",
+  );
+
   return (
-    <DashboardPage
-      data={data}
-      actionMessage={
-        actionData
-          ? { ok: actionData.ok, message: actionData.message }
-          : undefined
-      }
-      isSubmitting={isSubmitting}
-    />
+    <>
+      <DashboardPage
+        data={data}
+        actionMessage={
+          widgetActionData && !widgetActionData.ok
+            ? { ok: false, message: widgetActionData.message }
+            : undefined
+        }
+        isSubmitting={isSubmitting}
+      />
+      <SaveSuccessModal
+        open={saveSuccess.open}
+        message={saveSuccess.message}
+        onClose={saveSuccess.close}
+      />
+    </>
   );
 }
 

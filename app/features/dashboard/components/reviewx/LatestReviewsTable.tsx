@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 
 import { Stars } from "../../../../components/stars";
@@ -8,7 +8,10 @@ import {
 } from "../../../../lib/ui-format";
 import { toShopifyProductNumericId } from "../../../../lib/shopify-ids";
 import styles from "./dashboard.module.css";
-import { ReviewActionIcons } from "./review-action-icons";
+import {
+  ReviewActionIcons,
+  type ReviewModerationResult,
+} from "./review-action-icons";
 import type { DashboardReviewRow } from "./types";
 import { EmptyState } from "./EmptyState";
 
@@ -63,23 +66,38 @@ export function LatestReviewsTable({
   searchFilter,
 }: LatestReviewsTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<{
-    ok: boolean;
-    message: string;
-  } | null>(null);
+  const [rows, setRows] = useState(reviews);
+
+  useEffect(() => {
+    setRows(reviews);
+  }, [reviews]);
+
+  function applyModeration(result: ReviewModerationResult) {
+    if (!result.ok) return;
+    if (result.kind === "delete") {
+      setRows((prev) => prev.filter((row) => row.id !== result.reviewId));
+      return;
+    }
+    const nextStatus = result.kind === "publish" ? "APPROVED" : "REJECTED";
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === result.reviewId ? { ...row, status: nextStatus } : row,
+      ),
+    );
+  }
 
   const filtered = useMemo(() => {
     const q = searchFilter.trim().toLowerCase();
-    if (!q) return reviews;
-    return reviews.filter(
+    if (!q) return rows;
+    return rows.filter(
       (review) =>
         review.authorName.toLowerCase().includes(q) ||
         review.body.toLowerCase().includes(q) ||
         productLabel(review).toLowerCase().includes(q),
     );
-  }, [reviews, searchFilter]);
+  }, [rows, searchFilter]);
 
-  if (reviews.length === 0) {
+  if (rows.length === 0) {
     return (
       <section className={`${styles.card} ${styles.scrollCard}`} aria-labelledby="rx-latest-title">
         <h2 id="rx-latest-title" className={styles.sectionTitle}>
@@ -90,15 +108,20 @@ export function LatestReviewsTable({
           description="Start collecting reviews by importing existing reviews or sending your first review request."
           actions={
             <>
-              <a
+              <Link
                 className={`${styles.btn} ${styles.btnPrimary}`}
-                href="/app/imports"
+                to="/app/imports"
+                prefetch="intent"
               >
                 Import Reviews
-              </a>
-              <a className={styles.btn} href="/app/review-requests">
+              </Link>
+              <Link
+                className={styles.btn}
+                to="/app/review-requests"
+                prefetch="intent"
+              >
                 Send Requests
-              </a>
+              </Link>
             </>
           }
         />
@@ -124,20 +147,6 @@ export function LatestReviewsTable({
           View all ↗
         </Link>
       </div>
-
-      {actionMessage ? (
-        <p
-          className={styles.caption}
-          style={{
-            marginTop: 0,
-            marginBottom: 12,
-            color: actionMessage.ok ? "var(--rx-success)" : "var(--rx-danger)",
-          }}
-          role="status"
-        >
-          {actionMessage.message}
-        </p>
-      ) : null}
 
       <div
         className={`${styles.tableWrap} ${styles.desktopTable} ${styles.scrollBody}`}
@@ -200,7 +209,7 @@ export function LatestReviewsTable({
                         onToggleView={() =>
                           setExpandedId(expanded ? null : review.id)
                         }
-                        onResult={setActionMessage}
+                        onResult={applyModeration}
                       />
                     </td>
                   </tr>
@@ -253,7 +262,7 @@ export function LatestReviewsTable({
                 onToggleView={() =>
                   setExpandedId(expanded ? null : review.id)
                 }
-                onResult={setActionMessage}
+                onResult={applyModeration}
               />
             </article>
           );

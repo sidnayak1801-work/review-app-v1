@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router";
 import type { ShopPlan } from "../../../../repositories/shop.repository.server";
 import styles from "./dashboard.module.css";
 
-/** Spec sidebar + full merchant destinations */
+/** Spec sidebar + full merchant destinations (deduped Settings). */
 const NAV = [
   { to: "/app", label: "Dashboard", icon: "⌂" },
   { to: "/app/reviews", label: "Reviews", icon: "★" },
@@ -12,13 +12,6 @@ const NAV = [
   { to: "/app/imports", label: "Imports", icon: "⇪" },
   { to: "/app/incentives", label: "Incentives", icon: "◎" },
   { to: "/app/integrations", label: "Integrations", icon: "⧉" },
-  { to: "/app/settings", label: "Widgets", icon: "▣" },
-  {
-    to: "/app/settings",
-    label: "Customization",
-    icon: "✎",
-    hash: "#widget-settings",
-  },
   { to: "/app", label: "Analytics", icon: "▦", hash: "#analytics" },
   { to: "/app/api", label: "API", icon: "{ }" },
   { to: "/app/billing", label: "Billing", icon: "◈" },
@@ -35,17 +28,11 @@ function isActive(
   if ("hash" in item && item.hash === "#analytics") {
     return home && hash === "#analytics";
   }
-  if ("hash" in item && item.hash === "#widget-settings") {
-    return pathname.startsWith("/app/settings") && hash === "#widget-settings";
-  }
   if (item.label === "Dashboard") {
     return home && hash !== "#analytics";
   }
-  if (item.label === "Widgets") {
-    return pathname.startsWith("/app/settings") && hash !== "#widget-settings";
-  }
   if (item.label === "Settings") {
-    return false;
+    return pathname.startsWith("/app/settings");
   }
   if (item.to === "/app") {
     return home && hash !== "#analytics";
@@ -70,17 +57,32 @@ function SparkleIcon() {
 }
 
 interface SidebarProps {
+  id?: string;
   collapsed: boolean;
   onToggle: () => void;
   plan: ShopPlan;
+  onNavigate?: () => void;
+  /** Optimistic location while a document navigation is in flight. */
+  activePathname?: string;
+  activeHash?: string;
 }
 
-export function Sidebar({ collapsed, onToggle, plan }: SidebarProps) {
+export function Sidebar({
+  id,
+  collapsed,
+  onToggle,
+  plan,
+  onNavigate,
+  activePathname,
+  activeHash,
+}: SidebarProps) {
   const location = useLocation();
+  const pathname = activePathname ?? location.pathname;
+  const hash = activeHash ?? location.hash;
   const isPro = plan === "PRO";
 
   return (
-    <aside className={styles.sidebar} aria-label="Primary">
+    <aside id={id} className={styles.sidebar} aria-label="Primary">
       <div className={styles.brand}>
         <span className={styles.brandMark} aria-hidden>
           RX
@@ -93,14 +95,16 @@ export function Sidebar({ collapsed, onToggle, plan }: SidebarProps) {
       <nav className={styles.navList}>
         {NAV.map((item) => {
           const href = `${item.to}${"hash" in item ? item.hash : ""}`;
-          const active = isActive(item, location.pathname, location.hash);
+          const active = isActive(item, pathname, hash);
           return (
             <Link
               key={`${item.label}-${href}`}
               to={href}
+              prefetch="intent"
               className={`${styles.navLink} ${active ? styles.navActive : ""}`}
               aria-current={active ? "page" : undefined}
               title={item.label}
+              onClick={() => onNavigate?.()}
             >
               <span className={styles.navIcon} aria-hidden>
                 {item.icon}
@@ -139,7 +143,9 @@ export function Sidebar({ collapsed, onToggle, plan }: SidebarProps) {
             </p>
             <Link
               to="/app/billing"
+              prefetch="intent"
               className={`${styles.btn} ${styles.btnPrimary} ${styles.upgradeBtn}`}
+              onClick={() => onNavigate?.()}
             >
               {isPro ? "Manage plan" : "View plans"}
             </Link>
@@ -147,9 +153,11 @@ export function Sidebar({ collapsed, onToggle, plan }: SidebarProps) {
         ) : (
           <Link
             to="/app/billing"
+            prefetch="intent"
             className={`${styles.btn} ${styles.btnPrimary} ${styles.upgradeBtn}`}
             title={isPro ? "Manage plan" : "Upgrade to Pro"}
             aria-label={isPro ? "Manage plan" : "Upgrade to Pro"}
+            onClick={() => onNavigate?.()}
           >
             Pro
           </Link>

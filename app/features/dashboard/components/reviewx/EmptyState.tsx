@@ -42,17 +42,35 @@ export function SkeletonBlock({
 }
 
 export function DashboardSkeleton() {
+  return <AdminPageSkeleton label="Loading dashboard" />;
+}
+
+/** Content-area placeholder while a merchant admin route loader runs. */
+export function AdminPageSkeleton({
+  label = "Loading page",
+}: {
+  label?: string;
+}) {
   return (
-    <div aria-busy="true" aria-label="Loading dashboard">
-      <SkeletonBlock height={40} width="40%" />
-      <div style={{ height: 16 }} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+    <div
+      className={styles.adminPageSkeleton}
+      aria-busy="true"
+      aria-label={label}
+    >
+      <SkeletonBlock height={36} width="36%" />
+      <div style={{ height: 20 }} />
+      <div className={styles.adminPageSkeletonKpis}>
         {[0, 1, 2, 3].map((i) => (
-          <SkeletonBlock key={i} height={120} />
+          <SkeletonBlock key={i} height={96} />
         ))}
       </div>
       <div style={{ height: 24 }} />
-      <SkeletonBlock height={280} />
+      <SkeletonBlock height={220} />
+      <div style={{ height: 24 }} />
+      <div className={styles.adminPageSkeletonSplit}>
+        <SkeletonBlock height={180} />
+        <SkeletonBlock height={180} />
+      </div>
     </div>
   );
 }

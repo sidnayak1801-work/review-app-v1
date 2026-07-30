@@ -1,17 +1,9 @@
-import { useEffect } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
-import {
-  Link,
-  Outlet,
-  useLoaderData,
-  useNavigation,
-  useRouteError,
-} from "react-router";
-import { NavMenu, useAppBridge } from "@shopify/app-bridge-react";
+import { Link, Outlet, useLoaderData, useRouteError } from "react-router";
+import { NavMenu } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
-import { AppNavigationPending } from "../components/app-navigation-pending";
 import { MerchantAppShell } from "../features/dashboard/components/reviewx/MerchantAppShell";
 import { shopService } from "../features/shops/shop.service.server";
 import type { ShopPlan } from "../repositories/shop.repository.server";
@@ -39,38 +31,43 @@ export function shouldRevalidate() {
 
 function AppNavigationChrome() {
   const { shopDomain, plan } = useLoaderData<typeof loader>();
-  const navigation = useNavigation();
-  const shopify = useAppBridge();
-  const isNavigating =
-    navigation.state === "loading" || navigation.state === "submitting";
-
-  useEffect(() => {
-    shopify.loading(isNavigating);
-    return () => {
-      shopify.loading(false);
-    };
-  }, [isNavigating, shopify]);
 
   return (
     <>
       <NavMenu>
-        <Link to="/app" rel="home">
+        <Link to="/app" rel="home" prefetch="intent">
           Dashboard
         </Link>
-        <Link to="/app/reviews">Reviews</Link>
-        <Link to="/app/questions">Q&A</Link>
-        <Link to="/app/review-requests">Review requests</Link>
-        <Link to="/app/incentives">Incentives</Link>
-        <Link to="/app/integrations">Integrations</Link>
-        <Link to="/app/api">API</Link>
-        <Link to="/app/imports">Imports</Link>
-        <Link to="/app/billing">Billing</Link>
-        <Link to="/app/settings">Widget settings</Link>
+        <Link to="/app/reviews" prefetch="intent">
+          Reviews
+        </Link>
+        <Link to="/app/questions" prefetch="intent">
+          Q&A
+        </Link>
+        <Link to="/app/review-requests" prefetch="intent">
+          Review requests
+        </Link>
+        <Link to="/app/incentives" prefetch="intent">
+          Incentives
+        </Link>
+        <Link to="/app/integrations" prefetch="intent">
+          Integrations
+        </Link>
+        <Link to="/app/api" prefetch="intent">
+          API
+        </Link>
+        <Link to="/app/imports" prefetch="intent">
+          Imports
+        </Link>
+        <Link to="/app/billing" prefetch="intent">
+          Billing
+        </Link>
+        <Link to="/app/settings" prefetch="intent">
+          Widget settings
+        </Link>
       </NavMenu>
       <MerchantAppShell shopDomain={shopDomain} plan={plan}>
-        <AppNavigationPending>
-          <Outlet />
-        </AppNavigationPending>
+        <Outlet />
       </MerchantAppShell>
     </>
   );

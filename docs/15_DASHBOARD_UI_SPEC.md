@@ -907,6 +907,10 @@ Requirements:
 - Keep business logic separate from presentation.
 - Support light and dark mode where feasible.
 - Ensure responsive behavior.
+- **Mobile (≤800px):** hide the inline sidebar; open the same nav in an
+  off-canvas drawer from a top-bar hamburger (Judge.me / Loox pattern). Close
+  on route change, backdrop click, or Escape. Keep App Bridge `NavMenu` for
+  Shopify admin chrome.
 - Use semantic HTML.
 - Use TypeScript where available.
 - Optimize rendering performance.

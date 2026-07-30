@@ -217,3 +217,15 @@
   color: rgba(0, 0, 0, 0.5);
   font-size: 0.82rem;
 }
+
+.vouch-qa-modal__success {
+  padding-top: 0.35rem;
+  padding-right: 1.5rem;
+}
+
+.vouch-qa-modal__success-body {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.75);
+}

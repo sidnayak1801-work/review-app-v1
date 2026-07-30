@@ -49,7 +49,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return {
       ok: true as const,
-      message: "Incentive settings saved.",
+      message: "Incentives saved successfully!",
     };
   } catch (error) {
     if (error instanceof ValidationError) {
@@ -73,7 +73,9 @@ export default function IncentivesRoute() {
   const data = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const isSubmitting = navigation.state !== "idle";
+  const isSubmitting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "save-settings";
 
   return (
     <IncentivesPage

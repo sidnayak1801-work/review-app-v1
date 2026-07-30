@@ -129,6 +129,8 @@ Admin widget settings are saved via form actions on `/app` (dashboard) and
 `/app/settings` (same service). Documented REST admin widget-settings routes
 remain optional.
 
+- `GET /app/dashboard-chart?days=365` — authenticated lazy Home chart series
+  (7 / 30 / 90 / 365); Home first paint loads 90 days only
 - `GET/POST /api/review-request?token=...` — verified purchase email flow
 
 ## Phase 2 — Requests, Moderation, Imports, and Billing

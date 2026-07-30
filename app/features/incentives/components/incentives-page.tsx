@@ -1,5 +1,7 @@
 import { Form } from "react-router";
 
+import { SaveSuccessModal } from "../../../components/save-success-modal";
+import { useSaveSuccessModal } from "../../../components/use-save-success-modal";
 import type { AdminIncentiveCampaign } from "../incentive.service.server";
 
 interface IncentivesPageProps {
@@ -17,6 +19,12 @@ export function IncentivesPage({
   actionData,
   isSubmitting,
 }: IncentivesPageProps) {
+  const saveSuccess = useSaveSuccessModal(
+    actionData,
+    isSubmitting,
+    "Incentives saved successfully!",
+  );
+
   return (
     <s-page heading="Incentives">
       <s-stack direction="block" gap="large">
@@ -28,11 +36,8 @@ export function IncentivesPage({
           </s-text>
         </s-stack>
 
-        {actionData ? (
-          <s-banner
-            heading={actionData.ok ? "Saved" : "Could not save"}
-            tone={actionData.ok ? "success" : "critical"}
-          >
+        {actionData && !actionData.ok ? (
+          <s-banner heading="Could not save" tone="critical">
             {actionData.message}
             {actionData.issues?.length ? (
               <s-unordered-list>
@@ -178,6 +183,12 @@ export function IncentivesPage({
           </s-stack>
         </Form>
       </s-stack>
+
+      <SaveSuccessModal
+        open={saveSuccess.open}
+        message={saveSuccess.message}
+        onClose={saveSuccess.close}
+      />
     </s-page>
   );
 }

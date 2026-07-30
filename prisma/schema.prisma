@@ -120,10 +120,22 @@ model Shop {
   integrationConnections IntegrationConnection[]
   integrationExternalRefs IntegrationExternalRef[]
   apiTokens      ApiToken[]
+  uninstallFeedbacks UninstallFeedback[]
   widgetSettings WidgetSettings?
   reviewRequestSettings ReviewRequestSettings?
 
   @@index([status])
+}
+
+model UninstallFeedback {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reasons   String[]
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([shopId, createdAt])
 }
 
 model ApiToken {

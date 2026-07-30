@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { resolvePublicMediaUrl } from "../../lib/resolve-public-media-url";
+import { buildPublicMediaUrl } from "../../lib/resolve-public-media-url";
 import { ValidationError } from "../../lib/domain-error";
 import { parseWithSchema } from "../../lib/validation";
 import {
@@ -105,7 +105,7 @@ export function toPublicMedia(media: ReviewMediaRecord) {
   return {
     id: media.id,
     kind: media.kind,
-    url: resolvePublicMediaUrl(media.url),
+    url: buildPublicMediaUrl(media.storageKey),
     mimeType: media.mimeType,
     position: media.position,
   };
@@ -151,24 +151,41 @@ export class ReviewMediaService {
       contentType: mimeType,
     });
 
-    const record = await this.media.create({
-      shopId,
-      reviewId: null,
-      kind,
-      storageKey: stored.key,
-      url: stored.url,
-      mimeType,
-      sizeBytes: file.bytes.byteLength,
-    });
+    try {
+      const record = await this.media.create({
+        shopId,
+        reviewId: null,
+        kind,
+        storageKey: stored.key,
+        // Write-through for NOT NULL column; reads use storageKey via buildPublicMediaUrl.
+        url: buildPublicMediaUrl(stored.key),
+        mimeType,
+        sizeBytes: file.bytes.byteLength,
+      });
 
-    logger.info("Review media uploaded", {
-      shopId,
-      mediaId: record.id,
-      kind: record.kind,
-      sizeBytes: record.sizeBytes,
-    });
+      logger.info("Review media uploaded", {
+        shopId,
+        mediaId: record.id,
+        kind: record.kind,
+        sizeBytes: record.sizeBytes,
+      });
 
-    return record;
+      return record;
+    } catch (error) {
+      try {
+        await this.storage.deleteObject(stored.key);
+      } catch (cleanupError) {
+        logger.error("Failed to roll back media object after DB error", {
+          shopId,
+          storageKey: stored.key,
+          error:
+            cleanupError instanceof Error
+              ? cleanupError.message
+              : "unknown_cleanup_error",
+        });
+      }
+      throw error;
+    }
   }
 
   async resolveForAttach(

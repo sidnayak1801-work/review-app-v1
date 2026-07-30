@@ -31,6 +31,20 @@ function mediaRecord(
   };
 }
 
+function mockStorage(
+  overrides: Partial<MediaStorage> = {},
+): MediaStorage {
+  return {
+    isConfigured: () => true,
+    putObject: vi.fn(async ({ key }) => ({
+      key,
+      url: `https://cdn.example/${key}`,
+    })),
+    deleteObject: vi.fn(async () => undefined),
+    ...overrides,
+  };
+}
+
 describe("assertMediaLimits", () => {
   it("allows up to 5 images and 1 video", () => {
     const items = [
@@ -52,13 +66,7 @@ describe("assertMediaLimits", () => {
 
 describe("ReviewMediaService.uploadForShop", () => {
   it("accepts WebP by MIME and stores under 10 MB", async () => {
-    const storage: MediaStorage = {
-      isConfigured: () => true,
-      putObject: vi.fn(async ({ key }) => ({
-        key,
-        url: `https://cdn.example/${key}`,
-      })),
-    };
+    const storage = mockStorage();
     const create = vi.fn(async (input: unknown) => ({
       ...(input as object),
       id: "media-1",
@@ -85,6 +93,7 @@ describe("ReviewMediaService.uploadForShop", () => {
 
     expect(record.kind).toBe("IMAGE");
     expect(storage.putObject).toHaveBeenCalled();
+    expect(storage.deleteObject).not.toHaveBeenCalled();
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         mimeType: "image/webp",
@@ -94,13 +103,7 @@ describe("ReviewMediaService.uploadForShop", () => {
   });
 
   it("infers WebP from filename when browser MIME is empty", async () => {
-    const storage: MediaStorage = {
-      isConfigured: () => true,
-      putObject: vi.fn(async ({ key }) => ({
-        key,
-        url: `https://cdn.example/${key}`,
-      })),
-    };
+    const storage = mockStorage();
     const create = vi.fn(async (input: unknown) => ({
       ...(input as object),
       id: "media-2",
@@ -130,6 +133,9 @@ describe("ReviewMediaService.uploadForShop", () => {
   });
 
   it("rejects files over 10 MB", async () => {
+    const storage = mockStorage({
+      putObject: vi.fn(),
+    });
     const service = new ReviewMediaService(
       {
         create: vi.fn(),
@@ -137,10 +143,7 @@ describe("ReviewMediaService.uploadForShop", () => {
         attachToReview: vi.fn(),
         listForReviews: vi.fn(),
       } as never,
-      {
-        isConfigured: () => true,
-        putObject: vi.fn(),
-      },
+      storage,
     );
 
     await expect(
@@ -158,5 +161,77 @@ describe("ReviewMediaService.uploadForShop", () => {
         fileName: "big.mp4",
       }),
     ).rejects.toBeInstanceOf(ValidationError);
+
+    expect(storage.putObject).not.toHaveBeenCalled();
+    expect(storage.deleteObject).not.toHaveBeenCalled();
+  });
+
+  it("deletes the uploaded object when DB create fails", async () => {
+    const storage = mockStorage({
+      putObject: vi.fn(async () => ({
+        key: "shops/shop1/reviews/abc.webp",
+        url: "https://cdn.example/shops/shop1/reviews/abc.webp",
+      })),
+    });
+    const create = vi.fn(async () => {
+      throw new Error("db down");
+    });
+
+    const service = new ReviewMediaService(
+      {
+        create,
+        findByIdsForShop: vi.fn(),
+        attachToReview: vi.fn(),
+        listForReviews: vi.fn(),
+      } as never,
+      storage,
+    );
+
+    await expect(
+      service.uploadForShop("shop1", {
+        bytes: Buffer.from("ok"),
+        mimeType: "image/webp",
+        fileName: "photo.webp",
+      }),
+    ).rejects.toThrow("db down");
+
+    expect(storage.putObject).toHaveBeenCalled();
+    expect(storage.deleteObject).toHaveBeenCalledWith(
+      "shops/shop1/reviews/abc.webp",
+    );
+  });
+
+  it("rethrows the DB error even if rollback delete fails", async () => {
+    const storage = mockStorage({
+      putObject: vi.fn(async () => ({
+        key: "shops/shop1/reviews/xyz.webp",
+        url: "https://cdn.example/shops/shop1/reviews/xyz.webp",
+      })),
+      deleteObject: vi.fn(async () => {
+        throw new Error("delete failed");
+      }),
+    });
+
+    const service = new ReviewMediaService(
+      {
+        create: vi.fn(async () => {
+          throw new Error("db down");
+        }),
+        findByIdsForShop: vi.fn(),
+        attachToReview: vi.fn(),
+        listForReviews: vi.fn(),
+      } as never,
+      storage,
+    );
+
+    await expect(
+      service.uploadForShop("shop1", {
+        bytes: Buffer.from("ok"),
+        mimeType: "image/webp",
+        fileName: "photo.webp",
+      }),
+    ).rejects.toThrow("db down");
+
+    expect(storage.deleteObject).toHaveBeenCalled();
   });
 });

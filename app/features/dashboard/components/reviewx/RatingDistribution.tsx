@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 import styles from "./dashboard.module.css";
 import type { RatingDistributionData } from "./types";
 import { EmptyState } from "./EmptyState";
@@ -47,12 +49,13 @@ export function RatingDistribution({ summary }: RatingDistributionProps) {
           title="No published ratings"
           description="Approve reviews to build your rating mix."
           actions={
-            <a
+            <Link
               className={`${styles.btn} ${styles.btnPrimary}`}
-              href="/app/reviews?status=PENDING"
+              to="/app/reviews?status=PENDING"
+              prefetch="intent"
             >
               Moderate reviews
-            </a>
+            </Link>
           }
         />
       ) : (

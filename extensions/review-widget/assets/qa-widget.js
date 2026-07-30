@@ -14,6 +14,29 @@
     return date.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
   }
 
+  function guessNameFromEmail(email){
+    if(!email) return "";
+    var local=String(email).split("@")[0]||"";
+    local=local.replace(/[._-]+/g," ").trim();
+    if(!local) return "";
+    return local.replace(/\b\w/g,function(ch){ return ch.toUpperCase(); });
+  }
+
+  function applyCustomerPrefill(root, form){
+    if(!form) return;
+    var emailInput=form.querySelector('[name="email"]');
+    var nameInput=form.querySelector('[name="customerName"]');
+    var customerEmail=(root.getAttribute("data-customer-email")||"").trim();
+    var customerName=(root.getAttribute("data-customer-name")||"").trim();
+    if(emailInput&&!String(emailInput.value||"").trim()&&customerEmail){
+      emailInput.value=customerEmail;
+    }
+    if(nameInput&&!String(nameInput.value||"").trim()){
+      var name=customerName||guessNameFromEmail((emailInput&&emailInput.value)||customerEmail);
+      if(name) nameInput.value=name;
+    }
+  }
+
   function renderCard(item){
     var date=formatDate(item.answeredAt||item.publishedAt||item.createdAt);
     var answer=item.answer
@@ -43,6 +66,7 @@
     var openBtn=root.querySelector("[data-vouch-qa-open]");
     var modal=root.querySelector("[data-vouch-qa-modal]");
     var form=root.querySelector("[data-vouch-qa-form]");
+    var successEl=root.querySelector("[data-vouch-qa-success]");
     var errorEl=root.querySelector("[data-vouch-qa-error]");
     var submitBtn=root.querySelector("[data-vouch-qa-submit]");
     var nextCursor=null;
@@ -55,16 +79,36 @@
       errorEl.textContent=message||"";
     }
 
+    function showFormView(){
+      if(form) form.hidden=false;
+      if(successEl) successEl.hidden=true;
+      if(modal){
+        modal.setAttribute("aria-labelledby", "vouch-qa-modal-title");
+      }
+    }
+
+    function showSuccessView(){
+      if(form) form.hidden=true;
+      if(successEl) successEl.hidden=false;
+      if(modal){
+        modal.setAttribute("aria-labelledby", "vouch-qa-success-title");
+      }
+    }
+
     function closeModal(){
       if(!modal) return;
       modal.hidden=true;
       document.documentElement.style.overflow="";
+      showFormView();
+      setError("");
     }
 
     function openModal(){
       if(!modal||!showForm) return;
       if(form) form.reset();
+      applyCustomerPrefill(root, form);
       setError("");
+      showFormView();
       modal.hidden=false;
       document.documentElement.style.overflow="hidden";
     }
@@ -147,11 +191,7 @@
           })
           .then(function(result){
             if(result.ok){
-              closeModal();
-              listEl.insertAdjacentHTML(
-                "afterbegin",
-                '<p class="vouch-qa__empty">Thanks! Your question was submitted and will appear after review.</p>'
-              );
+              showSuccessView();
             } else {
               setError((result.body&&result.body.error&&result.body.error.message)||"Unable to submit question.");
             }

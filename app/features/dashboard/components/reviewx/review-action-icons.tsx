@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { useFetcher } from "react-router";
 
 import { ActionConfirmationModal } from "../../../moderation/action-confirmation-modal";
+import {
+  REVIEW_TOAST,
+  showModerationToast,
+} from "../../../moderation/show-moderation-toast";
 import {
   useModerationModal,
   type ModerationModalKind,
@@ -11,12 +16,24 @@ import type { DashboardReviewRow } from "./types";
 
 type ActionResult = { ok: boolean; message: string };
 
+export type ReviewModerationResult = ActionResult & {
+  reviewId: string;
+  kind: Exclude<ModerationModalKind, "none">;
+};
+
 interface ReviewActionIconsProps {
   review: Pick<DashboardReviewRow, "id" | "status">;
   showView?: boolean;
   expanded?: boolean;
   onToggleView?: () => void;
-  onResult?: (result: ActionResult) => void;
+  onResult?: (result: ReviewModerationResult) => void;
+}
+
+function toastForKind(kind: ModerationModalKind): string | null {
+  if (kind === "publish") return REVIEW_TOAST.published;
+  if (kind === "hide") return REVIEW_TOAST.hidden;
+  if (kind === "delete") return REVIEW_TOAST.deleted;
+  return null;
 }
 
 function IconEye({ crossed = false }: { crossed?: boolean }) {
@@ -79,28 +96,59 @@ export function ReviewActionIcons({
   onToggleView,
   onResult,
 }: ReviewActionIconsProps) {
+  const shopify = useAppBridge();
   const fetcher = useFetcher<ActionResult>();
-  const busy = fetcher.state !== "idle";
+  // Only the POST — not dashboard loader revalidation — should show Working…
+  const busy = fetcher.state === "submitting";
   const { kind, error, setError, open, close } = useModerationModal();
   const [pendingKind, setPendingKind] = useState<ModerationModalKind>("none");
+  const pendingToastRef = useRef<string | null>(null);
   const handledDataRef = useRef<ActionResult | null>(null);
+  const resultKindRef = useRef<Exclude<ModerationModalKind, "none"> | null>(
+    null,
+  );
 
   useEffect(() => {
-    if (fetcher.state !== "idle" || !fetcher.data) return;
+    if (!fetcher.data) return;
     if (handledDataRef.current === fetcher.data) return;
+    // Action response is available during "loading" revalidation; don't wait for idle
+    // or the row may unmount and skip the toast.
+    if (fetcher.state === "submitting") return;
     handledDataRef.current = fetcher.data;
 
-    onResult?.(fetcher.data);
+    const kind = resultKindRef.current;
+    if (kind) {
+      onResult?.({
+        ...fetcher.data,
+        reviewId: review.id,
+        kind,
+      });
+    }
 
     if (fetcher.data.ok) {
+      if (pendingToastRef.current) {
+        showModerationToast(shopify, pendingToastRef.current);
+      }
+      pendingToastRef.current = null;
+      resultKindRef.current = null;
       setPendingKind("none");
       close();
       return;
     }
 
+    pendingToastRef.current = null;
+    resultKindRef.current = null;
     setError(fetcher.data.message || "Something went wrong. Please try again.");
     setPendingKind("none");
-  }, [fetcher.state, fetcher.data, onResult, close, setError]);
+  }, [
+    fetcher.state,
+    fetcher.data,
+    onResult,
+    review.id,
+    shopify,
+    close,
+    setError,
+  ]);
 
   function openModal(next: ModerationModalKind, event: MouseEvent) {
     open(next, event.currentTarget);
@@ -113,6 +161,8 @@ export function ReviewActionIcons({
     if (busy) return;
     setError(null);
     setPendingKind(next);
+    resultKindRef.current = next;
+    pendingToastRef.current = toastForKind(next);
     handledDataRef.current = null;
     fetcher.submit(formData, { method: "post" });
   }

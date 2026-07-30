@@ -14,6 +14,11 @@
     elsif customer.first_name != blank or customer.last_name != blank
       assign customer_name = customer.first_name | append: ' ' | append: customer.last_name | strip
     endif
+    if customer_name == blank and customer_email != blank
+      assign customer_name_local = customer_email | split: '@' | first
+      assign customer_name_local = customer_name_local | replace: '.', ' ' | replace: '_', ' ' | replace: '-', ' ' | strip
+      assign customer_name = customer_name_local | capitalize
+    endif
   endif
 %}
 
@@ -26,6 +31,8 @@
     data-proxy-url="/apps/reviews/qa"
     data-page-size="3"
     data-show-form="{{ block.settings.show_form }}"
+    data-customer-email="{{ customer_email | escape }}"
+    data-customer-name="{{ customer_name | escape }}"
     style="--vouch-accent: {{ block.settings.accent_color }};"
     {{ block.shopify_attributes }}
   >
@@ -84,6 +91,12 @@
           </div>
           <p class="vouch-qa-modal__note">Questions are reviewed before they appear on the store.</p>
         </form>
+        <div class="vouch-qa-modal__success" data-vouch-qa-success hidden>
+          <h3 class="vouch-qa-modal__title" id="vouch-qa-success-title">Question submitted</h3>
+          <p class="vouch-qa-modal__success-body">
+            Thanks! Your question is submitted and will appear after store approval
+          </p>
+        </div>
       </div>
     </div>
   </div>

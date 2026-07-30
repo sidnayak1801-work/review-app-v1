@@ -131,8 +131,9 @@ Current fields:
 - `shopId`
 - `reviewId` — nullable until the review is created
 - `kind` — `IMAGE` or `VIDEO`
-- `storageKey`
-- `url` — public CDN/object URL
+- `storageKey` — durable S3/local object key (source of truth for media location)
+- `url` — write-through public URL for NOT NULL compatibility; reads build
+  from `storageKey` + `MEDIA_PUBLIC_BASE_URL` (or `/api/media/*` locally)
 - `mimeType`
 - `sizeBytes`
 - `width` / `height` — optional
@@ -143,8 +144,9 @@ Current fields:
 Indexes: `(shopId, reviewId)`, `(reviewId, position)`, `(shopId, createdAt)`.
 
 Limits (enforced in service): up to 5 images and 1 video per review; images
-and videos ≤10 MB each. Production uses S3-compatible storage (Cloudflare R2);
-local development can use disk under `storage/media` served at `/api/media/*`.
+and videos ≤10 MB each. Production uses S3-compatible storage (AWS S3; also
+compatible with Cloudflare R2); local development can use disk under
+`storage/media` served at `/api/media/*`.
 
 ## Phase 2 Tables
 
@@ -314,6 +316,21 @@ Per-shop API credentials for `/api/v1` (server-to-server):
 Unique on `tokenHash`. Indexes: `(shopId, revokedAt)`, `tokenPrefix`.
 Cascade delete with `Shop` (also deleted explicitly on `shop/redact`).
 
+### UninstallFeedback
+
+Optional in-app exit survey captured before the merchant continues to Shopify
+Admin uninstall (Shopify still shows its own mandatory reason modal on Apps →
+Uninstall; Partner Dashboard / Partner API hold those platform reasons).
+
+Fields:
+
+- `id`, `shopId`
+- `reasons` — string array of reason codes (Shopify-aligned list)
+- `details` — optional free text (required when `other` is selected; max 250)
+- `createdAt`
+
+Index: `(shopId, createdAt)`. Cascade delete with `Shop`.
+
 ### ReviewSource
 
 Adds `API` for reviews submitted through the public REST API.
@@ -360,7 +377,8 @@ patterns and retention rules before adding its migration.
 ## Data Retention and Privacy
 
 - Uninstall (`app/uninstalled`): mark shop `UNINSTALLED`, delete sessions, retain
-  merchant review data until `shop/redact`.
+  merchant review data until `shop/redact`. Optional in-app
+  `UninstallFeedback` rows are retained with the shop until redaction.
 - Customer data request (`customers/data_request`): locate reviews, questions,
   and review requests by email / customer id; operator exports within 30 days.
   See `10_OPERATIONS.md`.

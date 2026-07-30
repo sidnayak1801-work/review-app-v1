@@ -5,6 +5,62 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Home “Reviews collected” chart is interactive: hover snaps to a day with a
+  crosshair, accent dot, and tooltip (`reviews: N`); light draw animation on
+  range change. Analytics snapshot email open/conversion remain estimated
+  placeholders until campaign analytics ship.
+- Save incentives, Save widget settings, and Save settings show a success modal
+  with a green check (instead of only a banner or App Bridge toast); errors stay
+  as critical banners.
+- Top-right store avatar opens a Notion/Stripe-style right-side profile drawer
+  (store name, Shopify domain, plan badge, Billing / Settings / API shortcuts)
+  with backdrop and slide-in animation; bell and help stay as dropdowns.
+- Dashboard Quick actions (and other Home CTAs) use React Router `Link` with
+  intent prefetch instead of full-page `<a href>` navigations that broke the
+  embedded session and showed a blank admin page; cards get a clearer
+  hover lift like Notion/Stripe.
+- Merchant admin navigations feel closer to Notion/Stripe: sidebar links
+  prefetch on hover, the active nav item updates immediately, and the content
+  area swaps to a light skeleton until the next route is ready (no full-screen
+  overlay).
+- Merchant admin: removed the full-screen “Loading… / Please wait…” nav overlay
+  and App Bridge loading bar on sidebar navigations.
+- Merchant admin navigation feels snappier: Home loader uses a 90-day chart
+  window (1-year loads on demand), skips activity/email MoM on first paint,
+  skips full revalidation after dashboard Approve/Hide/Delete (optimistic list
+  updates).
+- Home Live preview stretches to match Widget settings height (no inner
+  scrollbar / empty band under the preview card).
+- Home dashboard: Widget settings and Live preview sit side-by-side; preview
+  updates instantly as controls change (layout, colors, toggles), then Save
+  publishes.
+- Storefront Q&A: after submit, success shows inside the ask modal (close via ×
+  or Esc) instead of a low-visibility inline list message.
+- Dashboard Approve / Hide / Delete: “Working…” only covers the POST (not full
+  dashboard revalidation); success toasts fire as soon as the action returns so
+  they are not lost when the row unmounts.
+- Media public URLs are built from `ReviewMedia.storageKey` +
+  `MEDIA_PUBLIC_BASE_URL` at read time (key-first); CDN/bucket host changes no
+  longer require rewriting Neon rows.
+- Media storage: `deleteObject` on local + S3-compatible adapters; roll back
+  uploaded objects when `ReviewMedia` DB create fails after PutObject.
+  `.env.example` / docs oriented to AWS S3 (`MEDIA_*` still works with R2).
+- Corrected `docs/16_Reviewx-s3-architecture.md` to match the live React Router
+  media path and AWS S3 via `MEDIA_*` / `MediaStorage` (no Multer or parallel
+  submit API).
+- Dashboard Approve / Hide / Delete actions show App Bridge success toasts
+  (same copy as the Reviews queue).
+- Logged-in storefront review/Q&A forms prefill email and display name from
+  Shopify customer identity; if name is missing, display name falls back to a
+  cleaned email local-part (still editable).
+- Settings (`/app/settings`) uses the same ReviewX widget controls as Home, with
+  a side-by-side live preview (stacked on mobile); Theme setup + uninstall
+  survey kept below.
+- In-app ReviewX uninstall survey on Settings (multi-select reasons + optional
+  details); persists `UninstallFeedback`, then opens Shopify Admin apps so the
+  merchant can finish uninstall. Shopify’s own uninstall survey is unchanged.
+- Mobile merchant shell: hamburger opens an off-canvas sidebar drawer (no more
+  wrapping nav chip wall under 800px); sidebar Settings destinations deduped.
 - Dashboard Open queue / Full settings use SPA `Link`s; Reviews list no longer
   blocks on Admin GraphQL product-title enrichment (media still loads).
 - Merchant admin navigations: overlay subtitle is “Please wait…”, no 900ms

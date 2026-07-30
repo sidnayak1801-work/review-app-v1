@@ -1,5 +1,7 @@
 import { Form, Link, useNavigation } from "react-router";
 
+import { SaveSuccessModal } from "../../../components/save-success-modal";
+import { useSaveSuccessModal } from "../../../components/use-save-success-modal";
 import { formatRelativeTime, statusBadgeTone } from "../../../lib/ui-format";
 
 type ReviewRequestStatus =
@@ -85,7 +87,14 @@ export function ReviewRequestsPage({
   actionData,
 }: ReviewRequestsPageProps) {
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
+  const isSubmitting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "save-settings";
+  const saveSuccess = useSaveSuccessModal(
+    actionData,
+    isSubmitting,
+    "Settings saved successfully!",
+  );
   const atLimit = reviewRequestUsage.used >= reviewRequestUsage.limit;
   const orderGroups = groupRequests(requests);
 
@@ -126,11 +135,8 @@ export function ReviewRequestsPage({
       </s-box>
 
       <s-section heading="Request settings">
-        {actionData ? (
-          <s-banner
-            tone={actionData.ok ? "success" : "critical"}
-            heading={actionData.ok ? "Saved" : "Could not save"}
-          >
+        {actionData && !actionData.ok ? (
+          <s-banner tone="critical" heading="Could not save">
             {actionData.message}
             {actionData.issues?.length ? (
               <s-unordered-list>
@@ -306,6 +312,12 @@ export function ReviewRequestsPage({
         )}
       </s-section>
       </s-stack>
+
+      <SaveSuccessModal
+        open={saveSuccess.open}
+        message={saveSuccess.message}
+        onClose={saveSuccess.close}
+      />
     </s-page>
   );
 }

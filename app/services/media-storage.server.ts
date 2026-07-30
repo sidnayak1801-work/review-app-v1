@@ -1,5 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { DomainError } from "../lib/domain-error";
@@ -12,11 +12,12 @@ export interface PutObjectInput {
 
 export interface MediaStorage {
   putObject(input: PutObjectInput): Promise<{ url: string; key: string }>;
+  deleteObject(key: string): Promise<void>;
   isConfigured(): boolean;
   readObject?(key: string): Promise<{ body: Buffer; contentType: string } | null>;
 }
 
-interface R2Config {
+interface S3CompatibleConfig {
   bucket: string;
   endpoint: string;
   accessKeyId: string;
@@ -26,10 +27,11 @@ interface R2Config {
 }
 
 const LOCAL_MEDIA_ROOT = path.join(process.cwd(), "storage", "media");
+const EMPTY_PAYLOAD_HASH = sha256Hex("");
 
-function readR2Config(
+function readS3Config(
   environment: NodeJS.ProcessEnv = process.env,
-): R2Config | null {
+): S3CompatibleConfig | null {
   const bucket = environment.MEDIA_S3_BUCKET?.trim();
   const endpoint = environment.MEDIA_S3_ENDPOINT?.trim();
   const accessKeyId = environment.MEDIA_S3_ACCESS_KEY_ID?.trim();
@@ -93,7 +95,19 @@ function contentTypeFromKey(key: string): string {
   }
 }
 
-/** Local disk fallback for development when R2 is not configured. */
+function assertSafeKey(key: string): string {
+  const normalized = key.replace(/\\/g, "/").replace(/^\/+/, "");
+  if (
+    normalized.includes("..") ||
+    path.isAbsolute(normalized) ||
+    normalized.length === 0
+  ) {
+    throw new DomainError("Invalid media key.", "MEDIA_INVALID_KEY");
+  }
+  return normalized;
+}
+
+/** Local disk fallback for development when MEDIA_* S3 config is incomplete. */
 export class LocalDiskMediaStorage implements MediaStorage {
   constructor(private readonly rootDir: string = LOCAL_MEDIA_ROOT) {}
 
@@ -102,15 +116,7 @@ export class LocalDiskMediaStorage implements MediaStorage {
   }
 
   private resolvePath(key: string): string {
-    const normalized = key.replace(/\\/g, "/").replace(/^\/+/, "");
-    if (
-      normalized.includes("..") ||
-      path.isAbsolute(normalized) ||
-      normalized.length === 0
-    ) {
-      throw new DomainError("Invalid media key.", "MEDIA_INVALID_KEY");
-    }
-    return path.join(this.rootDir, normalized);
+    return path.join(this.rootDir, assertSafeKey(key));
   }
 
   async putObject(input: PutObjectInput): Promise<{ url: string; key: string }> {
@@ -122,6 +128,21 @@ export class LocalDiskMediaStorage implements MediaStorage {
       // Path-only so tunnel host changes do not break stored rows.
       url: `/api/media/${input.key}`,
     };
+  }
+
+  async deleteObject(key: string): Promise<void> {
+    try {
+      await unlink(this.resolvePath(key));
+    } catch (error) {
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String((error as { code?: unknown }).code)
+          : "";
+      if (code === "ENOENT") {
+        return;
+      }
+      throw error;
+    }
   }
 
   async readObject(
@@ -140,30 +161,54 @@ export class LocalDiskMediaStorage implements MediaStorage {
   }
 }
 
-/** Minimal S3 PutObject (R2-compatible) without the AWS SDK. */
-export class R2MediaStorage implements MediaStorage {
-  constructor(private readonly config: R2Config) {}
+/**
+ * S3-compatible PutObject / DeleteObject (SigV4) without the AWS SDK.
+ * Targets AWS S3; also works with Cloudflare R2 and other S3 APIs.
+ */
+export class S3MediaStorage implements MediaStorage {
+  constructor(private readonly config: S3CompatibleConfig) {}
 
   isConfigured(): boolean {
     return true;
   }
 
-  async putObject(input: PutObjectInput): Promise<{ url: string; key: string }> {
-    const { bucket, endpoint, accessKeyId, secretAccessKey, publicBaseUrl, region } =
-      this.config;
-    const url = new URL(`${endpoint}/${bucket}/${input.key}`);
+  private objectUrl(key: string): URL {
+    const safeKey = assertSafeKey(key);
+    return new URL(`${this.config.endpoint}/${this.config.bucket}/${safeKey}`);
+  }
+
+  private async signedFetch(
+    method: "PUT" | "DELETE",
+    key: string,
+    options: {
+      body?: Buffer;
+      contentType?: string;
+      payloadHash: string;
+    },
+  ): Promise<Response> {
+    const { accessKeyId, secretAccessKey, region } = this.config;
+    const url = this.objectUrl(key);
     const now = new Date();
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
     const dateStamp = amzDate.slice(0, 8);
-    const payloadHash = sha256Hex(input.body);
-    const canonicalHeaders =
-      `content-type:${input.contentType}\n` +
-      `host:${url.host}\n` +
-      `x-amz-content-sha256:${payloadHash}\n` +
-      `x-amz-date:${amzDate}\n`;
-    const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
+    const payloadHash = options.payloadHash;
+
+    const headerLines = [
+      ...(options.contentType ? [`content-type:${options.contentType}`] : []),
+      `host:${url.host}`,
+      `x-amz-content-sha256:${payloadHash}`,
+      `x-amz-date:${amzDate}`,
+    ];
+    const signedHeaderNames = [
+      ...(options.contentType ? ["content-type"] : []),
+      "host",
+      "x-amz-content-sha256",
+      "x-amz-date",
+    ];
+    const canonicalHeaders = `${headerLines.join("\n")}\n`;
+    const signedHeaders = signedHeaderNames.join(";");
     const canonicalRequest = [
-      "PUT",
+      method,
       url.pathname,
       "",
       canonicalHeaders,
@@ -185,15 +230,28 @@ export class R2MediaStorage implements MediaStorage {
       `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${credentialScope}, ` +
       `SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        "content-type": input.contentType,
-        "x-amz-content-sha256": payloadHash,
-        "x-amz-date": amzDate,
-        authorization,
-      },
-      body: new Uint8Array(input.body),
+    const headers: Record<string, string> = {
+      "x-amz-content-sha256": payloadHash,
+      "x-amz-date": amzDate,
+      authorization,
+    };
+    if (options.contentType) {
+      headers["content-type"] = options.contentType;
+    }
+
+    return fetch(url, {
+      method,
+      headers,
+      body: options.body ? new Uint8Array(options.body) : undefined,
+    });
+  }
+
+  async putObject(input: PutObjectInput): Promise<{ url: string; key: string }> {
+    const payloadHash = sha256Hex(input.body);
+    const response = await this.signedFetch("PUT", input.key, {
+      body: input.body,
+      contentType: input.contentType,
+      payloadHash,
     });
 
     if (!response.ok) {
@@ -206,17 +264,34 @@ export class R2MediaStorage implements MediaStorage {
 
     return {
       key: input.key,
-      url: `${publicBaseUrl}/${input.key}`,
+      url: `${this.config.publicBaseUrl}/${assertSafeKey(input.key)}`,
     };
+  }
+
+  async deleteObject(key: string): Promise<void> {
+    const response = await this.signedFetch("DELETE", key, {
+      payloadHash: EMPTY_PAYLOAD_HASH,
+    });
+
+    // 404: already gone — treat as success for rollback/cleanup.
+    if (response.ok || response.status === 404) {
+      return;
+    }
+
+    const detail = await response.text().catch(() => "");
+    throw new DomainError(
+      `Media storage delete failed (${response.status}). ${detail}`.trim(),
+      "MEDIA_DELETE_FAILED",
+    );
   }
 }
 
 export function createMediaStorage(
   environment: NodeJS.ProcessEnv = process.env,
 ): MediaStorage {
-  const config = readR2Config(environment);
+  const config = readS3Config(environment);
   if (config) {
-    return new R2MediaStorage(config);
+    return new S3MediaStorage(config);
   }
   return new LocalDiskMediaStorage();
 }

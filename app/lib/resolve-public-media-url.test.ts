@@ -1,6 +1,41 @@
 import { describe, expect, it } from "vitest";
 
-import { resolvePublicMediaUrl } from "./resolve-public-media-url";
+import {
+  buildPublicMediaUrl,
+  resolvePublicMediaUrl,
+} from "./resolve-public-media-url";
+
+describe("buildPublicMediaUrl", () => {
+  it("joins MEDIA_PUBLIC_BASE_URL with the storage key", () => {
+    expect(
+      buildPublicMediaUrl("shops/1/reviews/a.webp", {
+        MEDIA_PUBLIC_BASE_URL: "https://cdn.example.com/",
+      }),
+    ).toBe("https://cdn.example.com/shops/1/reviews/a.webp");
+  });
+
+  it("strips a leading slash from the key", () => {
+    expect(
+      buildPublicMediaUrl("/shops/1/reviews/a.webp", {
+        MEDIA_PUBLIC_BASE_URL: "https://cdn.example.com",
+      }),
+    ).toBe("https://cdn.example.com/shops/1/reviews/a.webp");
+  });
+
+  it("uses /api/media for local disk when no public base is set", () => {
+    expect(buildPublicMediaUrl("shops/1/reviews/a.webp", {})).toBe(
+      "/api/media/shops/1/reviews/a.webp",
+    );
+  });
+
+  it("rewrites local media onto SHOPIFY_APP_URL when present", () => {
+    expect(
+      buildPublicMediaUrl("shops/1/reviews/a.webp", {
+        SHOPIFY_APP_URL: "https://tunnel.trycloudflare.com",
+      }),
+    ).toBe("https://tunnel.trycloudflare.com/api/media/shops/1/reviews/a.webp");
+  });
+});
 
 describe("resolvePublicMediaUrl", () => {
   it("rewrites stale tunnel hosts to the current app URL", () => {

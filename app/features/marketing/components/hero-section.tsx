@@ -31,10 +31,10 @@ export function HeroSection() {
           id="hero-heading"
           className="text-balance text-[2.35rem] font-semibold tracking-[-0.04em] text-foreground sm:text-5xl md:text-6xl lg:text-[4.1rem] lg:leading-[1.08]"
         >
-          Reviews that{" "}
-          <span className="text-brand">turn</span> browsers into{" "}
-          <span className="text-brand">buyers</span>
-          .
+          Ship product {" "}
+          <span className="text-brand">reviews</span> at lightning{" "}
+          <span className="text-brand">speed </span>
+          
         </h1>
 
         <p className="mx-auto mt-5 max-w-2xl text-pretty text-[15px] leading-relaxed text-muted-foreground sm:text-lg">
