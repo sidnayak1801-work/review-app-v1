@@ -69,6 +69,8 @@ Scope:
 ### Review Widget
 
 - [x] Add a Theme App Extension
+- [x] Review Summary block (in `review-widget` + `ProductRatingSummary` +
+  `/apps/reviews/products/:id/summary`) — see `17_REVIEW_SUMMARY.md`
 - [x] Render approved product reviews
 - [x] Add a star-rating badge
 - [x] Keep the widget accessible, responsive, and lightweight

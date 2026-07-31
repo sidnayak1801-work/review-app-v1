@@ -161,6 +161,38 @@ export function WidgetPreview({ settings }: WidgetPreviewProps) {
               </span>
             </>
           ) : null}
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 11,
+              fontWeight: 700,
+              color: isDark ? "#86efac" : "#15803d",
+              background: isDark
+                ? "rgba(34, 197, 94, 0.22)"
+                : "rgba(34, 197, 94, 0.14)",
+              border: `1px solid ${
+                isDark ? "rgba(34, 197, 94, 0.4)" : "rgba(34, 197, 94, 0.28)"
+              }`,
+              borderRadius: 999,
+              padding: "3px 10px",
+            }}
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              aria-hidden
+              focusable="false"
+            >
+              <path
+                fill="currentColor"
+                d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"
+              />
+            </svg>
+            Verified
+          </span>
           {review.featured ? (
             <span
               style={{

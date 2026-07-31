@@ -1,0 +1,128 @@
+{% liquid
+  assign product_resource = closest.product
+  if product_resource == blank
+    assign product_resource = product
+  endif
+%}
+
+{% if product_resource %}
+  <div
+    class="rx-summary"
+    data-rx-review-summary
+    data-product-id="{{ product_resource.id }}"
+    data-summary-url="/apps/reviews/products/{{ product_resource.id }}/summary"
+    data-show-stars="{{ block.settings.show_stars }}"
+    data-show-average="{{ block.settings.show_average }}"
+    data-show-count="{{ block.settings.show_count }}"
+    data-show-see-all="{{ block.settings.show_see_all }}"
+    data-enable-animations="{{ block.settings.enable_animations }}"
+    style="
+      --rx-star-color: {{ block.settings.star_color }};
+      --rx-text-color: {{ block.settings.text_color }};
+      --rx-accent-color: {{ block.settings.accent_color }};
+      --rx-link-color: {{ block.settings.accent_color }};
+      --rx-bar-fill: {{ block.settings.star_color }};
+      --rx-font-size: {{ block.settings.font_size }}px;
+      --rx-spacing: {{ block.settings.spacing }}px;
+      --rx-radius: {{ block.settings.border_radius }}px;
+    "
+    {{ block.shopify_attributes }}
+  ></div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Review Summary",
+  "target": "section",
+  "stylesheet": "review-summary.css",
+  "javascript": "review-summary.js",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Visibility"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_stars",
+      "label": "Show stars",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_average",
+      "label": "Show average",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_count",
+      "label": "Show review count",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_see_all",
+      "label": "Show “See all reviews” in popover",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_animations",
+      "label": "Enable animations",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star color",
+      "default": "#22c55e"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Link / accent color",
+      "default": "#007185"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#111111"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "spacing",
+      "min": 0,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Spacing",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Border radius",
+      "default": 8
+    }
+  ]
+}
+{% endschema %}

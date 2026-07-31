@@ -7,6 +7,10 @@ import type {
   ReviewImportRepository,
 } from "../../repositories/review-import.repository.server";
 import { reviewImportRepository } from "../../repositories/review-import.repository.server";
+import {
+  productRatingSummaryRepository,
+  type ProductRatingSummaryRepository,
+} from "../../repositories/product-rating-summary.repository.server";
 import type { ShopPlan } from "../../repositories/shop.repository.server";
 import {
   hashImportContent,
@@ -29,6 +33,7 @@ export class ReviewImportService {
     private readonly imports: ReviewImportRepository,
     private readonly reviews: ReviewRepository,
     private readonly billing: BillingService,
+    private readonly ratingSummaries: ProductRatingSummaryRepository = productRatingSummaryRepository,
   ) {}
 
   async listRecentForShop(
@@ -136,6 +141,7 @@ export class ReviewImportService {
     let failedRows = 0;
     const errorRows: string[][] = [];
     let stopApproving = false;
+    const productsToRefresh = new Set<string>();
 
     for (let index = 0; index < input.rows.length; index += IMPORT_BATCH_SIZE) {
       const batch = input.rows.slice(index, index + IMPORT_BATCH_SIZE);
@@ -201,9 +207,19 @@ export class ReviewImportService {
           publishedAt: data.status === "APPROVED" ? new Date() : null,
         });
 
+        if (data.status === "APPROVED") {
+          productsToRefresh.add(data.product_id);
+        }
+
         importedRows += 1;
       }
     }
+
+    await Promise.all(
+      [...productsToRefresh].map((productId) =>
+        this.ratingSummaries.recomputeForProduct(input.shopId, productId),
+      ),
+    );
 
     let errorFileKey: string | null = null;
 

@@ -4,9 +4,39 @@ import type {
   ReviewRecord,
   ReviewRepository,
 } from "../../repositories/review.repository.server";
+import type { ProductRatingSummaryRepository } from "../../repositories/product-rating-summary.repository.server";
 import { DomainError } from "../../lib/domain-error";
 import type { BillingService } from "../billing/billing.service.server";
 import { ReviewService } from "./review.service.server";
+
+function createRatingSummaries(
+  overrides: Partial<ProductRatingSummaryRepository> = {},
+): ProductRatingSummaryRepository {
+  return {
+    getForProduct: vi.fn().mockResolvedValue(null),
+    recomputeForProduct: vi.fn().mockResolvedValue({
+      id: "summary-1",
+      shopId: "shop-1",
+      shopifyProductId: "gid://shopify/Product/1",
+      averageRating: 5,
+      totalReviews: 1,
+      fiveStar: 1,
+      fourStar: 0,
+      threeStar: 0,
+      twoStar: 0,
+      oneStar: 0,
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    }),
+    getStorefrontSummary: vi.fn().mockResolvedValue({
+      productId: "gid://shopify/Product/1",
+      averageRating: 5,
+      totalReviews: 1,
+      distribution: { "1": 0, "2": 0, "3": 0, "4": 0, "5": 1 },
+    }),
+    ...overrides,
+  };
+}
 
 function createBilling(
   overrides: Partial<BillingService> = {},
@@ -116,6 +146,37 @@ const noopIntegrations = {
 };
 
 describe("ReviewService", () => {
+  it("returns storefront product summary from the rating cache", async () => {
+    const summaries = createRatingSummaries({
+      getStorefrontSummary: vi.fn().mockResolvedValue({
+        productId: "123",
+        averageRating: 4.8,
+        totalReviews: 10,
+        distribution: { "1": 0, "2": 0, "3": 1, "4": 2, "5": 7 },
+      }),
+    });
+    const service = new ReviewService(
+      createRepository(),
+      createBilling(),
+      undefined,
+      noopIntegrations as never,
+      summaries,
+    );
+
+    await expect(
+      service.getStorefrontProductSummary("shop-1", "123"),
+    ).resolves.toEqual({
+      productId: "123",
+      averageRating: 4.8,
+      totalReviews: 10,
+      distribution: { "1": 0, "2": 0, "3": 1, "4": 2, "5": 7 },
+    });
+    expect(summaries.getStorefrontSummary).toHaveBeenCalledWith(
+      "shop-1",
+      "gid://shopify/Product/123",
+    );
+  });
+
   it("creates a merchant review as approved by default", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const repository = createRepository();
@@ -125,6 +186,7 @@ describe("ReviewService", () => {
       billing,
       undefined,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     await service.createMerchantReview("shop-1", "FREE", {
@@ -157,6 +219,7 @@ describe("ReviewService", () => {
       billing,
       undefined,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     await service.listForShop("shop-1", {
@@ -188,6 +251,7 @@ describe("ReviewService", () => {
       billing,
       media as never,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     const result = await service.listApprovedForStorefront("shop-1", {
@@ -243,6 +307,7 @@ describe("ReviewService", () => {
       billing,
       media as never,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     const result = await service.listApprovedForStorefront("shop-1", {
@@ -294,6 +359,7 @@ describe("ReviewService", () => {
       createBilling(),
       media as never,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     const result = await service.listApprovedForStorefront("shop-1", {
@@ -324,6 +390,7 @@ describe("ReviewService", () => {
       createBilling(),
       media as never,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     await service.listApprovedForStorefront("shop-1", {
@@ -354,6 +421,7 @@ describe("ReviewService", () => {
       billing,
       media as never,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     await expect(
@@ -389,6 +457,7 @@ describe("ReviewService", () => {
       billing,
       media as never,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     await service.createStorefrontReview("shop-1", "FREE", {
@@ -425,6 +494,7 @@ describe("ReviewService", () => {
       billing,
       media as never,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     await service.createStorefrontReview(
@@ -473,6 +543,7 @@ describe("ReviewService", () => {
       billing,
       media as never,
       noopIntegrations as never,
+      createRatingSummaries(),
     );
 
     await service.createStorefrontReview(
@@ -499,7 +570,7 @@ describe("ReviewService", () => {
   it("does not call billing when updating an already approved review", async () => {
     const repository = createRepository();
     const billing = createBilling();
-    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never, createRatingSummaries());
 
     await service.updateForShop(
       "shop-1",
@@ -528,7 +599,7 @@ describe("ReviewService", () => {
     });
 
     const billing = createBilling();
-    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never, createRatingSummaries());
 
     await service.updateForShop(
       "shop-1",
@@ -572,7 +643,7 @@ describe("ReviewService", () => {
     });
 
     const billing = createBilling();
-    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never, createRatingSummaries());
 
     const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
       reviewIds: ["review-pending"],
@@ -623,7 +694,7 @@ describe("ReviewService", () => {
           ),
         ),
     });
-    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never, createRatingSummaries());
 
     const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
       reviewIds: ["review-2", "review-3"],
@@ -644,7 +715,7 @@ describe("ReviewService", () => {
     });
 
     const billing = createBilling();
-    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never);
+    const service = new ReviewService(repository, billing, undefined, noopIntegrations as never, createRatingSummaries());
 
     const result = await service.bulkUpdateStatusForShop("shop-1", "FREE", {
       reviewIds: ["review-1"],
@@ -665,7 +736,7 @@ describe("ReviewService", () => {
         featured: true,
       }),
     });
-    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never);
+    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never, createRatingSummaries());
 
     const updated = await service.setFeaturedForShop("shop-1", {
       reviewId: "review-1",
@@ -694,7 +765,7 @@ describe("ReviewService", () => {
           merchantReplyAt: null,
         }),
     });
-    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never);
+    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never, createRatingSummaries());
 
     await service.setMerchantReplyForShop("shop-1", {
       reviewId: "review-1",
@@ -725,7 +796,7 @@ describe("ReviewService", () => {
 
   it("rejects merchant replies longer than 1000 characters", async () => {
     const repository = createRepository();
-    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never);
+    const service = new ReviewService(repository, createBilling(), undefined, noopIntegrations as never, createRatingSummaries());
 
     await expect(
       service.setMerchantReplyForShop("shop-1", {

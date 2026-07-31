@@ -86,6 +86,15 @@ Uninstall survey + mobile nav:
 
 ## Next
 
+Storefront Review Summary (`17_REVIEW_SUMMARY.md`) is implemented:
+
+- Block in `extensions/review-widget` + `ProductRatingSummary` + summary route
+- Apply migration `20260731120000_add_product_rating_summary` on each env
+- Theme editor: add **Review Summary** under the product title; keep Product
+  reviews block for `#reviewx-reviews` scroll target
+- Rebuild assets with `npm run build:review-summary` after edits under
+  `tooling/review-summary/`
+
 1. Submission-identity vertical slice (per `14_REVIEW_SUBMISSION_SPEC.md`):
    storefront logged-in skip About You, server-side `source` /
    `verifiedPurchase`, Verified Buyer badge (non-editable), then guest allow

@@ -113,11 +113,20 @@ These webhook routes use Shopify request verification.
   - Creates a `PENDING` question
   - Honeypot + IP rate limit (`storefront-qa:{shopId}:{ip}`)
   - Notifies the merchant shop contact email via Resend/console provider
+- `GET /api/storefront/reviews/products/:productId/summary`
+  - Requires verified storefront/app-proxy context
+  - Returns denormalized approved-review summary for the Review Summary block:
+    `productId`, `averageRating`, `totalReviews`, `distribution` (`1`–`5`)
+  - Reads `ProductRatingSummary` (recomputes once on cache miss)
+  - Rate limit key: `storefront-summary:{shopId}:{ip}`
+  - Cache-Control: `private, max-age=60`
 
 The public storefront contract uses the Shopify app proxy:
 
-- Storefront path: `/apps/reviews` (reviews) and `/apps/reviews/qa` (Q&A)
-- App routes: `/api/storefront/reviews` and `/api/storefront/reviews/qa`
+- Storefront path: `/apps/reviews` (reviews), `/apps/reviews/qa` (Q&A), and
+  `/apps/reviews/products/{productId}/summary` (Review Summary)
+- App routes: `/api/storefront/reviews`, `/api/storefront/reviews/qa`, and
+  `/api/storefront/reviews/products/:productId/summary`
 - Authenticated with `authenticate.public.appProxy`
 - Query `productId` (numeric or GID) for approved reviews
 - Query `sort` for storefront list ordering / media filters (widget toolbar)

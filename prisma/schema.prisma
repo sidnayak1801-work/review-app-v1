@@ -115,6 +115,7 @@ model Shop {
   reviewImports  ReviewImport[]
   reviewRequests ReviewRequest[]
   reviewMedia    ReviewMedia[]
+  productRatingSummaries ProductRatingSummary[]
   questions      Question[]
   incentiveCampaigns IncentiveCampaign[]
   integrationConnections IntegrationConnection[]
@@ -185,6 +186,26 @@ model Review {
   @@index([shopId, shopifyProductId, status, rating, createdAt])
   @@index([shopId, shopifyProductId, status, hasImage, createdAt])
   @@index([shopId, shopifyProductId, status, hasVideo, createdAt])
+}
+
+/// Denormalized approved-review aggregates for storefront summary (Review Summary block).
+model ProductRatingSummary {
+  id               String   @id @default(cuid())
+  shopId           String
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifyProductId String
+  averageRating    Float?
+  totalReviews     Int      @default(0)
+  fiveStar         Int      @default(0)
+  fourStar         Int      @default(0)
+  threeStar        Int      @default(0)
+  twoStar          Int      @default(0)
+  oneStar          Int      @default(0)
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  @@unique([shopId, shopifyProductId])
+  @@index([shopId, shopifyProductId])
 }
 
 model ReviewMedia {

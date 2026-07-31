@@ -5,6 +5,21 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Storefront review cards show a green **Verified** badge (with checkmark) on
+  every published review; Featured remains a separate merchant pin.
+- Review Summary popover opens on hover (closes on leave) with a short smooth
+  animation; star/bar default matches widget green `#22c55e`; count shows
+  `(N reviews)`.
+- Review Summary storefront UI matches Amazon-style product title ratings:
+  chevron trigger, compact `(count)` link, white histogram card with % bars and
+  “See customer reviews ›”.
+- Storefront **Review Summary** block in the existing `review-widget` Theme App
+  Extension (Shopify allows one theme extension per app): Amazon-style average
+  + stars + count under the product title; accessible rating popover with
+  distribution bars; count / “See all reviews” smooth-scroll to
+  `#reviewx-reviews`. Single app-proxy fetch
+  `GET /apps/reviews/products/{productId}/summary`. Backed by
+  `ProductRatingSummary` (maintained on approve/reject/delete/import).
 - Home “Reviews collected” chart is interactive: hover snaps to a day with a
   crosshair, accent dot, and tooltip (`reviews: N`); light draw animation on
   range change. Analytics snapshot email open/conversion remain estimated

@@ -131,7 +131,11 @@ describe("ReviewImportService", () => {
     const imports = createImportRepository();
     const reviews = createReviewRepository();
     const billing = createBilling();
-    const service = new ReviewImportService(imports, reviews, billing);
+    const service = new ReviewImportService(imports, reviews, billing, {
+      getForProduct: vi.fn(),
+      recomputeForProduct: vi.fn().mockResolvedValue({}),
+      getStorefrontSummary: vi.fn(),
+    } as never);
 
     const result = await service.createAndProcessImport({
       shopId: "shop-1",
@@ -161,7 +165,11 @@ describe("ReviewImportService", () => {
     const imports = createImportRepository();
     const reviews = createReviewRepository();
     const billing = createBilling();
-    const service = new ReviewImportService(imports, reviews, billing);
+    const service = new ReviewImportService(imports, reviews, billing, {
+      getForProduct: vi.fn(),
+      recomputeForProduct: vi.fn().mockResolvedValue({}),
+      getStorefrontSummary: vi.fn(),
+    } as never);
 
     const result = await service.createAndProcessImport({
       shopId: "shop-1",
@@ -187,6 +195,11 @@ describe("ReviewImportService", () => {
       imports,
       createReviewRepository(),
       createBilling(),
+      {
+        getForProduct: vi.fn(),
+        recomputeForProduct: vi.fn().mockResolvedValue({}),
+        getStorefrontSummary: vi.fn(),
+      } as never,
     );
 
     await expect(
@@ -216,7 +229,11 @@ describe("ReviewImportService", () => {
     });
     const imports = createImportRepository();
     const reviews = createReviewRepository();
-    const service = new ReviewImportService(imports, reviews, billing);
+    const service = new ReviewImportService(imports, reviews, billing, {
+      getForProduct: vi.fn(),
+      recomputeForProduct: vi.fn().mockResolvedValue({}),
+      getStorefrontSummary: vi.fn(),
+    } as never);
 
     const result = await service.createAndProcessImport({
       shopId: "shop-1",

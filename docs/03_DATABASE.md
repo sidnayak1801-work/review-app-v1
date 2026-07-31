@@ -148,6 +148,28 @@ and videos ≤10 MB each. Production uses S3-compatible storage (AWS S3; also
 compatible with Cloudflare R2); local development can use disk under
 `storage/media` served at `/api/media/*`.
 
+### ProductRatingSummary
+
+Denormalized approved-review aggregates per product for the storefront Review
+Summary Theme App Extension. Product pages read this row; they do not
+`groupBy` reviews on every request.
+
+Current fields:
+
+- `id`
+- `shopId`
+- `shopifyProductId`
+- `averageRating` — nullable when `totalReviews` is 0
+- `totalReviews`
+- `fiveStar` / `fourStar` / `threeStar` / `twoStar` / `oneStar`
+- `createdAt`
+- `updatedAt`
+
+Unique: `(shopId, shopifyProductId)`.
+
+Recomputed when approved reviews change (create/approve/reject/delete/import).
+Storefront summary uses recompute-on-miss if a row is absent.
+
 ## Phase 2 Tables
 
 ### Shop Billing Fields

@@ -3,6 +3,9 @@
   "star_rating": {
     "name": "Star rating badge"
   },
+  "review_summary": {
+    "name": "Review Summary"
+  },
   "review_list": {
     "name": "Product reviews"
   },

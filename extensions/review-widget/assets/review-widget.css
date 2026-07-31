@@ -261,12 +261,25 @@
 .vouch-reviews__badge {
   display: inline-flex;
   align-items: center;
+  gap: 0.25rem;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--vouch-accent) 14%, #fff);
   color: var(--vouch-accent);
   font-size: 0.72rem;
   font-weight: 600;
+  line-height: 1.2;
+}
+
+.vouch-reviews__badge-icon {
+  flex-shrink: 0;
+  display: block;
+}
+
+.vouch-reviews__badge--verified {
+  background: color-mix(in srgb, #22c55e 14%, #fff);
+  color: #15803d;
+  border: 1px solid color-mix(in srgb, #22c55e 28%, transparent);
 }
 
 .vouch-reviews__badge--featured {
@@ -573,6 +586,12 @@
 .vouch-reviews--dark .vouch-reviews__card-body,
 .vouch-reviews--dark .vouch-reviews__date {
   color: rgba(255, 255, 255, 0.78);
+}
+
+.vouch-reviews--dark .vouch-reviews__badge--verified {
+  background: color-mix(in srgb, #22c55e 22%, #1f1f1f);
+  color: #86efac;
+  border-color: color-mix(in srgb, #22c55e 40%, transparent);
 }
 
 .vouch-reviews--dark .vouch-reviews__badge--featured {

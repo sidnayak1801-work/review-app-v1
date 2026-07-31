@@ -1,4 +1,5 @@
 import { DomainError, NotFoundError, ValidationError } from "../../lib/domain-error";
+import { normalizeShopifyProductId } from "../../lib/shopify-ids";
 import { parseWithSchema } from "../../lib/validation";
 import {
   reviewRepository,
@@ -7,6 +8,11 @@ import {
   type ReviewStatusCounts,
   type ListReviewsResult,
 } from "../../repositories/review.repository.server";
+import {
+  productRatingSummaryRepository,
+  type ProductRatingSummaryRepository,
+  type StorefrontProductSummary,
+} from "../../repositories/product-rating-summary.repository.server";
 import { logger } from "../../services/logger.server";
 import type { ShopPlan } from "../../repositories/shop.repository.server";
 import type { BillingService } from "../billing/billing.service.server";
@@ -70,7 +76,48 @@ export class ReviewService {
     private readonly billing: BillingService,
     private readonly media: ReviewMediaService = reviewMediaService,
     private readonly integrations: IntegrationEventDispatcher = integrationEventDispatcher,
+    private readonly ratingSummaries: ProductRatingSummaryRepository = productRatingSummaryRepository,
   ) {}
+
+  private async refreshProductRatingSummary(
+    shopId: string,
+    shopifyProductId: string,
+  ): Promise<void> {
+    await this.ratingSummaries.recomputeForProduct(shopId, shopifyProductId);
+  }
+
+  private async refreshProductRatingSummaries(
+    shopId: string,
+    shopifyProductIds: Iterable<string>,
+  ): Promise<void> {
+    const unique = [...new Set([...shopifyProductIds].filter(Boolean))];
+    await Promise.all(
+      unique.map((productId) =>
+        this.refreshProductRatingSummary(shopId, productId),
+      ),
+    );
+  }
+
+  async getStorefrontProductSummary(
+    shopId: string,
+    shopifyProductId: string,
+  ): Promise<StorefrontProductSummary> {
+    const trimmed = shopifyProductId.trim();
+    if (!trimmed) {
+      throw new ValidationError("Invalid product", ["Product id is required"]);
+    }
+
+    let productId: string;
+    try {
+      productId = normalizeShopifyProductId(trimmed);
+    } catch {
+      throw new ValidationError("Invalid product", [
+        "Must be a Shopify product ID or GID",
+      ]);
+    }
+
+    return this.ratingSummaries.getStorefrontSummary(shopId, productId);
+  }
 
   private emitReviewPublished(review: ReviewRecord): void {
     if (review.status !== "APPROVED") {
@@ -215,6 +262,7 @@ export class ReviewService {
 
     if (review.status === "APPROVED") {
       this.emitReviewPublished(review);
+      await this.refreshProductRatingSummary(shopId, review.shopifyProductId);
     }
 
     return review;
@@ -266,6 +314,14 @@ export class ReviewService {
       this.emitReviewPublished(updated);
     }
 
+    if (
+      existing.status === "APPROVED" ||
+      nextStatus === "APPROVED" ||
+      (data.rating != null && existing.status === "APPROVED")
+    ) {
+      await this.refreshProductRatingSummary(shopId, updated.shopifyProductId);
+    }
+
     return updated;
   }
 
@@ -290,6 +346,7 @@ export class ReviewService {
     };
 
     let stopApproving = false;
+    const productsToRefresh = new Set<string>();
 
     for (const reviewId of data.reviewIds) {
       const existing = reviewsById.get(reviewId);
@@ -350,11 +407,14 @@ export class ReviewService {
 
       result.updatedCount += 1;
       reviewsById.set(reviewId, updated);
+      productsToRefresh.add(updated.shopifyProductId);
 
       if (data.status === "APPROVED" && existing.status !== "APPROVED") {
         this.emitReviewPublished(updated);
       }
     }
+
+    await this.refreshProductRatingSummaries(shopId, productsToRefresh);
 
     logger.info("Bulk review status update completed", {
       shopId,
@@ -368,10 +428,15 @@ export class ReviewService {
   }
 
   async deleteForShop(shopId: string, reviewId: string): Promise<void> {
+    const existing = await this.getForShop(shopId, reviewId);
     const deleted = await this.reviews.deleteForShop(shopId, reviewId);
 
     if (!deleted) {
       throw new NotFoundError("Review not found");
+    }
+
+    if (existing.status === "APPROVED") {
+      await this.refreshProductRatingSummary(shopId, existing.shopifyProductId);
     }
 
     logger.info("Review deleted", { shopId, reviewId });
@@ -571,6 +636,7 @@ export class ReviewService {
 
     if (review.status === "APPROVED") {
       this.emitReviewPublished(review);
+      await this.refreshProductRatingSummary(shopId, review.shopifyProductId);
     }
 
     return toPublicReview(
