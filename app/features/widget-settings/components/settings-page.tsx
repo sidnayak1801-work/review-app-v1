@@ -69,7 +69,9 @@ export function SettingsPage({
         </div>
       ) : null}
 
-      <div className={styles.settingsPageSplit}>
+      <div
+        className={`${styles.settingsPageSplit} ${styles.settingsPageSplitFill}`}
+      >
         <section
           className={`${styles.card} ${styles.settingsCard}`}
           aria-labelledby="rx-settings-controls-title"
@@ -169,7 +171,7 @@ export function SettingsPage({
         </section>
 
         <section
-          className={`${styles.card} ${styles.settingsPreviewSticky}`}
+          className={`${styles.card} ${styles.settingsPreviewFill}`}
           aria-labelledby="rx-settings-preview-title"
         >
           <div className={styles.cardHeader}>

@@ -44,7 +44,15 @@ describe("ShopifyBillingSyncService", () => {
     const billing = {
       check: vi.fn().mockResolvedValue({
         hasActivePayment: true,
-        appSubscriptions: [{ name: PRO_PLAN, id: "sub-1" }],
+        appSubscriptions: [
+          {
+            name: PRO_PLAN,
+            id: "sub-1",
+            createdAt: "2026-07-20T10:00:00.000Z",
+            currentPeriodEnd: "2026-08-19T10:00:00.000Z",
+            trialDays: 14,
+          },
+        ],
       }),
     };
     const service = new ShopifyBillingSyncService(shops);
@@ -66,7 +74,13 @@ describe("ShopifyBillingSyncService", () => {
         billingStatus: "ACTIVE",
       }),
     );
-    expect(result.plan).toBe("PRO");
+    expect(result.shop.plan).toBe("PRO");
+    expect(result.proSubscription).toEqual({
+      id: "sub-1",
+      createdAt: "2026-07-20T10:00:00.000Z",
+      currentPeriodEnd: "2026-08-19T10:00:00.000Z",
+      trialDays: 14,
+    });
   });
 
   it("maps missing Pro subscription to FREE plan", async () => {
@@ -79,7 +93,7 @@ describe("ShopifyBillingSyncService", () => {
     };
     const service = new ShopifyBillingSyncService(shops);
 
-    await service.syncFromShopify({
+    const result = await service.syncFromShopify({
       shopId: "shop-1",
       billing,
     });
@@ -91,6 +105,7 @@ describe("ShopifyBillingSyncService", () => {
         billingStatus: "FREE",
       }),
     );
+    expect(result.proSubscription).toBeNull();
   });
 
   it("reuses cached billing when sync is fresh", async () => {

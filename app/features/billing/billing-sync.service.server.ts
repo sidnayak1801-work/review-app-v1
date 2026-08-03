@@ -7,21 +7,42 @@ import {
 import { logger } from "../../services/logger.server";
 import { BILLING_SYNC_MAX_AGE_MS, PRO_PLAN } from "./billing.constants";
 
+export type ShopifyAppSubscription = {
+  name: string;
+  id: string;
+  createdAt?: string;
+  currentPeriodEnd?: string | null;
+  trialDays?: number;
+};
+
+export type ProSubscriptionSummary = {
+  id: string;
+  createdAt: string | null;
+  currentPeriodEnd: string | null;
+  trialDays: number | null;
+};
+
+export type BillingSyncResult = {
+  shop: ShopRecord;
+  proSubscription: ProSubscriptionSummary | null;
+};
+
 export interface ShopifyBillingClient {
   check(input: {
     plans: "Pro"[];
     isTest?: boolean;
   }): Promise<{
     hasActivePayment: boolean;
-    appSubscriptions: Array<{ name: string; id: string }>;
+    appSubscriptions: ShopifyAppSubscription[];
   }>;
 }
+
 export interface BillingSyncService {
   syncFromShopify(input: {
     shopId: string;
     billing: ShopifyBillingClient;
     isTest?: boolean;
-  }): Promise<ShopRecord>;
+  }): Promise<BillingSyncResult>;
   resolvePlanForShop(input: {
     shop: ShopRecord;
     billing?: ShopifyBillingClient;
@@ -40,6 +61,22 @@ function mapSubscriptionToPlan(
   return { plan: "FREE", billingStatus: "FREE" };
 }
 
+function toProSubscriptionSummary(
+  subscription: ShopifyAppSubscription | undefined,
+): ProSubscriptionSummary | null {
+  if (!subscription) {
+    return null;
+  }
+
+  return {
+    id: subscription.id,
+    createdAt: subscription.createdAt ?? null,
+    currentPeriodEnd: subscription.currentPeriodEnd ?? null,
+    trialDays:
+      typeof subscription.trialDays === "number" ? subscription.trialDays : null,
+  };
+}
+
 export class ShopifyBillingSyncService implements BillingSyncService {
   constructor(private readonly shops: ShopRepository) {}
 
@@ -47,17 +84,18 @@ export class ShopifyBillingSyncService implements BillingSyncService {
     shopId: string;
     billing: ShopifyBillingClient;
     isTest?: boolean;
-  }): Promise<ShopRecord> {
+  }): Promise<BillingSyncResult> {
     const billingCheck = await input.billing.check({
       plans: [PRO_PLAN],
       ...(input.isTest !== undefined ? { isTest: input.isTest } : {}),
     });
 
+    const proSubscriptionRecord = billingCheck.appSubscriptions.find(
+      (subscription) => subscription.name === PRO_PLAN,
+    );
+
     const hasActiveProPayment =
-      billingCheck.hasActivePayment &&
-      billingCheck.appSubscriptions.some(
-        (subscription) => subscription.name === PRO_PLAN,
-      );
+      billingCheck.hasActivePayment && Boolean(proSubscriptionRecord);
 
     const nextState = mapSubscriptionToPlan(hasActiveProPayment);
     const syncedAt = new Date();
@@ -78,7 +116,13 @@ export class ShopifyBillingSyncService implements BillingSyncService {
       billingStatus: updated.billingStatus,
     });
 
-    return updated;
+    return {
+      shop: updated,
+      proSubscription:
+        nextState.plan === "PRO"
+          ? toProSubscriptionSummary(proSubscriptionRecord)
+          : null,
+    };
   }
 
   async resolvePlanForShop(input: {
@@ -100,11 +144,12 @@ export class ShopifyBillingSyncService implements BillingSyncService {
     }
 
     try {
-      return await this.syncFromShopify({
+      const { shop } = await this.syncFromShopify({
         shopId: input.shop.id,
         billing: input.billing,
         isTest: input.isTest,
       });
+      return shop;
     } catch (error) {
       logger.warn("Billing sync failed; using cached plan", {
         shopId: input.shop.id,

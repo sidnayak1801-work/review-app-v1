@@ -5,6 +5,9 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Billing page shows Pro **plan bought on** date, a non-clickable
+  **Valid for 1 month** chip, and the exact **Expires** date from Shopify
+  `AppSubscription` (`createdAt` / `currentPeriodEnd`).
 - Storefront review cards show a green **Verified** badge (with checkmark) on
   every published review; Featured remains a separate merchant pin.
 - Review Summary popover opens on hover (closes on leave) with a short smooth
