@@ -5,6 +5,12 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Review media S3 keys use `review-images/{shopId}/…` and
+  `review-videos/{shopId}/…` (legacy `shops/…/reviews/…` keys still resolve).
+- Removed the in-app marketing landing page (`app/features/marketing`); `/`
+  redirects to `/auth/login` (or `/app` when `shop` is present). Public
+  marketing lives on the separate Next.js site. Thin `/privacy` and `/terms`
+  remain on the app origin.
 - Billing page shows Pro **plan bought on** date, a non-clickable
   **Valid for 1 month** chip, and the exact **Expires** date from Shopify
   `AppSubscription` (`createdAt` / `currentPeriodEnd`).

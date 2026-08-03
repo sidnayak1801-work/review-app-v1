@@ -1,0 +1,60 @@
+/**
+ * Minimal shared styles for same-origin legal pages (/privacy, /terms).
+ * Intentionally plain — marketing site lives on Next.js.
+ */
+.legalPage {
+  box-sizing: border-box;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  color: #202223;
+  line-height: 1.55;
+}
+
+.legalPage h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.legalPage .legalUpdated {
+  margin: 0 0 1.75rem;
+  color: #6d7175;
+  font-size: 0.9rem;
+}
+
+.legalPage h2 {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.legalPage p,
+.legalPage ul {
+  margin: 0 0 0.85rem;
+}
+
+.legalPage ul {
+  padding-left: 1.25rem;
+}
+
+.legalPage a {
+  color: #008060;
+}
+
+.legalPage a:hover {
+  text-decoration: underline;
+}
+
+.legalPage code {
+  font-size: 0.9em;
+}

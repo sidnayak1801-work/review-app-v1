@@ -7,9 +7,10 @@ URL is a stable host (Render: `https://review-app-v1.onrender.com`), not a
 
 ## 1. Install
 
-1. Open the app install link from the Partner Dashboard, or the hosted landing
-   page (`https://review-app-v1.onrender.com`) and enter an **allowed**
-   development shop domain (your Partner/dev store — not an arbitrary shop).
+1. Install from the **Shopify App Store** listing (or Partner Dashboard install
+   link for development stores). Public marketing / install CTA lives on the
+   separate Next.js marketing site, which sends merchants to the App Store —
+   not the app root URL.
 2. Approve requested scopes (`read_orders` for review-request emails).
 3. Confirm the app Home shows shop status **INSTALLED** and a setup checklist.
 

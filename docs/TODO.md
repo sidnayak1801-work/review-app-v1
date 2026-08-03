@@ -101,7 +101,8 @@ Storefront Review Summary (`17_REVIEW_SUMMARY.md`) is implemented:
    setting enforcement
 2. Optional: measure remaining admin routes (product insights) if still >2s
 3. Optional: storefront “Most helpful” (needs helpful-votes data + UI)
-4. Optional: configure `MEDIA_*` R2 env vars and `INTEGRATIONS_ENCRYPTION_KEY`
+4. Optional: confirm `MEDIA_*` AWS S3 (or S3-compatible) env vars are set for
+   production hosts; `INTEGRATIONS_ENCRYPTION_KEY` for integrations
 5. Confirm Partner Dashboard App URL + redirect match the intended host
 6. Validation gate before broader Phase 5 (syndication)
 7. BFS gaps: Flow trigger + customer admin block (`11_APP_STORE_AND_BFS.md`)

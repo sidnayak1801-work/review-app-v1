@@ -85,7 +85,8 @@ curl https://review-app-v1.onrender.com/health?ready=1
 ```
 
 - [ ] Health returns ready (allow ~1 min cold start on free)
-- [ ] Open `https://review-app-v1.onrender.com/` (landing)
+- [ ] Open `https://review-app-v1.onrender.com/` → redirects to `/auth/login`
+      (marketing landing removed; public site is the Next.js marketing app)
 - [ ] Install on an **allowed** development store (e.g. your Partner store),
       not an arbitrary shop that is not linked to the app
 - [ ] App Home shows INSTALLED
@@ -95,8 +96,9 @@ curl https://review-app-v1.onrender.com/health?ready=1
 
 ## 4. Local development vs Render
 
-- **Render / install from landing page:** keep toml URLs on Render;
-  `automatically_update_urls_on_dev = false`.
+- **Render / production install:** keep toml URLs on Render;
+  `automatically_update_urls_on_dev = false`. Merchants install via App Store
+  (or Partner install link), not an in-app landing page.
 - **Local tunnel only:** temporarily set
   `automatically_update_urls_on_dev = true`, run `shopify app dev`, then
   restore Render URLs and `shopify app deploy` before testing the hosted app

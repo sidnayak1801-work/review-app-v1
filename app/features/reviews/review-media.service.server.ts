@@ -144,7 +144,8 @@ export class ReviewMediaService {
                   ? "mov"
                   : "mp4";
 
-    const key = `shops/${shopId}/reviews/${randomUUID()}.${extension}`;
+    const prefix = kind === "VIDEO" ? "review-videos" : "review-images";
+    const key = `${prefix}/${shopId}/${randomUUID()}.${extension}`;
     const stored = await this.storage.putObject({
       key,
       body: file.bytes,

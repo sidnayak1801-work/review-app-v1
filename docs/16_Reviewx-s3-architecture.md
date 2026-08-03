@@ -106,7 +106,7 @@ are deliberately migrated. Prefer extending
 | --- | --- | --- |
 | Route (`api.storefront.reviews.tsx`) | App-proxy auth, `request.formData()`, call services, map errors to JSON | S3 I/O, Prisma, MIME/size business rules |
 | Feature services (`review-media.service`, `review.service`) | Validation, key naming, upload orchestration, attach rules, tenant checks | Raw AWS signing, HTTP transport details |
-| MediaStorage (`media-storage.server.ts`) | PutObject (and DeleteObject when implemented), local read for dev | Prisma, Remix/React Router request objects, product rules |
+| MediaStorage (`media-storage.server.ts`) | PutObject and DeleteObject (S3 + local), local read for dev | Prisma, Remix/React Router request objects, product rules |
 | Repository (`review-media.repository`, `review.repository`) | Prisma only | Uploads, AWS |
 | Theme widget | Collect files, preview, POST, show errors | AWS credentials, bucket names, direct S3 |
 
@@ -135,21 +135,29 @@ unless an approved redesign replaces this map.
 
 S3 has no real folders. Prefixes are part of the object key.
 
-**Current key layout:**
+**Current key layout** (`ReviewMedia.kind` selects the media-type prefix;
+`shopId` keeps tenant isolation):
 
 ```text
-shops/{shopId}/reviews/{uuid}.{ext}
+review-images/{shopId}/{uuid}.{ext}   # IMAGE
+review-videos/{shopId}/{uuid}.{ext}   # VIDEO
 ```
 
 - Always generate a **UUID** filename; never trust the original client name as
   the object key.
 - Do not pre-create empty prefix objects in the bucket; keys appear on first
   `PutObject`.
+- Older objects may still use `shops/{shopId}/reviews/{uuid}.{ext}`. Those
+  rows remain valid via stored `storageKey`; only **new** uploads use the
+  layout above.
+- Console prefixes such as `exports/`, `imports/`, or `merchant-logos/` are
+  unused by review media unless a later approved feature writes there.
 
-Example:
+Examples:
 
 ```text
-shops/clxyz…/reviews/d94f5af8-….jpg
+review-images/clxyz…/d94f5af8-….jpg
+review-videos/clxyz…/a1b2c3d4-….mp4
 ```
 
 ---
@@ -203,9 +211,10 @@ does not require rewriting Neon rows.
 ### Operator setup (outside the app)
 
 1. Create an S3 bucket in your AWS account.
-2. Create an IAM user or role with least privilege on the media prefix
-   (at least `s3:PutObject`; add `s3:DeleteObject` when rollback is implemented;
-   `s3:GetObject` if the app or CDN needs it).
+2. Create an IAM user or role with least privilege on
+   `review-images/*` and `review-videos/*` (and optionally legacy `shops/*`
+   for older objects): `s3:PutObject`, `s3:DeleteObject`; `s3:GetObject` if
+   the app or CDN needs it.
 3. Configure public read or CloudFront so storefront/admin can load media URLs.
 4. Set `MEDIA_*` in local `.env` or hosting secrets.
 5. Do not paste access keys into chat or git.
@@ -321,7 +330,8 @@ bytes either uses the public URL (`MEDIA_PUBLIC_BASE_URL`) or, in local mode,
 4. Feature services coordinate workflows (validate → upload → persist → attach).
 5. Frontend never accesses AWS.
 6. Database stores object keys (and optional public URLs), never file bytes.
-7. Object names use UUIDs under the shop-scoped prefix.
+7. Object names use UUIDs under `review-images/{shopId}/` or
+   `review-videos/{shopId}/`.
 8. Roll back uploaded objects if the database transaction/workflow fails after
    upload.
 9. Validate MIME and size before upload.
@@ -354,12 +364,12 @@ Explicitly **not** part of this architecture:
 
 ## Operator checklist
 
-- [ ] S3 bucket created in AWS
-- [ ] IAM policy limited to required actions and prefix
-- [ ] Public access or CloudFront base URL decided
-- [ ] `MEDIA_*` set in `.env` / host secrets (not committed)
+- [x] S3 bucket created in AWS
+- [x] IAM policy limited to required actions and prefix (Put/Delete verified via smoke)
+- [x] Public access or CloudFront base URL decided (`MEDIA_PUBLIC_BASE_URL` returns 200)
+- [x] `MEDIA_*` set in `.env` / host secrets (not committed)
 - [ ] Local smoke: upload via widget → object in bucket → `ReviewMedia` row in Neon
-- [ ] Confirm storefront/admin can load the public URL
+- [x] Confirm storefront/admin can load the public URL (public GET smoke OK; re-check after `shopify app dev` restart)
 
 ---
 

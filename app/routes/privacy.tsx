@@ -1,7 +1,7 @@
+import type { ReactNode } from "react";
 import type { LinksFunction, MetaFunction } from "react-router";
 
-import { LegalPageShell } from "../features/marketing/components/legal-page-shell";
-import marketingStyles from "../styles/marketing.css?url";
+import legalStyles from "../styles/legal.css?url";
 
 export const meta: MetaFunction = () => [
   { title: "Privacy Policy — ReviewX" },
@@ -12,16 +12,30 @@ export const meta: MetaFunction = () => [
 ];
 
 export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: marketingStyles },
-  {
-    rel: "stylesheet",
-    href: "https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap",
-  },
+  { rel: "stylesheet", href: legalStyles },
 ];
+
+function LegalLayout({
+  title,
+  updated,
+  children,
+}: {
+  title: string;
+  updated: string;
+  children: ReactNode;
+}) {
+  return (
+    <main className="legalPage">
+      <h1>{title}</h1>
+      <p className="legalUpdated">Last updated {updated}</p>
+      {children}
+    </main>
+  );
+}
 
 export default function PrivacyPage() {
   return (
-    <LegalPageShell title="Privacy Policy" updated="July 25, 2026">
+    <LegalLayout title="Privacy Policy" updated="July 25, 2026">
       <p>
         ReviewX (“we”, “us”) is a Shopify product-review application. This
         summary explains how we handle data for merchants who install the app
@@ -66,10 +80,8 @@ export default function PrivacyPage() {
       <h2>Contact</h2>
       <p>
         Privacy questions:{" "}
-        <a className="text-brand hover:underline" href="mailto:support@reviewx.app">
-          support@reviewx.app
-        </a>
+        <a href="mailto:support@reviewx.app">support@reviewx.app</a>
       </p>
-    </LegalPageShell>
+    </LegalLayout>
   );
 }

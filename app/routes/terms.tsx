@@ -1,7 +1,7 @@
+import type { ReactNode } from "react";
 import type { LinksFunction, MetaFunction } from "react-router";
 
-import { LegalPageShell } from "../features/marketing/components/legal-page-shell";
-import marketingStyles from "../styles/marketing.css?url";
+import legalStyles from "../styles/legal.css?url";
 
 export const meta: MetaFunction = () => [
   { title: "Terms of Service — ReviewX" },
@@ -12,16 +12,30 @@ export const meta: MetaFunction = () => [
 ];
 
 export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: marketingStyles },
-  {
-    rel: "stylesheet",
-    href: "https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap",
-  },
+  { rel: "stylesheet", href: legalStyles },
 ];
+
+function LegalLayout({
+  title,
+  updated,
+  children,
+}: {
+  title: string;
+  updated: string;
+  children: ReactNode;
+}) {
+  return (
+    <main className="legalPage">
+      <h1>{title}</h1>
+      <p className="legalUpdated">Last updated {updated}</p>
+      {children}
+    </main>
+  );
+}
 
 export default function TermsPage() {
   return (
-    <LegalPageShell title="Terms of Service" updated="July 25, 2026">
+    <LegalLayout title="Terms of Service" updated="July 25, 2026">
       <p>
         By installing or using ReviewX on Shopify, you agree to these terms.
         This is an MVP placeholder and should be finalized with counsel before
@@ -63,11 +77,8 @@ export default function TermsPage() {
       </p>
       <h2>Contact</h2>
       <p>
-        Questions:{" "}
-        <a className="text-brand hover:underline" href="mailto:support@reviewx.app">
-          support@reviewx.app
-        </a>
+        Questions: <a href="mailto:support@reviewx.app">support@reviewx.app</a>
       </p>
-    </LegalPageShell>
+    </LegalLayout>
   );
 }

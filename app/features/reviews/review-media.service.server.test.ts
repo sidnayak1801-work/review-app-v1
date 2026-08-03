@@ -92,12 +92,50 @@ describe("ReviewMediaService.uploadForShop", () => {
     });
 
     expect(record.kind).toBe("IMAGE");
-    expect(storage.putObject).toHaveBeenCalled();
+    expect(storage.putObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: expect.stringMatching(/^review-images\/shop1\/.+\.webp$/),
+        contentType: "image/webp",
+      }),
+    );
     expect(storage.deleteObject).not.toHaveBeenCalled();
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         mimeType: "image/webp",
         kind: "IMAGE",
+      }),
+    );
+  });
+
+  it("stores videos under review-videos/{shopId}/", async () => {
+    const storage = mockStorage();
+    const create = vi.fn(async (input: unknown) => ({
+      ...(input as object),
+      id: "media-video-1",
+      position: 0,
+      createdAt: new Date(),
+    }));
+
+    const service = new ReviewMediaService(
+      {
+        create,
+        findByIdsForShop: vi.fn(),
+        attachToReview: vi.fn(),
+        listForReviews: vi.fn(),
+      } as never,
+      storage,
+    );
+
+    await service.uploadForShop("shop1", {
+      bytes: Buffer.alloc(1024, 1),
+      mimeType: "video/mp4",
+      fileName: "clip.mp4",
+    });
+
+    expect(storage.putObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: expect.stringMatching(/^review-videos\/shop1\/.+\.mp4$/),
+        contentType: "video/mp4",
       }),
     );
   });
@@ -169,8 +207,8 @@ describe("ReviewMediaService.uploadForShop", () => {
   it("deletes the uploaded object when DB create fails", async () => {
     const storage = mockStorage({
       putObject: vi.fn(async () => ({
-        key: "shops/shop1/reviews/abc.webp",
-        url: "https://cdn.example/shops/shop1/reviews/abc.webp",
+        key: "review-images/shop1/abc.webp",
+        url: "https://cdn.example/review-images/shop1/abc.webp",
       })),
     });
     const create = vi.fn(async () => {
@@ -197,15 +235,15 @@ describe("ReviewMediaService.uploadForShop", () => {
 
     expect(storage.putObject).toHaveBeenCalled();
     expect(storage.deleteObject).toHaveBeenCalledWith(
-      "shops/shop1/reviews/abc.webp",
+      "review-images/shop1/abc.webp",
     );
   });
 
   it("rethrows the DB error even if rollback delete fails", async () => {
     const storage = mockStorage({
       putObject: vi.fn(async () => ({
-        key: "shops/shop1/reviews/xyz.webp",
-        url: "https://cdn.example/shops/shop1/reviews/xyz.webp",
+        key: "review-images/shop1/xyz.webp",
+        url: "https://cdn.example/review-images/shop1/xyz.webp",
       })),
       deleteObject: vi.fn(async () => {
         throw new Error("delete failed");
