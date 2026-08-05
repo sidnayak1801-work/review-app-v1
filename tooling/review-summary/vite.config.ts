@@ -18,7 +18,7 @@ export default defineConfig({
     emptyOutDir: false,
     lib: {
       entry: path.resolve(__dirname, "src/main.ts"),
-      name: "ReviewXSummary",
+      name: "ReviewTrixSummary",
       formats: ["iife"],
       fileName: () => "review-summary.js",
     },

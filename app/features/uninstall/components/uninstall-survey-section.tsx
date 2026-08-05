@@ -121,7 +121,7 @@ export function UninstallSurveySection({
   return (
     <section className={styles.dangerCard} aria-labelledby="rx-uninstall-title">
       <h2 id="rx-uninstall-title" className={styles.dangerTitle}>
-        Uninstall ReviewX
+        Uninstall ReviewTrix
       </h2>
       <p className={styles.dangerBody}>
         Leaving? Tell us why first. You’ll still confirm uninstall in Shopify
@@ -136,7 +136,7 @@ export function UninstallSurveySection({
           setLocalError(null);
         }}
       >
-        Uninstall ReviewX
+        Uninstall ReviewTrix
       </button>
 
       {open ? (
@@ -157,7 +157,7 @@ export function UninstallSurveySection({
           >
             <div className={styles.dialogHeader}>
               <h3 id={titleId} className={styles.dialogTitle}>
-                Uninstall ReviewX?
+                Uninstall ReviewTrix?
               </h3>
               <button
                 type="button"
@@ -172,7 +172,7 @@ export function UninstallSurveySection({
 
             <p className={styles.copy}>
               You’ll no longer be able to use the app. After uninstalling,
-              reviews and settings managed by ReviewX stay available until
+              reviews and settings managed by ReviewTrix stay available until
               Shopify sends a shop deletion request (~48 hours).
             </p>
             <p className={styles.copy}>

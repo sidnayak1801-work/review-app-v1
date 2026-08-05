@@ -1,5 +1,5 @@
 import type { WidgetSettingsInput } from "../../widget-settings/widget-settings.schema";
-import styles from "./reviewx/dashboard.module.css";
+import styles from "./reviewtrix/dashboard.module.css";
 
 interface WidgetSettingsPanelProps {
   settings: WidgetSettingsInput;

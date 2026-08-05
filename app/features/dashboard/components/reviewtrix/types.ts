@@ -55,7 +55,7 @@ export interface AnalyticsSnapshotData {
   };
 }
 
-export interface ReviewXDashboardData {
+export interface ReviewTrixDashboardData {
   shopDomain: string;
   shopName: string;
   kpis: DashboardKpis;

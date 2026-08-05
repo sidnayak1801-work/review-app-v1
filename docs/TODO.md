@@ -11,6 +11,13 @@ Review submission / identity / verified-buyer work must follow
 
 ## Completed
 
+Merchant onboarding (`docs/18_ONBOARDING_ReviewTrix.md`) — shipped:
+
+- `/app/onboarding` welcome + steps; `OnboardingStatus`; app gate
+- Theme/widget deep links + optional `read_themes` detection
+- CSV import step; email config marks `emailConfigured` on save
+- Finish screen with Pro trial CTA; dashboard reminders
+
 Phase 1 — Core Reviews and Widget is complete.
 
 Phase 2 — Launch Features is complete.
@@ -62,7 +69,7 @@ Phase 5.5 public API:
 - Rate-limit architecture (in-memory; Redis-ready interface)
 - Merchant `/app/api` docs + token management (Free + Pro)
 
-ReviewX merchant dashboard (`15_DASHBOARD_UI_SPEC.md`):
+ReviewTrix merchant dashboard (`15_DASHBOARD_UI_SPEC.md`):
 
 - `/app` home rebuilt to the full section order + design tokens from the spec
 - Inline approve/hide/delete and widget settings save preserved
@@ -80,7 +87,7 @@ Admin load performance:
 
 Uninstall survey + mobile nav:
 
-- Settings → Uninstall ReviewX modal (multi-select reasons + details)
+- Settings → Uninstall ReviewTrix modal (multi-select reasons + details)
 - Saves `UninstallFeedback`, then redirects to Shopify Admin apps
 - ≤800px: hamburger + off-canvas sidebar drawer
 

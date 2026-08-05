@@ -1,5 +1,5 @@
 /**
- * ReviewX merchant dashboard styles
+ * ReviewTrix merchant dashboard styles
  * Source of truth: docs/15_DASHBOARD_UI_SPEC.md
  * 8px grid · Shopify green · standard admin width (not full-bleed)
  */
@@ -94,31 +94,37 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 10px 8px;
+  width: 100%;
+  padding: 8px 8px 12px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-.brandMark {
-  width: 32px;
+.brandLogo {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 72px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+/* Collapsed rail: clip to the X mark so the wordmark does not spill. */
+.shellCollapsed .brand {
+  justify-content: center;
+  width: 40px;
+  padding: 4px 4px 8px;
+  overflow: hidden;
+}
+
+.shellCollapsed .brandLogo {
   height: 32px;
-  border-radius: 10px;
-  background: var(--rx-primary);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  font-weight: 700;
-  flex-shrink: 0;
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  object-position: left center;
 }
 
-.brandText {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-
-.shellCollapsed .brandText,
 .shellCollapsed .navLabel,
 .shellCollapsed .navSection {
   display: none;
@@ -1921,11 +1927,26 @@
     width: min(280px, calc(100vw - 40px));
   }
 
-  .shellCollapsed .brandText,
   .shellCollapsed .navLabel,
   .shellCollapsed .navSection,
   .shellCollapsed .upgradeCard {
     display: block;
+  }
+
+  .shellCollapsed .brand {
+    justify-content: flex-start;
+    width: 100%;
+    padding: 8px 8px 12px;
+    overflow: visible;
+  }
+
+  .shellCollapsed .brandLogo {
+    width: 100%;
+    height: auto;
+    max-height: 72px;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: left center;
   }
 
   .shellCollapsed .upgradeBtn {

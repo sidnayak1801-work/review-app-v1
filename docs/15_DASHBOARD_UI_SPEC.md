@@ -1,5 +1,5 @@
 # Dashboard UI Specification
-## ReviewX Merchant Dashboard
+## ReviewTrix Merchant Dashboard
 Version: 1.0
 Status: MVP
 Target: Shopify Admin Embedded App
@@ -890,7 +890,7 @@ Instead, combine their best qualities:
 - Vercel's simplicity
 - Notion's readability
 
-The result should feel like **ReviewX** has its own premium identity.
+The result should feel like **ReviewTrix** has its own premium identity.
 
 ---
 

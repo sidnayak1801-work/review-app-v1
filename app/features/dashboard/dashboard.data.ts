@@ -6,8 +6,8 @@ import type {
   DashboardKpis,
   DashboardReviewRow,
   KpiTrend,
-  ReviewXDashboardData,
-} from "./components/reviewx/types";
+  ReviewTrixDashboardData,
+} from "./components/reviewtrix/types";
 import type { WidgetSettingsInput } from "../widget-settings/widget-settings.schema";
 
 function trendFromChange(percent: number | null, label: string): KpiTrend {
@@ -34,7 +34,7 @@ function sparkFromSeries(points: VolumeSeriesPoint[], buckets = 8): number[] {
   return values;
 }
 
-export function buildReviewXDashboardData(input: {
+export function buildReviewTrixDashboardData(input: {
   shopDomain: string;
   queueCounts: { PENDING: number; APPROVED: number; REJECTED: number };
   averageRating: number | null;
@@ -55,7 +55,7 @@ export function buildReviewXDashboardData(input: {
   activity: ActivityFeedItem[];
   settings: WidgetSettingsInput;
   hasReviewRequestActivity: boolean;
-}): ReviewXDashboardData {
+}): ReviewTrixDashboardData {
   const totalReviews =
     input.queueCounts.PENDING +
     input.queueCounts.APPROVED +

@@ -52,7 +52,7 @@ export class ReviewSummary {
     try {
       this.summary = await fetchProductSummary(summaryUrl);
     } catch (error) {
-      console.error("[ReviewX] Review summary failed to load", error);
+      console.error("[ReviewTrix] Review summary failed to load", error);
       this.root.innerHTML =
         `<span class="rx-summary__error" role="status">Unable to load ratings</span>`;
       return;

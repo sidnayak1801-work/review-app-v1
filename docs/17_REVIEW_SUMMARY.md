@@ -1,4 +1,4 @@
-# ReviewX Theme App Extension - Review Summary Specification
+# ReviewTrix Theme App Extension - Review Summary Specification
 
 ## Overview
 
@@ -11,7 +11,7 @@ Its purpose is to provide customers with an instant overview of the product's ra
 - View total reviews
 - Navigate directly to the reviews section
 
-The interaction should be similar to Amazon and Judge.me while following ReviewX's modern design system.
+The interaction should be similar to Amazon and Judge.me while following ReviewTrix's modern design system.
 
 ---
 
@@ -182,7 +182,7 @@ extension (Shopify allows only `assets`, `blocks`, `snippets`, `locales`):
 
 The Theme Extension never queries Shopify Reviews.
 
-It fetches ReviewX backend.
+It fetches ReviewTrix backend.
 
 Logical resource (app route under the existing reviews proxy):
 

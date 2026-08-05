@@ -3,7 +3,7 @@ import { Form, Link } from "react-router";
 
 import { WidgetPreview } from "../../dashboard/components/WidgetPreview";
 import { WidgetSettingsPanel } from "../../dashboard/components/WidgetSettings";
-import styles from "../../dashboard/components/reviewx/dashboard.module.css";
+import styles from "../../dashboard/components/reviewtrix/dashboard.module.css";
 import { UninstallSurveySection } from "../../uninstall/components/uninstall-survey-section";
 import type { WidgetSettingsInput } from "../widget-settings.schema";
 
@@ -15,7 +15,7 @@ interface SettingsPageProps {
 }
 
 /**
- * Full Settings experience: ReviewX card controls + live preview (richer than Home).
+ * Full Settings experience: ReviewTrix card controls + live preview (richer than Home).
  */
 export function SettingsPage({
   shopDomain,

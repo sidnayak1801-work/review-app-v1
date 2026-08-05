@@ -1,5 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../onboarding/onboarding.service.server", () => ({
+  onboardingService: {
+    ensureForShop: vi.fn().mockResolvedValue({
+      needsOnboarding: true,
+      themeEnabled: false,
+      widgetAdded: false,
+      reviewsImported: false,
+      emailConfigured: false,
+      completed: false,
+      skipped: false,
+      currentStep: 0,
+      completedAt: null,
+    }),
+  },
+}));
+
 import type {
   ShopRecord,
   ShopRepository,

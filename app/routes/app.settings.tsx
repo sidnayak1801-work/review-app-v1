@@ -21,7 +21,7 @@ import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 import { SaveSuccessModal } from "../components/save-success-modal";
 import { useSaveSuccessModal } from "../components/use-save-success-modal";
-import styles from "../features/dashboard/components/reviewx/dashboard.module.css";
+import styles from "../features/dashboard/components/reviewtrix/dashboard.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);

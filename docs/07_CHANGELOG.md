@@ -5,6 +5,15 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Merchant onboarding (`/app/onboarding`): welcome + 5 steps (theme, widgets,
+  CSV import, review-request email, finish/Pro trial). `OnboardingStatus`
+  model; gate redirects incomplete shops; `read_themes` scope for detection;
+  authenticated `GET/POST /api/onboarding/status`. Competitor one-click import
+  is CSV-guided (not OAuth). Dashboard shows setup-complete / finish-setup
+  reminders.
+- Product renamed from ReviewX to **ReviewTrix** (merchant UI, Shopify app
+  name, privacy/terms, and docs). Marketing domain:
+  `https://reviewtrix.algorithmtrix.com`.
 - Review media S3 keys use `review-images/{shopId}/…` and
   `review-videos/{shopId}/…` (legacy `shops/…/reviews/…` keys still resolve).
 - Removed the in-app marketing landing page (`app/features/marketing`); `/`
@@ -77,10 +86,10 @@ This file records completed changes only. Planned work belongs in
 - Logged-in storefront review/Q&A forms prefill email and display name from
   Shopify customer identity; if name is missing, display name falls back to a
   cleaned email local-part (still editable).
-- Settings (`/app/settings`) uses the same ReviewX widget controls as Home, with
+- Settings (`/app/settings`) uses the same ReviewTrix widget controls as Home, with
   a side-by-side live preview (stacked on mobile); Theme setup + uninstall
   survey kept below.
-- In-app ReviewX uninstall survey on Settings (multi-select reasons + optional
+- In-app ReviewTrix uninstall survey on Settings (multi-select reasons + optional
   details); persists `UninstallFeedback`, then opens Shopify Admin apps so the
   merchant can finish uninstall. Shopify’s own uninstall survey is unchanged.
 - Mobile merchant shell: hamburger opens an off-canvas sidebar drawer (no more
@@ -95,13 +104,13 @@ This file records completed changes only. Planned work belongs in
   `sort` + sort-aware cursors; `Review.hasImage` / `hasVideo` denormalized flags.
 - Marketing theme uses `@theme inline` + `data-theme` so light/dark toggles
   the full page palette; nav/CTAs use a sage/emerald look instead of black.
-- Rebuilt the ReviewX marketing site end-to-end: Tailwind + Framer Motion
+- Rebuilt the ReviewTrix marketing site end-to-end: Tailwind + Framer Motion
   (LazyMotion), light/dark theme, sticky glass navbar, hero with floating
   cards, logo marquee, feature grid (Coming soon badges for AI/SEO/video),
   interactive dashboard preview, social proof counters, how-it-works, Free/Pro
   pricing, FAQ, install CTA, and multi-column footer. Marketing CSS stays
   scoped to public routes so Polaris admin is unaffected.
-- Partner app display name set to ReviewX.
+- Partner app display name set to ReviewTrix.
 - Reviews search: top-bar `q` filters the moderation queue by customer name,
   review text, and product title; empty results show a clear “not found” state
   with a Clear search action.

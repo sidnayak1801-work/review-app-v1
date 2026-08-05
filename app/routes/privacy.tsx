@@ -4,10 +4,10 @@ import type { LinksFunction, MetaFunction } from "react-router";
 import legalStyles from "../styles/legal.css?url";
 
 export const meta: MetaFunction = () => [
-  { title: "Privacy Policy — ReviewX" },
+  { title: "Privacy Policy — ReviewTrix" },
   {
     name: "description",
-    content: "How ReviewX handles merchant and customer data on Shopify.",
+    content: "How ReviewTrix handles merchant and customer data on Shopify.",
   },
 ];
 
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout title="Privacy Policy" updated="July 25, 2026">
       <p>
-        ReviewX (“we”, “us”) is a Shopify product-review application. This
+        ReviewTrix (“we”, “us”) is a Shopify product-review application. This
         summary explains how we handle data for merchants who install the app
         and for shoppers who submit reviews. It is an MVP placeholder and should
         be reviewed by counsel before public App Store launch.
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
       <h2>Contact</h2>
       <p>
         Privacy questions:{" "}
-        <a href="mailto:support@reviewx.app">support@reviewx.app</a>
+        <a href="mailto:support@reviewtrix.algorithmtrix.com">support@reviewtrix.algorithmtrix.com</a>
       </p>
     </LegalLayout>
   );

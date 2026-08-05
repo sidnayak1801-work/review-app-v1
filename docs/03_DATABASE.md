@@ -49,6 +49,14 @@ Current fields:
 - `createdAt`
 - `updatedAt`
 
+### OnboardingStatus
+
+One row per shop tracking merchant setup progress (Phase onboarding).
+
+- `themeEnabled`, `widgetAdded`, `reviewsImported`, `emailConfigured`
+- `completed`, `skipped`, `currentStep`, `completedAt`
+- Created on install via `onboardingService.ensureForShop`
+
 Phase 1 Shop lifecycle connects this model to installation, reinstallation, and
 uninstall workflows. Uninstall sets `status = UNINSTALLED` and `uninstalledAt`
 without deleting the row.

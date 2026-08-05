@@ -84,10 +84,11 @@ export function Sidebar({
   return (
     <aside id={id} className={styles.sidebar} aria-label="Primary">
       <div className={styles.brand}>
-        <span className={styles.brandMark} aria-hidden>
-          RX
-        </span>
-        <span className={styles.brandText}>ReviewX</span>
+        <img
+          src="/reviewtrix-logo.png"
+          alt="ReviewTrix"
+          className={styles.brandLogo}
+        />
       </div>
 
       <p className={styles.navSection}>Menu</p>

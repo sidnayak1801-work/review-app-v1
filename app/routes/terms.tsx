@@ -4,10 +4,10 @@ import type { LinksFunction, MetaFunction } from "react-router";
 import legalStyles from "../styles/legal.css?url";
 
 export const meta: MetaFunction = () => [
-  { title: "Terms of Service — ReviewX" },
+  { title: "Terms of Service — ReviewTrix" },
   {
     name: "description",
-    content: "Terms of use for the ReviewX Shopify application.",
+    content: "Terms of use for the ReviewTrix Shopify application.",
   },
 ];
 
@@ -37,13 +37,13 @@ export default function TermsPage() {
   return (
     <LegalLayout title="Terms of Service" updated="July 25, 2026">
       <p>
-        By installing or using ReviewX on Shopify, you agree to these terms.
+        By installing or using ReviewTrix on Shopify, you agree to these terms.
         This is an MVP placeholder and should be finalized with counsel before
         public App Store launch.
       </p>
       <h2>The service</h2>
       <p>
-        ReviewX provides product-review collection, moderation, storefront
+        ReviewTrix provides product-review collection, moderation, storefront
         widgets, review requests, imports, and related merchant tools subject to
         your Shopify plan allowances (Free or Pro).
       </p>
@@ -58,7 +58,7 @@ export default function TermsPage() {
           and for complying with applicable consumer and advertising laws.
         </li>
         <li>
-          You must not use ReviewX to submit or display fraudulent, unlawful, or
+          You must not use ReviewTrix to submit or display fraudulent, unlawful, or
           infringing content.
         </li>
       </ul>
@@ -77,7 +77,7 @@ export default function TermsPage() {
       </p>
       <h2>Contact</h2>
       <p>
-        Questions: <a href="mailto:support@reviewx.app">support@reviewx.app</a>
+        Questions: <a href="mailto:support@reviewtrix.algorithmtrix.com">support@reviewtrix.algorithmtrix.com</a>
       </p>
     </LegalLayout>
   );

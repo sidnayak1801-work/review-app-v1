@@ -5,6 +5,7 @@ import {
   type ShopRepository,
 } from "../../repositories/shop.repository.server";
 import { logger } from "../../services/logger.server";
+import { onboardingService } from "../onboarding/onboarding.service.server";
 import {
   createShopSchema,
   installShopSchema,
@@ -27,6 +28,8 @@ export class ShopService {
       shopDomain: shop.shopDomain,
     });
 
+    await onboardingService.ensureForShop(shop.id);
+
     return shop;
   }
 
@@ -43,6 +46,8 @@ export class ShopService {
       shopDomain: shop.shopDomain,
       status: shop.status,
     });
+
+    await onboardingService.ensureForShop(shop.id);
 
     return shop;
   }

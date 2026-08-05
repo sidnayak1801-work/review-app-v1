@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReviewXDashboardData } from "./dashboard.data";
+import { buildReviewTrixDashboardData } from "./dashboard.data";
 
-describe("buildReviewXDashboardData", () => {
+describe("buildReviewTrixDashboardData", () => {
   it("assembles KPIs and chart ranges from shop metrics", () => {
     const series30d = Array.from({ length: 30 }, (_, index) => ({
       dateKey: `2026-07-${String(index + 1).padStart(2, "0")}`,
@@ -10,7 +10,7 @@ describe("buildReviewXDashboardData", () => {
       count: index < 15 ? 1 : 2,
     }));
 
-    const data = buildReviewXDashboardData({
+    const data = buildReviewTrixDashboardData({
       shopDomain: "acme.myshopify.com",
       queueCounts: { PENDING: 2, APPROVED: 10, REJECTED: 1 },
       averageRating: 4.6,

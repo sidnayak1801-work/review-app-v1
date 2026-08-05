@@ -14,7 +14,8 @@ import {
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
 import { DashboardPage } from "../features/dashboard/components/dashboard-page";
-import { buildReviewXDashboardData } from "../features/dashboard/dashboard.data";
+import { buildReviewTrixDashboardData } from "../features/dashboard/dashboard.data";
+import { onboardingService } from "../features/onboarding/onboarding.service.server";
 import { reviewRequestService } from "../features/review-requests/review-request.service.server";
 import { reviewService } from "../features/reviews/review.service.server";
 import { widgetSettingsService } from "../features/widget-settings/widget-settings.service.server";
@@ -112,6 +113,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     ratingSummary,
     series90d,
     emailsSentThisMonth,
+    onboarding,
   ] = await Promise.all([
     reviewService.listForShop(shop.id, { limit: 20 }),
     reviewService.listForShop(shop.id, { status: "PENDING", limit: 8 }),
@@ -120,12 +122,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     reviewService.getApprovedSummaryForShop(shop.id),
     reviewService.getShopReviewVolumeSeries(shop.id, 90),
     reviewRequestService.countSentInUtcMonth(shop.id),
+    onboardingService.getStatus(shop.id),
   ]);
 
   const series30d = series90d.slice(-30);
   const series7d = series90d.slice(-7);
 
-  const data = buildReviewXDashboardData({
+  const data = buildReviewTrixDashboardData({
     shopDomain: shop.shopDomain,
     queueCounts,
     averageRating: ratingSummary.averageRating,
@@ -143,7 +146,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     hasReviewRequestActivity: emailsSentThisMonth > 0,
   });
 
-  return { data };
+  return {
+    data,
+    onboardingReminder: {
+      themeEnabled: onboarding.themeEnabled,
+      widgetAdded: onboarding.widgetAdded,
+      reviewsImported: onboarding.reviewsImported,
+      emailConfigured: onboarding.emailConfigured,
+      completed: onboarding.completed,
+    },
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -217,7 +229,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function AppIndex() {
-  const { data } = useLoaderData<typeof loader>();
+  const { data, onboardingReminder } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting =
@@ -241,6 +253,7 @@ export default function AppIndex() {
     <>
       <DashboardPage
         data={data}
+        onboardingReminder={onboardingReminder}
         actionMessage={
           widgetActionData && !widgetActionData.ok
             ? { ok: false, message: widgetActionData.message }

@@ -313,6 +313,20 @@ for future Free/Pro divergence. Response headers:
 Swap in Redis later without changing route adapters. Shared
 `handlePublicApi` / `authenticateBearer` are GraphQL-ready.
 
+## Merchant onboarding (authenticated Admin)
+
+`GET/POST /api/onboarding/status` — Shopify Admin session required.
+
+GET returns `{ ok, status }` with flags:
+`themeEnabled`, `widgetAdded`, `reviewsImported`, `emailConfigured`,
+`completed`, `skipped`, `currentStep`, `completedAt`, `needsOnboarding`.
+
+POST `intent` values: `start`, `set-step`, `theme`, `widget`, `import`,
+`email`, `skip-step`, `skip`, `complete`.
+
+Primary UI is `/app/onboarding` (loader/actions); the status route supports
+polling and external clients.
+
 ## Deferred APIs
 
 Do not implement these until their roadmap phase is active:

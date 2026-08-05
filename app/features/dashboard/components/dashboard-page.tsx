@@ -2,25 +2,32 @@ import { useEffect, useState } from "react";
 import { Form, Link } from "react-router";
 
 import type { WidgetSettingsInput } from "../../widget-settings/widget-settings.schema";
-import { AnalyticsSnapshot } from "./reviewx/AnalyticsSnapshot";
-import { DashboardFooter } from "./reviewx/DashboardFooter";
-import { DashboardLayout } from "./reviewx/DashboardLayout";
-import { KPIGrid } from "./reviewx/KPIGrid";
-import { LatestReviewsTable } from "./reviewx/LatestReviewsTable";
-import { PendingModerationCard } from "./reviewx/PendingModerationCard";
-import { QuickActions } from "./reviewx/QuickActions";
-import { RatingDistribution } from "./reviewx/RatingDistribution";
-import { ReviewsChart } from "./reviewx/ReviewsChart";
-import type { ReviewXDashboardData } from "./reviewx/types";
-import { WelcomeSection } from "./reviewx/WelcomeSection";
+import { AnalyticsSnapshot } from "./reviewtrix/AnalyticsSnapshot";
+import { DashboardFooter } from "./reviewtrix/DashboardFooter";
+import { DashboardLayout } from "./reviewtrix/DashboardLayout";
+import { KPIGrid } from "./reviewtrix/KPIGrid";
+import { LatestReviewsTable } from "./reviewtrix/LatestReviewsTable";
+import { PendingModerationCard } from "./reviewtrix/PendingModerationCard";
+import { QuickActions } from "./reviewtrix/QuickActions";
+import { RatingDistribution } from "./reviewtrix/RatingDistribution";
+import { ReviewsChart } from "./reviewtrix/ReviewsChart";
+import type { ReviewTrixDashboardData } from "./reviewtrix/types";
+import { WelcomeSection } from "./reviewtrix/WelcomeSection";
 import { WidgetPreview } from "./WidgetPreview";
 import { WidgetSettingsPanel } from "./WidgetSettings";
-import styles from "./reviewx/dashboard.module.css";
+import styles from "./reviewtrix/dashboard.module.css";
 
 interface DashboardPageProps {
-  data: ReviewXDashboardData;
+  data: ReviewTrixDashboardData;
   actionMessage?: { ok: boolean; message: string };
   isSubmitting: boolean;
+  onboardingReminder?: {
+    themeEnabled: boolean;
+    widgetAdded: boolean;
+    reviewsImported: boolean;
+    emailConfigured: boolean;
+    completed: boolean;
+  } | null;
 }
 
 /**
@@ -32,12 +39,22 @@ export function DashboardPage({
   data,
   actionMessage,
   isSubmitting,
+  onboardingReminder = null,
 }: DashboardPageProps) {
   const [settings, setSettings] = useState<WidgetSettingsInput>(data.settings);
 
   useEffect(() => {
     setSettings(data.settings);
   }, [data.settings]);
+
+  const showSetupComplete = Boolean(onboardingReminder?.completed);
+  const showReminders =
+    onboardingReminder &&
+    !onboardingReminder.completed &&
+    (!onboardingReminder.themeEnabled ||
+      !onboardingReminder.widgetAdded ||
+      !onboardingReminder.reviewsImported ||
+      !onboardingReminder.emailConfigured);
 
   return (
     <DashboardLayout>
@@ -52,6 +69,44 @@ export function DashboardPage({
           }}
         >
           {actionMessage.message}
+        </div>
+      ) : null}
+
+      {showSetupComplete ? (
+        <div className={styles.card} style={{ padding: 16 }} role="status">
+          <strong>Setup complete.</strong> ReviewTrix is collecting and
+          displaying reviews.
+        </div>
+      ) : null}
+
+      {showReminders ? (
+        <div className={styles.card} style={{ padding: 16 }} role="status">
+          <strong>Finish setup</strong>
+          <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+            {!onboardingReminder.themeEnabled ? (
+              <li>
+                Theme extension not enabled —{" "}
+                <Link to="/app/settings">open widget settings</Link> for
+                instructions.
+              </li>
+            ) : null}
+            {!onboardingReminder.widgetAdded ? (
+              <li>Your reviews aren&apos;t visible yet — add a widget in the theme editor.</li>
+            ) : null}
+            {!onboardingReminder.reviewsImported ? (
+              <li>
+                No imported reviews yet —{" "}
+                <Link to="/app/imports">Import reviews</Link> or collect your
+                first review.
+              </li>
+            ) : null}
+            {!onboardingReminder.emailConfigured ? (
+              <li>
+                Start collecting automatically —{" "}
+                <Link to="/app/review-requests">Configure emails</Link>.
+              </li>
+            ) : null}
+          </ul>
         </div>
       ) : null}
 

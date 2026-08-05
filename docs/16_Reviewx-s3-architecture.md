@@ -1,4 +1,4 @@
-# ReviewX — S3 Media Architecture
+# ReviewTrix — S3 Media Architecture
 
 Version: 2.0  
 Status: Source of truth  
