@@ -6,9 +6,9 @@ import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
 /**
- * Authenticated onboarding status + step mutations.
+ * Authenticated onboarding status.
  * GET  /api/onboarding/status
- * POST intents: start | theme | widget | import | email | skip-step | skip | complete | set-step
+ * POST intents: start | theme | import | automation | branding | skip | complete
  */
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.admin(request);
@@ -23,67 +23,32 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const contentType = request.headers.get("content-type") ?? "";
   let intent = "";
-  let step: "widget" | "import" | "email" | undefined;
-  let currentStep: number | undefined;
 
   if (contentType.includes("application/json")) {
-    const body = (await request.json()) as {
-      intent?: string;
-      step?: string;
-      currentStep?: number;
-    };
+    const body = (await request.json()) as { intent?: string };
     intent = body.intent ?? "";
-    if (body.step === "widget" || body.step === "import" || body.step === "email") {
-      step = body.step;
-    }
-    if (typeof body.currentStep === "number") {
-      currentStep = body.currentStep;
-    }
   } else {
     const form = await request.formData();
     intent = String(form.get("intent") ?? "");
-    const rawStep = String(form.get("step") ?? "");
-    if (rawStep === "widget" || rawStep === "import" || rawStep === "email") {
-      step = rawStep;
-    }
-    const rawCurrent = form.get("currentStep");
-    if (rawCurrent != null && rawCurrent !== "") {
-      currentStep = Number(rawCurrent);
-    }
   }
 
   try {
     let status;
     switch (intent) {
       case "start":
-        status = await onboardingService.setCurrentStep(shop.id, 1);
-        break;
-      case "set-step":
-        status = await onboardingService.setCurrentStep(
-          shop.id,
-          Number.isFinite(currentStep) ? (currentStep as number) : 1,
-        );
+        status = await onboardingService.markStarted(shop.id);
         break;
       case "theme":
         status = await onboardingService.markThemeEnabled(shop.id);
         break;
-      case "widget":
-        status = await onboardingService.markWidgetAdded(shop.id);
-        break;
       case "import":
         status = await onboardingService.markReviewsImported(shop.id);
         break;
-      case "email":
-        status = await onboardingService.markEmailConfigured(shop.id);
+      case "automation":
+        status = await onboardingService.markAutomationConfigured(shop.id);
         break;
-      case "skip-step":
-        if (!step) {
-          return data(
-            { ok: false as const, message: "Missing step to skip." },
-            { status: 400 },
-          );
-        }
-        status = await onboardingService.skipStep(shop.id, step);
+      case "branding":
+        status = await onboardingService.markBrandingConfigured(shop.id);
         break;
       case "skip":
         status = await onboardingService.skipOnboarding(shop.id);

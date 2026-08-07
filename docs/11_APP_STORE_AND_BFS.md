@@ -1,7 +1,8 @@
 # App Store and Built for Shopify gaps
 
-Recorded against Shopify’s published requirements (fetched 2026-07-21).
-Do **not** claim Built for Shopify status until Shopify awards it.
+Recorded against Shopify’s published requirements (fetched 2026-07-21;
+submission readiness pass 2026-08-06). Do **not** claim Built for Shopify
+status until Shopify awards it.
 
 Canonical sources:
 
@@ -24,12 +25,48 @@ Canonical sources:
 | Webhook HMAC verification | Done | `authenticate.webhook` |
 | App proxy verification | Done | Storefront reviews |
 | Mandatory compliance webhooks | Done | `customers/data_request`, `customers/redact`, `shop/redact` |
-| Least-privilege scopes | Done | `read_orders` for fulfillment emails |
-| Protected customer data access | Gap | Partner Dashboard approval required for order email on non-dev stores |
-| Public distribution | Gap | Billing API requires public/App Store distribution |
-| Privacy policy URL | Gap | Required for App Store listing |
-| App listing screenshots / demo store | Gap | Submission assets |
-| Billing disclosures | Partial | In-app Free/Pro + allowances; confirm listing pricing text matches |
+| Least-privilege scopes | Done | `read_orders,read_products,read_themes` |
+| Protected customer data access | Gap (Partners) | Request/approve in Partner Dashboard for order email on non-dev stores |
+| Public distribution | Gap (Partners) | Enable App Store / public distribution for Billing API |
+| Privacy policy URL | Done (code) | `https://reviewtrix.algorithmtrix.com/privacy` — wire URL in listing |
+| Terms of service URL | Done (code) | `https://reviewtrix.algorithmtrix.com/terms` |
+| In-app support / legal links | Done | Help menu, footer, Settings |
+| App listing screenshots / demo store | Gap (Partners) | Submission assets |
+| Billing disclosures | Done (app) / confirm listing | Free + Pro $19 / 14-day trial; set Coolify `BILLING_TEST_MODE=false` |
+| Data-request ops runbook | Done | `10_OPERATIONS.md` + `privacy_customers_data_request` logs |
+
+## Partner Dashboard checklist (before submit)
+
+Complete in Shopify Partners (cannot be done from this repo):
+
+- [ ] Enable **public / App Store distribution**
+- [ ] Request **Protected customer data** access required for fulfillment email
+- [ ] App URL + redirect: `https://reviewtrix.algorithmtrix.com` and
+      `…/api/auth`
+- [ ] Privacy policy URL: `https://reviewtrix.algorithmtrix.com/privacy`
+- [ ] Support email: `support@reviewtrix.algorithmtrix.com`
+- [ ] Category: **Product reviews** + structured category fields
+- [ ] Pricing text matches Free + Pro ($19/mo, 14-day trial) and allowances
+- [ ] Screenshots + demo store attached
+- [ ] Listing copy: no Built for Shopify claim; no competitor trademarks
+- [ ] `shopify app deploy` after URL/scope freeze
+- [ ] Coolify env: `BILLING_TEST_MODE=false`, `NODE_ENV=production`
+
+## Pre-submit QA checklist
+
+- [ ] `GET https://reviewtrix.algorithmtrix.com/health?ready=1` → ready
+- [ ] Install from Partner / Admin Apps (Shopify-owned surface), not only
+      `/auth/login` shop-domain form
+- [ ] Onboarding / Home loads on Coolify URL
+- [ ] Clean OS 2.0 theme: enable app embed + Star rating / Product reviews /
+      Review Summary; submit via app proxy; moderate in admin
+- [ ] Billing: upgrade → approve; decline path; reinstall can request charge
+      again (`BILLING_TEST_MODE=false`)
+- [ ] Uninstall + reinstall OAuth works
+- [ ] Admin usable at ~375px; storefront stars keyboard-reachable
+- [ ] Public `/privacy` and `/terms` load without auth; no “placeholder” copy
+
+See also `12_DEPLOYMENT.md` and `13_MERCHANT_SETUP.md`.
 
 ## Built for Shopify — remaining eligibility gaps
 
@@ -63,34 +100,32 @@ Canonical sources:
 | --- | --- |
 | NavMenu primary navigation | Done |
 | Mobile-friendly Polaris layouts | Verify on device before submit |
-| Helpful onboarding | Partial — home checklist added; refine dismissible steps if review asks |
-| Contextual save bar on forms | Gap — widget settings / forms may need CSB before BFS apply |
-| Homepage theme extension status via `app.extensions()` | Gap — surface block/embed activation on home |
-| Accessibility (WCAG-oriented contrast, labels) | Partial — widget stars have labels; run full a11y pass before submit |
+| Helpful onboarding | Done — `/app/onboarding` + dashboard reminders |
+| Contextual save bar on forms | Gap — defer (BFS apply) |
+| Homepage theme extension status via `app.extensions()` | Gap — defer (BFS apply) |
+| Accessibility (WCAG-oriented contrast, labels) | Partial — run full a11y pass before submit |
 
 ### Category-specific — Product reviews (5.11)
 
 | Requirement | Status |
 | --- | --- |
-| 5.11.1 Flow trigger when a review is collected | **Gap** — not implemented |
-| 5.11.2 Admin block on customer detail for that customer’s reviews | **Gap** — not implemented |
+| 5.11.1 Flow trigger when a review is collected | **Gap** — not required for App Store submit; BFS blocker |
+| 5.11.2 Admin block on customer detail for that customer’s reviews | **Gap** — not required for App Store submit; BFS blocker |
 
-These two are hard blockers for Built for Shopify under Product reviews even
-after general quality bars are met. Track as post-pilot work (not Phase 4
-review-request UX).
+Track in `08_IDEAS.md` as post-listing work.
 
 ### Billing (BFS / App Store)
 
 - Shopify App Pricing Free + Pro implemented
 - Plan transitions and entitlement sync implemented
-- Confirm listing shows pricing, trial (if any), and allowance language clearly
+- Confirm listing shows pricing, trial, and allowance language clearly
 - Partner Dashboard: enable public distribution before relying on Billing API
   in production
 
 ## Theme App Extension verification notes
 
 - Extension: `extensions/review-widget`
-- Blocks: review list, star rating, app embed
+- Blocks: review list, star rating, Review Summary, app embed
 - Merchants enable via theme editor — no Liquid theme-code edits required
 - Uninstall removes extension blocks automatically
 - Before submit: install on a clean OS 2.0 theme, enable embed + blocks, confirm
@@ -106,11 +141,14 @@ Manual pass before App Store submit:
 - [ ] Error banners announced / visible next to actions
 - [ ] Color contrast of accent color against theme backgrounds
 
-## What Phase 3 closed in code/docs
+## What Phase 3 / submission readiness closed in code/docs
 
 - Compliance webhooks + retention/deletion procedures
 - Rate limits on public review-request API
 - `/health` readiness probe + CI workflow
 - Onboarding / uninstall dashboard messaging
-- Landing page no longer implies Built for Shopify award
-- This gap record for BFS eligibility
+- Counsel-ready `/privacy` and `/terms` on app origin (canonical Coolify URLs)
+- In-app Support / Privacy / Terms links (Help, footer, Settings)
+- Coolify deployment + `BILLING_TEST_MODE=false` guidance
+- Data-request operator runbook (`privacy_customers_data_request` logs)
+- This gap record updated for App Store submit vs BFS deferrals

@@ -1,24 +1,38 @@
 export type OnboardingPublicStatus = {
   themeEnabled: boolean;
-  widgetAdded: boolean;
   reviewsImported: boolean;
-  emailConfigured: boolean;
+  automationConfigured: boolean;
+  brandingConfigured: boolean;
   completed: boolean;
   skipped: boolean;
-  currentStep: number;
   completedAt: string | null;
   needsOnboarding: boolean;
+  /** 0–100 in steps of 25 (theme, automation, import, branding). */
+  progress: number;
 };
+
+export type OnboardingScreen =
+  | "welcome"
+  | "health"
+  | "checklist"
+  | "theme"
+  | "import"
+  | "automation"
+  | "branding"
+  | "celebration";
 
 export type OnboardingAnalyticsEvent =
   | "Onboarding Started"
+  | "Welcome Completed"
   | "Theme Enabled"
-  | "Widget Added"
   | "Import Started"
   | "Import Completed"
-  | "Email Configured"
-  | "Onboarding Completed"
+  | "Automation Enabled"
+  | "Branding Customized"
+  | "Checklist Completed"
+  | "Onboarding Finished"
+  | "Dashboard Opened"
   | "Skipped Import"
-  | "Skipped Emails"
-  | "Skipped Onboarding"
-  | "Skipped Widget";
+  | "Skipped Branding"
+  | "Skipped Automation"
+  | "Skipped Onboarding";

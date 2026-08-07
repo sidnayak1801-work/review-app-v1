@@ -315,17 +315,23 @@ Swap in Redis later without changing route adapters. Shared
 
 ## Merchant onboarding (authenticated Admin)
 
+Source of truth: `docs/onboarding/`.
+
+Primary UI: `/app/onboarding?screen=welcome|health|checklist|theme|import|automation|branding|celebration`.
+
 `GET/POST /api/onboarding/status` — Shopify Admin session required.
 
-GET returns `{ ok, status }` with flags:
-`themeEnabled`, `widgetAdded`, `reviewsImported`, `emailConfigured`,
-`completed`, `skipped`, `currentStep`, `completedAt`, `needsOnboarding`.
+GET returns `{ ok, status }` with:
+`themeEnabled`, `reviewsImported`, `automationConfigured`,
+`brandingConfigured`, `completed`, `skipped`, `completedAt`,
+`needsOnboarding`, `progress` (0–100).
 
-POST `intent` values: `start`, `set-step`, `theme`, `widget`, `import`,
-`email`, `skip-step`, `skip`, `complete`.
+POST `intent` values: `start`, `theme`, `import`, `automation`, `branding`,
+`skip`, `complete`.
 
-Primary UI is `/app/onboarding` (loader/actions); the status route supports
-polling and external clients.
+Thin helpers (same auth):
+`POST /api/onboarding/theme`, `/import`, `/automation`, `/branding`,
+`/complete`.
 
 ## Deferred APIs
 

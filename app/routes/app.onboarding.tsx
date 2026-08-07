@@ -13,31 +13,68 @@ import {
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useEffect } from "react";
 
-import {
-  PRO_MONTHLY_PRICE_USD,
-  PRO_TRIAL_DAYS,
-} from "../features/billing/billing.constants";
 import { OnboardingPage } from "../features/onboarding/components/onboarding-page";
-import {
-  detectThemeExtensionEnabled,
-  detectWidgetBlocksPresent,
-} from "../features/onboarding/onboarding-theme-detect.server";
+import { detectThemeExtensionEnabled } from "../features/onboarding/onboarding-theme-detect.server";
 import {
   storefrontUrl,
-  themeAddBlockEditorUrl,
   themeAppEmbedEditorUrl,
 } from "../features/onboarding/onboarding-theme.server";
-import { ONBOARDING_WIDGET_OPTIONS } from "../features/onboarding/onboarding-widgets";
 import { onboardingService } from "../features/onboarding/onboarding.service.server";
 import { trackOnboardingEvent } from "../features/onboarding/onboarding-analytics.server";
+import type { OnboardingScreen } from "../features/onboarding/onboarding.types";
 import { reviewImportService } from "../features/review-imports/review-import.service.server";
 import { reviewRequestService } from "../features/review-requests/review-request.service.server";
+import { widgetSettingsService } from "../features/widget-settings/widget-settings.service.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
 import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
+const SCREENS: OnboardingScreen[] = [
+  "welcome",
+  "health",
+  "checklist",
+  "theme",
+  "import",
+  "automation",
+  "branding",
+  "celebration",
+];
+
+function parseScreen(raw: string | null): OnboardingScreen {
+  if (raw && (SCREENS as string[]).includes(raw)) {
+    return raw as OnboardingScreen;
+  }
+  return "welcome";
+}
+
+function screenHref(screen: OnboardingScreen, preservedQuery: string): string {
+  const params = new URLSearchParams(preservedQuery);
+  params.set("screen", screen);
+  return `/app/onboarding?${params.toString()}`;
+}
+
+async function detectThemeName(
+  admin: { graphql: (query: string) => Promise<Response> },
+): Promise<string | null> {
+  try {
+    const response = await admin.graphql(`#graphql
+      query OnboardingMainTheme {
+        themes(first: 1, roles: [MAIN]) {
+          nodes { name }
+        }
+      }
+    `);
+    const payload = (await response.json()) as {
+      data?: { themes?: { nodes?: Array<{ name?: string }> } };
+    };
+    return payload.data?.themes?.nodes?.[0]?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const shop = await requireShopRecord(session.shop);
   const status = await onboardingService.getStatus(shop.id);
 
@@ -45,30 +82,39 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw redirect("/app");
   }
 
-  const settings = await reviewRequestService.getSettingsForShop(shop.id);
-  const widgetEditorUrls: Record<string, string> = {};
-  for (const option of ONBOARDING_WIDGET_OPTIONS) {
-    widgetEditorUrls[option.id] = themeAddBlockEditorUrl(
-      session.shop,
-      option.blockHandle,
-    );
-  }
+  const url = new URL(request.url);
+  const screen = parseScreen(url.searchParams.get("screen"));
+  const preserved = new URLSearchParams(url.searchParams);
+  preserved.delete("screen");
+  const preservedQuery = preserved.toString();
+  const linkSuffix = preservedQuery ? `&${preservedQuery}` : "";
+
+  const [emailSettings, widgetSettings, themeName] = await Promise.all([
+    reviewRequestService.getSettingsForShop(shop.id),
+    widgetSettingsService.getForShop(shop.id),
+    detectThemeName(admin),
+  ]);
 
   return {
+    screen,
     status,
     shopDomain: session.shop,
-    shopPlan: shop.plan,
+    health: {
+      shopDomain: session.shop,
+      planLabel: shop.plan === "PRO" ? "Pro" : "Free",
+      themeName,
+      scopesOk: true,
+    },
     themeEditorUrl: themeAppEmbedEditorUrl(session.shop),
     storeUrl: storefrontUrl(session.shop),
-    widgetEditorUrls,
-    settings: {
-      requestDelayDays: settings.requestDelayDays,
-      reminderEnabled: settings.reminderEnabled,
-      reminderDelayDays: settings.reminderDelayDays,
-      emailSubject: settings.emailSubject,
+    search: linkSuffix,
+    emailSettings: {
+      requestDelayDays: emailSettings.requestDelayDays,
+      reminderEnabled: emailSettings.reminderEnabled,
+      reminderDelayDays: emailSettings.reminderDelayDays,
+      emailSubject: emailSettings.emailSubject,
     },
-    proTrialDays: PRO_TRIAL_DAYS,
-    proMonthlyPrice: PRO_MONTHLY_PRICE_USD,
+    widgetSettings,
   };
 };
 
@@ -77,32 +123,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const shop = await requireShopRecord(session.shop);
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "");
+  const url = new URL(request.url);
+  const preserved = new URLSearchParams(url.searchParams);
+  preserved.delete("screen");
+  const preservedQuery = preserved.toString();
 
   try {
     switch (intent) {
       case "start": {
-        const status = await onboardingService.setCurrentStep(shop.id, 1);
-        return data({ ok: true as const, status, message: "Setup started." });
+        await onboardingService.markStarted(shop.id);
+        throw redirect(screenHref("health", preservedQuery));
+      }
+      case "continue-checklist": {
+        throw redirect(screenHref("checklist", preservedQuery));
       }
       case "skip": {
         await onboardingService.skipOnboarding(shop.id);
         throw redirect("/app");
-      }
-      case "set-step": {
-        const currentStep = Number(form.get("currentStep") ?? 1);
-        const status = await onboardingService.setCurrentStep(
-          shop.id,
-          Number.isFinite(currentStep) ? currentStep : 1,
-        );
-        return data({ ok: true as const, status });
-      }
-      case "theme": {
-        const status = await onboardingService.markThemeEnabled(shop.id);
-        return data({
-          ok: true as const,
-          status,
-          message: "Theme extension marked enabled.",
-        });
       }
       case "poll-theme": {
         const detected = await detectThemeExtensionEnabled(admin);
@@ -114,36 +151,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           status,
           message: detected
             ? "Theme extension detected."
-            : "Not detected yet. Enable the app embed, then check again.",
+            : "Not detected yet. Enable the app embed, save, then wait.",
         });
-      }
-      case "widget": {
-        const status = await onboardingService.markWidgetAdded(shop.id);
-        return data({ ok: true as const, status, message: "Widget marked added." });
-      }
-      case "poll-widget": {
-        const detected = await detectWidgetBlocksPresent(admin);
-        const status = detected
-          ? await onboardingService.markWidgetAdded(shop.id)
-          : await onboardingService.getStatus(shop.id);
-        return data({
-          ok: true as const,
-          status,
-          message: detected
-            ? "Widget placement detected."
-            : "No widget found yet. Add a block, then check again.",
-        });
-      }
-      case "skip-step": {
-        const step = String(form.get("step") ?? "");
-        if (step !== "widget" && step !== "import" && step !== "email") {
-          return data(
-            { ok: false as const, message: "Invalid skip step." },
-            { status: 400 },
-          );
-        }
-        const status = await onboardingService.skipStep(shop.id, step);
-        return data({ ok: true as const, status, message: "Step skipped." });
       }
       case "upload-import": {
         trackOnboardingEvent("Import Started", { shopId: shop.id });
@@ -159,8 +168,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           shopId: shop.id,
           shopPlan: shop.plan,
           fileName: file.name || "import.csv",
-          contentType: file.type || "text/csv",
-          content: buffer,
+          fileContent: buffer,
         });
         const status = await onboardingService.markReviewsImported(shop.id);
         return data({
@@ -168,14 +176,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           status,
           message: `Imported ${job.importedRows} reviews${
             job.failedRows > 0
-              ? ` (${job.failedRows} rows skipped — duplicates or errors).`
+              ? ` (${job.failedRows} rows skipped).`
               : "."
           }`,
         });
       }
-      case "save-email": {
+      case "save-automation": {
         const existing = await reviewRequestService.getSettingsForShop(shop.id);
-        const requestDelayDays = Number(form.get("requestDelayDays") ?? 3);
+        const requestDelayDays = Number(form.get("requestDelayDays") ?? 5);
         const reminderEnabled =
           form.get("reminderEnabled") === "true" ||
           form.get("reminderEnabled") === "on";
@@ -199,15 +207,70 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           reminderBodyHtml: existing.reminderBodyHtml,
         });
 
-        const status = await onboardingService.markEmailConfigured(shop.id);
+        const status = await onboardingService.markAutomationConfigured(shop.id);
         return data({
           ok: true as const,
           status,
-          message: "Email configuration saved.",
+          message: "Automation enabled.",
         });
       }
+      case "save-branding": {
+        const current = await widgetSettingsService.getForShop(shop.id);
+        const accentColor = String(
+          form.get("accentColor") ?? current.accentColor,
+        );
+        const borderRadius = Number(
+          form.get("borderRadius") ?? current.borderRadius,
+        );
+        await widgetSettingsService.updateForShop(shop.id, {
+          widgetEnabled: current.widgetEnabled,
+          accentColor,
+          primaryButtonColor: current.primaryButtonColor,
+          starColor: String(form.get("starColor") ?? accentColor),
+          borderRadius: Number.isFinite(borderRadius)
+            ? borderRadius
+            : current.borderRadius,
+          cardShadow: current.cardShadow,
+          layout: current.layout,
+          showCustomerName: current.showCustomerName,
+          showReviewDate: current.showReviewDate,
+          showProductImages: current.showProductImages,
+          showCustomerPhotos: current.showCustomerPhotos,
+          autoPublishReviews: current.autoPublishReviews,
+          darkMode: current.darkMode,
+          showReviewForm: current.showReviewForm,
+          reviewsPerPage: current.reviewsPerPage,
+        });
+        const status = await onboardingService.markBrandingConfigured(shop.id);
+        return data({
+          ok: true as const,
+          status,
+          message: "Branding saved.",
+        });
+      }
+      case "skip-optional": {
+        const task = String(form.get("task") ?? "");
+        if (task !== "import" && task !== "automation" && task !== "branding") {
+          return data(
+            { ok: false as const, message: "Invalid optional task." },
+            { status: 400 },
+          );
+        }
+        await onboardingService.skipOptional(shop.id, task);
+        throw redirect(screenHref("checklist", preservedQuery));
+      }
       case "complete": {
-        await onboardingService.complete(shop.id);
+        const status = await onboardingService.complete(shop.id);
+        if (!status.completed) {
+          return data(
+            {
+              ok: false as const,
+              status,
+              message: "Enable storefront reviews before finishing setup.",
+            },
+            { status: 400 },
+          );
+        }
         throw redirect("/app");
       }
       default:
@@ -225,7 +288,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         {
           ok: false as const,
           message: error.message,
-          issues: error.issues,
         },
         { status: 400 },
       );
@@ -252,7 +314,8 @@ export default function OnboardingRoute() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const status = actionData && "status" in actionData ? actionData.status : null;
+    const status =
+      actionData && "status" in actionData ? actionData.status : null;
     if (status && !status.needsOnboarding) {
       navigate("/app", { replace: true });
     }
@@ -265,9 +328,9 @@ export default function OnboardingRoute() {
         actionData && "ok" in actionData
           ? {
               ok: actionData.ok,
-              message: "message" in actionData ? actionData.message : undefined,
+              message:
+                "message" in actionData ? actionData.message : undefined,
               status: "status" in actionData ? actionData.status : undefined,
-              issues: "issues" in actionData ? actionData.issues : undefined,
             }
           : undefined
       }

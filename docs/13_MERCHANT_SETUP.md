@@ -2,7 +2,7 @@
 
 Short guide for a store installing this review app during the Phase 3 pilot.
 Operators should finish [12_DEPLOYMENT.md](12_DEPLOYMENT.md) first so the app
-URL is a stable host (Render: `https://review-app-v1.onrender.com`), not a
+URL is a stable host (`https://reviewtrix.algorithmtrix.com` on Coolify), not a
 `shopify app dev` tunnel.
 
 ## 1. Install

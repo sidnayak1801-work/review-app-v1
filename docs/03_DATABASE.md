@@ -51,11 +51,14 @@ Current fields:
 
 ### OnboardingStatus
 
-One row per shop tracking merchant setup progress (Phase onboarding).
+One row per shop tracking merchant launch-checklist progress
+(see `docs/onboarding/`).
 
-- `themeEnabled`, `widgetAdded`, `reviewsImported`, `emailConfigured`
-- `completed`, `skipped`, `currentStep`, `completedAt`
+- `themeEnabled`, `reviewsImported`, `automationConfigured`,
+  `brandingConfigured`
+- `completed`, `skipped`, `completedAt`
 - Created on install via `onboardingService.ensureForShop`
+- Progress for UI is derived as 25% per completed checklist flag
 
 Phase 1 Shop lifecycle connects this model to installation, reinstallation, and
 uninstall workflows. Uninstall sets `status = UNINSTALLED` and `uninstalledAt`

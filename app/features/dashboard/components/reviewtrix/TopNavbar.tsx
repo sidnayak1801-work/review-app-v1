@@ -195,6 +195,36 @@ export function TopNavbar({
             </button>
             {helpOpen ? (
               <div className={styles.dropdown} role="menu">
+                <a
+                  className={styles.dropdownItem}
+                  href="mailto:support@reviewtrix.algorithmtrix.com"
+                  role="menuitem"
+                >
+                  Contact support
+                  <span className={styles.dropdownMeta}>
+                    support@reviewtrix.algorithmtrix.com
+                  </span>
+                </a>
+                <a
+                  className={styles.dropdownItem}
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  role="menuitem"
+                >
+                  Privacy policy
+                  <span className={styles.dropdownMeta}>Opens in a new tab</span>
+                </a>
+                <a
+                  className={styles.dropdownItem}
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  role="menuitem"
+                >
+                  Terms of service
+                  <span className={styles.dropdownMeta}>Opens in a new tab</span>
+                </a>
                 <Link
                   className={styles.dropdownItem}
                   to="/app/billing"

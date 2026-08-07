@@ -39,7 +39,8 @@ Includes everything in Free plus:
 
 - Up to 5,000 published reviews
 - Up to 1,000 review-request emails per month
-- Optional removal of app branding from the widget
+- Separate domestic and international review-request delays
+- Multi-product request emails listing all order items
 - Priority support
 
 Phase 4 review-request entitlements:
@@ -48,8 +49,10 @@ Phase 4 review-request entitlements:
 - Multi-product request emails: one email per order listing all products
 - Editable email templates and optional reminder emails
 
-Do not advertise photo reviews, merchant replies, advanced analytics, AI, or
-other post-MVP features as Pro benefits until those features exist.
+Photo/video on storefront submissions, merchant replies, and Theme App
+Extension widgets ship on Free and Pro (subject to published-review allowances).
+Do not advertise advanced email open/conversion analytics, AI theme analysis,
+or “remove app branding” as live Pro benefits until those features exist.
 
 ## Allowance Definitions
 

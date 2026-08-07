@@ -130,19 +130,18 @@ model Shop {
 }
 
 model OnboardingStatus {
-  id               String    @id @default(cuid())
-  shopId           String    @unique
-  shop             Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  themeEnabled     Boolean   @default(false)
-  widgetAdded      Boolean   @default(false)
-  reviewsImported  Boolean   @default(false)
-  emailConfigured  Boolean   @default(false)
-  completed        Boolean   @default(false)
-  skipped          Boolean   @default(false)
-  currentStep      Int       @default(0)
-  completedAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                    String    @id @default(cuid())
+  shopId                String    @unique
+  shop                  Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  themeEnabled          Boolean   @default(false)
+  reviewsImported       Boolean   @default(false)
+  automationConfigured  Boolean   @default(false)
+  brandingConfigured    Boolean   @default(false)
+  completed             Boolean   @default(false)
+  skipped               Boolean   @default(false)
+  completedAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model UninstallFeedback {

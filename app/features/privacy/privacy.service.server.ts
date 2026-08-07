@@ -167,7 +167,8 @@ export class PrivacyService {
       return;
     }
 
-    logger.info("customers/data_request processed", {
+    logger.info("privacy_customers_data_request", {
+      event: "privacy_customers_data_request",
       shopId: exportResult.shop.id,
       shopDomain: exportResult.shop.shopDomain,
       dataRequestId: payload.data_request?.id ?? null,

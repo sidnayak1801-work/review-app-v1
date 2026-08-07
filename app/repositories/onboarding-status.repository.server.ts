@@ -6,12 +6,11 @@ export interface OnboardingStatusRecord {
   id: string;
   shopId: string;
   themeEnabled: boolean;
-  widgetAdded: boolean;
   reviewsImported: boolean;
-  emailConfigured: boolean;
+  automationConfigured: boolean;
+  brandingConfigured: boolean;
   completed: boolean;
   skipped: boolean;
-  currentStep: number;
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -21,10 +20,9 @@ export type OnboardingStepFlags = Partial<
   Pick<
     OnboardingStatusRecord,
     | "themeEnabled"
-    | "widgetAdded"
     | "reviewsImported"
-    | "emailConfigured"
-    | "currentStep"
+    | "automationConfigured"
+    | "brandingConfigured"
   >
 >;
 
@@ -32,12 +30,11 @@ const SELECT = {
   id: true,
   shopId: true,
   themeEnabled: true,
-  widgetAdded: true,
   reviewsImported: true,
-  emailConfigured: true,
+  automationConfigured: true,
+  brandingConfigured: true,
   completed: true,
   skipped: true,
-  currentStep: true,
   completedAt: true,
   createdAt: true,
   updatedAt: true,

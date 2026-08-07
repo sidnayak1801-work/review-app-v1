@@ -23,10 +23,12 @@ interface DashboardPageProps {
   isSubmitting: boolean;
   onboardingReminder?: {
     themeEnabled: boolean;
-    widgetAdded: boolean;
     reviewsImported: boolean;
-    emailConfigured: boolean;
+    automationConfigured: boolean;
+    brandingConfigured: boolean;
     completed: boolean;
+    skipped: boolean;
+    progress: number;
   } | null;
 }
 
@@ -50,11 +52,11 @@ export function DashboardPage({
   const showSetupComplete = Boolean(onboardingReminder?.completed);
   const showReminders =
     onboardingReminder &&
-    !onboardingReminder.completed &&
+    (onboardingReminder.skipped || onboardingReminder.completed) &&
     (!onboardingReminder.themeEnabled ||
-      !onboardingReminder.widgetAdded ||
+      !onboardingReminder.automationConfigured ||
       !onboardingReminder.reviewsImported ||
-      !onboardingReminder.emailConfigured);
+      !onboardingReminder.brandingConfigured);
 
   return (
     <DashboardLayout>
@@ -74,8 +76,8 @@ export function DashboardPage({
 
       {showSetupComplete ? (
         <div className={styles.card} style={{ padding: 16 }} role="status">
-          <strong>Setup complete.</strong> ReviewTrix is collecting and
-          displaying reviews.
+          <strong>Setup complete.</strong> Everything is ready — ReviewTrix is
+          collecting and displaying reviews.
         </div>
       ) : null}
 
@@ -85,25 +87,27 @@ export function DashboardPage({
           <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
             {!onboardingReminder.themeEnabled ? (
               <li>
-                Theme extension not enabled —{" "}
-                <Link to="/app/settings">open widget settings</Link> for
-                instructions.
+                Show reviews on your storefront —{" "}
+                <Link to="/app/onboarding?screen=theme">enable theme embed</Link>
+                .
               </li>
             ) : null}
-            {!onboardingReminder.widgetAdded ? (
-              <li>Your reviews aren&apos;t visible yet — add a widget in the theme editor.</li>
+            {!onboardingReminder.automationConfigured ? (
+              <li>
+                Collect reviews automatically —{" "}
+                <Link to="/app/review-requests">configure emails</Link>.
+              </li>
             ) : null}
             {!onboardingReminder.reviewsImported ? (
               <li>
-                No imported reviews yet —{" "}
-                <Link to="/app/imports">Import reviews</Link> or collect your
-                first review.
+                Import existing reviews —{" "}
+                <Link to="/app/imports">open Imports</Link>.
               </li>
             ) : null}
-            {!onboardingReminder.emailConfigured ? (
+            {!onboardingReminder.brandingConfigured ? (
               <li>
-                Start collecting automatically —{" "}
-                <Link to="/app/review-requests">Configure emails</Link>.
+                Personalize widgets —{" "}
+                <Link to="/app/settings">open Settings</Link>.
               </li>
             ) : null}
           </ul>

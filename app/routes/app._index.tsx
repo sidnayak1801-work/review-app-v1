@@ -150,10 +150,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     data,
     onboardingReminder: {
       themeEnabled: onboarding.themeEnabled,
-      widgetAdded: onboarding.widgetAdded,
       reviewsImported: onboarding.reviewsImported,
-      emailConfigured: onboarding.emailConfigured,
+      automationConfigured: onboarding.automationConfigured,
+      brandingConfigured: onboarding.brandingConfigured,
       completed: onboarding.completed,
+      skipped: onboarding.skipped,
+      progress: onboarding.progress,
     },
   };
 };

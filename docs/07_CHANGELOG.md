@@ -5,12 +5,28 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
-- Merchant onboarding (`/app/onboarding`): welcome + 5 steps (theme, widgets,
-  CSV import, review-request email, finish/Pro trial). `OnboardingStatus`
-  model; gate redirects incomplete shops; `read_themes` scope for detection;
-  authenticated `GET/POST /api/onboarding/status`. Competitor one-click import
-  is CSV-guided (not OAuth). Dashboard shows setup-complete / finish-setup
-  reminders.
+- Merchant onboarding v2 (launch checklist): replaced the linear wizard with
+  Welcome → Store Health Check → Launch Checklist → Theme / Import /
+  Automation / Branding → Celebration → Dashboard. Spec in
+  `docs/onboarding/`; removed obsolete `docs/18_ONBOARDING_ReviewTrix.md`.
+  `OnboardingStatus` now tracks `automationConfigured` and
+  `brandingConfigured` (dropped wizard `currentStep` / `widgetAdded` /
+  `emailConfigured`).
+- Removed Render hosting leftovers (`render.yaml`, Render App URL docs/env
+  notes). Production host is Coolify only
+  (`https://reviewtrix.algorithmtrix.com`); Partner App URL must match via
+  `shopify app deploy`.
+- App Store audit fixes: removed unshipped Pro “remove app branding” claims from
+  onboarding and billing docs; photos/replies called out as shipped Free+Pro.
+- App Store submission readiness: counsel-ready `/privacy` and `/terms` (no
+  placeholder copy; canonical `https://reviewtrix.algorithmtrix.com/…`);
+  Support / Privacy / Terms in Help, footer, and Settings; Coolify deploy docs
+  with `BILLING_TEST_MODE=false` for production; structured
+  `privacy_customers_data_request` logs + ops runbook; Partner + pre-submit QA
+  checklists in `11_APP_STORE_AND_BFS.md`.
+- (Superseded by onboarding v2 above.) Initial onboarding introduced
+  `OnboardingStatus`, app gate, theme detection (`read_themes`), and
+  `/api/onboarding/status`.
 - Product renamed from ReviewX to **ReviewTrix** (merchant UI, Shopify app
   name, privacy/terms, and docs). Marketing domain:
   `https://reviewtrix.algorithmtrix.com`.

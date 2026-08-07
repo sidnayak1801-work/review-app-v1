@@ -210,6 +210,31 @@ export function SettingsPage({
         </Link>
       </section>
 
+      <section className={styles.card} style={{ padding: 20 }}>
+        <h2 className={styles.sectionTitle}>Support and legal</h2>
+        <p className={styles.body} style={{ marginTop: 8 }}>
+          Reach us any time after install. Privacy and terms stay available
+          outside the embedded admin.
+        </p>
+        <nav
+          className={styles.footerLinks}
+          aria-label="Support and legal"
+          style={{ marginTop: 12 }}
+        >
+          <a href="mailto:support@reviewtrix.algorithmtrix.com">
+            support@reviewtrix.algorithmtrix.com
+          </a>
+          <span aria-hidden>·</span>
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">
+            Privacy policy
+          </a>
+          <span aria-hidden>·</span>
+          <a href="/terms" target="_blank" rel="noopener noreferrer">
+            Terms of service
+          </a>
+        </nav>
+      </section>
+
       <div>
         <UninstallSurveySection shopDomain={shopDomain} />
       </div>

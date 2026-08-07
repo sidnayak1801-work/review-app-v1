@@ -16,7 +16,7 @@ Operator procedures for production readiness. Deployment steps:
 - Never log access tokens, review bodies, customer emails, or import CSV contents
 - Compliance webhook handlers log shop domain, resource IDs, and counts only
 - Ship stdout/stderr from the production process to your host’s log drain
-  (Fly, Railway, Render, CloudWatch, etc.)
+  (Coolify, CloudWatch, etc.)
 - Recommended next step before broader launch: attach an error tracker
   (for example Sentry) using an environment DSN — not required for the pilot
   if log drain + uptime alerts are configured
@@ -49,12 +49,29 @@ Until a self-serve export UI ships (Phase 5 / ideas backlog):
 
 ### Customer data request (`customers/data_request`)
 
-1. Shopify sends the verified compliance webhook
-2. Handler matches reviews by `authorEmail` / `shopifyCustomerId` and review
-   requests by `customerEmail`
-3. Logs list matching record IDs (no PII in logs)
-4. Operator fulfills the merchant’s request within 30 days by exporting those
-   IDs via `PrivacyService.collectCustomerDataExport` or equivalent SQL
+**SLA:** fulfill within Shopify’s required window (typically **30 days**).
+
+1. Shopify sends the verified compliance webhook to `/webhooks/compliance`
+2. `PrivacyService.handleCustomersDataRequest` matches reviews by
+   `authorEmail` / `shopifyCustomerId`, review requests by `customerEmail`,
+   and questions by customer email
+3. Handler emits structured log event `privacy_customers_data_request` with:
+   - `shopId`, `shopDomain`, `dataRequestId`
+   - `reviewIds`, `reviewRequestIds`, `questionIds` (IDs only — no PII)
+   - counts for each collection
+4. Operator fulfillment runbook:
+   1. Grep Coolify / host logs for `privacy_customers_data_request` (or
+      `event=privacy_customers_data_request`) filtered by `shopDomain` /
+      `dataRequestId`
+   2. Export matching rows via
+      `PrivacyService.collectCustomerDataExport` (script/REPL) or SQL on
+      those IDs for the shop
+   3. Deliver the export to the **merchant** (or Shopify’s prescribed channel)
+      over a secure channel — do not email raw PII to shared inboxes
+   4. Confirm completion in the ticket / Partner compliance thread
+5. Alerting: until an error tracker ships, rely on log drain search + uptime
+   on `/health?ready=1`. Escalate if a data_request log is missing after
+   Shopify notifies you of a request.
 
 ## Deletion and redaction
 

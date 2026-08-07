@@ -3,20 +3,20 @@
 Source of truth: `04_ROADMAP.md`
 
 Active phase: **Phase 5** (5.1–5.5 shipped); merchant home follows
-`15_DASHBOARD_UI_SPEC.md`. Phase 3 Render pilot still relevant for production
-URLs.
+`15_DASHBOARD_UI_SPEC.md`. Production URLs: Coolify at
+`https://reviewtrix.algorithmtrix.com`.
 
 Review submission / identity / verified-buyer work must follow
 `14_REVIEW_SUBMISSION_SPEC.md`.
 
 ## Completed
 
-Merchant onboarding (`docs/18_ONBOARDING_ReviewTrix.md`) — shipped:
+Merchant onboarding v2 (`docs/onboarding/`) — shipped:
 
-- `/app/onboarding` welcome + steps; `OnboardingStatus`; app gate
-- Theme/widget deep links + optional `read_themes` detection
-- CSV import step; email config marks `emailConfigured` on save
-- Finish screen with Pro trial CTA; dashboard reminders
+- Launch checklist UX: Welcome → Health → Checklist → deep-dives → Celebration
+- `OnboardingStatus` flags + progress; app gate unchanged
+- Theme poll (2s/30s), CSV import, automation settings, branding via WidgetSettings
+- Dashboard Setup Complete / unfinished optional reminders
 
 Phase 1 — Core Reviews and Widget is complete.
 
@@ -93,6 +93,13 @@ Uninstall survey + mobile nav:
 
 ## Next
 
+App Store submit (see `11_APP_STORE_AND_BFS.md`):
+
+- [ ] Partner: public distribution, PCD, listing assets, privacy URL, pricing
+- [ ] Coolify: `BILLING_TEST_MODE=false`
+- [ ] Pre-submit QA checklist (theme, billing, health, mobile/a11y)
+- Code/docs for legal pages, support links, and ops runbook are done
+
 Storefront Review Summary (`17_REVIEW_SUMMARY.md`) is implemented:
 
 - Block in `extensions/review-widget` + `ProductRatingSummary` + summary route
@@ -110,9 +117,9 @@ Storefront Review Summary (`17_REVIEW_SUMMARY.md`) is implemented:
 3. Optional: storefront “Most helpful” (needs helpful-votes data + UI)
 4. Optional: confirm `MEDIA_*` AWS S3 (or S3-compatible) env vars are set for
    production hosts; `INTEGRATIONS_ENCRYPTION_KEY` for integrations
-5. Confirm Partner Dashboard App URL + redirect match the intended host
+5. Confirm Partner Dashboard App URL + redirect match Coolify host
 6. Validation gate before broader Phase 5 (syndication)
-7. BFS gaps: Flow trigger + customer admin block (`11_APP_STORE_AND_BFS.md`)
+7. BFS gaps (post-listing): Flow trigger + customer admin block
 8. Integrations follow-up: Gorgias inbound reply webhooks; Klaviyo SMS
 9. Public API follow-up: Redis rate limiter; GraphQL surface reusing auth modules
 

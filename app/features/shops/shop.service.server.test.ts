@@ -5,13 +5,13 @@ vi.mock("../onboarding/onboarding.service.server", () => ({
     ensureForShop: vi.fn().mockResolvedValue({
       needsOnboarding: true,
       themeEnabled: false,
-      widgetAdded: false,
       reviewsImported: false,
-      emailConfigured: false,
+      automationConfigured: false,
+      brandingConfigured: false,
       completed: false,
       skipped: false,
-      currentStep: 0,
       completedAt: null,
+      progress: 0,
     }),
   },
 }));

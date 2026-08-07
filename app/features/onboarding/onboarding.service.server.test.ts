@@ -13,12 +13,11 @@ function baseRecord(
     id: "ob-1",
     shopId: "shop-1",
     themeEnabled: false,
-    widgetAdded: false,
     reviewsImported: false,
-    emailConfigured: false,
+    automationConfigured: false,
+    brandingConfigured: false,
     completed: false,
     skipped: false,
-    currentStep: 0,
     completedAt: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -47,27 +46,44 @@ describe("OnboardingService", () => {
     await expect(service.getStatus("shop-1")).resolves.toMatchObject({
       needsOnboarding: true,
       completed: false,
-      skipped: false,
+      progress: 0,
     });
   });
 
-  it("marks theme enabled and advances step", async () => {
+  it("computes progress in 25% steps", async () => {
+    const store = {
+      record: baseRecord({
+        themeEnabled: true,
+        automationConfigured: true,
+      }),
+    };
+    const service = createService(store);
+
+    await expect(service.getStatus("shop-1")).resolves.toMatchObject({
+      progress: 50,
+    });
+  });
+
+  it("marks theme enabled", async () => {
     const store = { record: baseRecord() };
     const service = createService(store);
 
     const status = await service.markThemeEnabled("shop-1");
     expect(status.themeEnabled).toBe(true);
-    expect(status.currentStep).toBeGreaterThanOrEqual(2);
+    expect(status.progress).toBe(25);
   });
 
-  it("completes onboarding and clears needsOnboarding", async () => {
-    const store = { record: baseRecord({ themeEnabled: true }) };
+  it("complete requires themeEnabled", async () => {
+    const store = { record: baseRecord() };
     const service = createService(store);
 
+    const blocked = await service.complete("shop-1");
+    expect(blocked.completed).toBe(false);
+
+    store.record.themeEnabled = true;
     const status = await service.complete("shop-1");
     expect(status.completed).toBe(true);
     expect(status.needsOnboarding).toBe(false);
-    expect(status.completedAt).toBeTruthy();
   });
 
   it("skip onboarding sets skipped without completed", async () => {

@@ -2,7 +2,7 @@
 
 client_id = "5583660bf73cc180c986fcedf3977151"
 name = "ReviewTrix"
-application_url = "https://review-app-v1.onrender.com"
+application_url = "https://reviewtrix.algorithmtrix.com"
 embedded = true
 
 [access_scopes]
@@ -29,7 +29,7 @@ api_version = "2026-07"
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [auth]
-redirect_urls = [ "https://review-app-v1.onrender.com/api/auth" ]
+redirect_urls = [ "https://reviewtrix.algorithmtrix.com/api/auth" ]
 
 [app_proxy]
 url = "/api/storefront/reviews"
@@ -37,6 +37,5 @@ subpath = "reviews"
 prefix = "apps"
 
 [build]
-# TEMP local testing: true so `shopify app dev` points App URL + proxy at the
-# tunnel (not Render). Set false + restore Render URLs before production again.
-automatically_update_urls_on_dev = true
+# Keep false so `shopify app dev` does not rewrite Coolify Partner URLs to a tunnel.
+automatically_update_urls_on_dev = false
