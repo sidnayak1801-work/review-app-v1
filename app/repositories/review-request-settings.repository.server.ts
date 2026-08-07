@@ -77,8 +77,13 @@ type SettingsModel = {
   }): Promise<ReviewRequestSettingsRecord | null>;
   upsert(args: {
     where: { shopId: string };
-    create: UpsertReviewRequestSettingsInput;
-    update: Omit<UpsertReviewRequestSettingsInput, "shopId">;
+    create: UpsertReviewRequestSettingsInput & {
+      createdAt?: Date;
+      updatedAt?: Date;
+    };
+    update: Omit<UpsertReviewRequestSettingsInput, "shopId"> & {
+      updatedAt?: Date;
+    };
     select: typeof SETTINGS_SELECT;
   }): Promise<ReviewRequestSettingsRecord>;
 };
@@ -125,10 +130,11 @@ export class PrismaReviewRequestSettingsRepository
     input: UpsertReviewRequestSettingsInput,
   ): Promise<ReviewRequestSettingsRecord> {
     const { shopId, ...update } = input;
+    const now = new Date();
     return settingsModel(this.database).upsert({
       where: { shopId },
-      create: input,
-      update,
+      create: { ...input, createdAt: now, updatedAt: now },
+      update: { ...update, updatedAt: now },
       select: SETTINGS_SELECT,
     });
   }

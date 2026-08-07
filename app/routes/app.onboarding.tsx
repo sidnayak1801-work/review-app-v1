@@ -5,10 +5,12 @@ import type {
 } from "react-router";
 import {
   data,
+  isRouteErrorResponse,
   redirect,
   useActionData,
   useLoaderData,
   useNavigate,
+  useRouteError,
 } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useEffect } from "react";
@@ -27,6 +29,7 @@ import { reviewRequestService } from "../features/review-requests/review-request
 import { widgetSettingsService } from "../features/widget-settings/widget-settings.service.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
 import { requireShopRecord } from "../lib/shop-context.server";
+import { logger } from "../services/logger.server";
 import { authenticate } from "../shopify.server";
 
 const SCREENS: OnboardingScreen[] = [
@@ -74,48 +77,75 @@ async function detectThemeName(
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
-  const shop = await requireShopRecord(session.shop);
-  const status = await onboardingService.getStatus(shop.id);
+  try {
+    const { admin, session } = await authenticate.admin(request);
+    const shop = await requireShopRecord(session.shop);
+    const status = await onboardingService.getStatus(shop.id);
 
-  if (!status.needsOnboarding) {
-    throw redirect("/app");
-  }
+    if (!status.needsOnboarding) {
+      throw redirect("/app");
+    }
 
-  const url = new URL(request.url);
-  const screen = parseScreen(url.searchParams.get("screen"));
-  const preserved = new URLSearchParams(url.searchParams);
-  preserved.delete("screen");
-  const preservedQuery = preserved.toString();
-  const linkSuffix = preservedQuery ? `&${preservedQuery}` : "";
+    const url = new URL(request.url);
+    const screen = parseScreen(url.searchParams.get("screen"));
+    const preserved = new URLSearchParams(url.searchParams);
+    preserved.delete("screen");
+    const preservedQuery = preserved.toString();
+    const linkSuffix = preservedQuery ? `&${preservedQuery}` : "";
 
-  const [emailSettings, widgetSettings, themeName] = await Promise.all([
-    reviewRequestService.getSettingsForShop(shop.id),
-    widgetSettingsService.getForShop(shop.id),
-    detectThemeName(admin),
-  ]);
+    const themeName =
+      screen === "health" ? await detectThemeName(admin) : null;
 
-  return {
-    screen,
-    status,
-    shopDomain: session.shop,
-    health: {
+    const emailSettings =
+      screen === "automation"
+        ? await reviewRequestService.getSettingsForShop(shop.id)
+        : null;
+
+    const widgetSettings =
+      screen === "branding"
+        ? await widgetSettingsService.getForShop(shop.id)
+        : null;
+
+    return {
+      screen,
+      status,
       shopDomain: session.shop,
-      planLabel: shop.plan === "PRO" ? "Pro" : "Free",
-      themeName,
-      scopesOk: true,
-    },
-    themeEditorUrl: themeAppEmbedEditorUrl(session.shop),
-    storeUrl: storefrontUrl(session.shop),
-    search: linkSuffix,
-    emailSettings: {
-      requestDelayDays: emailSettings.requestDelayDays,
-      reminderEnabled: emailSettings.reminderEnabled,
-      reminderDelayDays: emailSettings.reminderDelayDays,
-      emailSubject: emailSettings.emailSubject,
-    },
-    widgetSettings,
-  };
+      health: {
+        shopDomain: session.shop,
+        planLabel: shop.plan === "PRO" ? "Pro" : "Free",
+        themeName,
+        scopesOk: true,
+      },
+      themeEditorUrl:
+        screen === "theme" ? themeAppEmbedEditorUrl(session.shop) : "",
+      storeUrl:
+        screen === "celebration" ? storefrontUrl(session.shop) : "",
+      search: linkSuffix,
+      emailSettings: emailSettings
+        ? {
+            requestDelayDays: emailSettings.requestDelayDays,
+            reminderEnabled: emailSettings.reminderEnabled,
+            reminderDelayDays: emailSettings.reminderDelayDays,
+            emailSubject: emailSettings.emailSubject,
+          }
+        : null,
+      widgetSettings,
+    };
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+
+    logger.error(
+      "onboarding_loader_failed",
+      { path: new URL(request.url).pathname },
+      error,
+    );
+    throw data(
+      { message: "Could not load onboarding. Please try again." },
+      { status: 500 },
+    );
+  }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -298,10 +328,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         { status: 400 },
       );
     }
+    logger.error(
+      "onboarding_action_failed",
+      { intent, shopId: shop.id },
+      error,
+    );
     return data(
       {
         ok: false as const,
-        message: "Unable to connect to Shopify. Please try again.",
+        message: "Unable to complete that step. Please try again.",
       },
       { status: 500 },
     );
@@ -335,6 +370,26 @@ export default function OnboardingRoute() {
           : undefined
       }
     />
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const message = isRouteErrorResponse(error)
+    ? typeof error.data === "object" &&
+      error.data !== null &&
+      "message" in error.data &&
+      typeof error.data.message === "string"
+      ? error.data.message
+      : error.statusText || "Could not load onboarding."
+    : "Could not load onboarding. Please try again.";
+
+  return (
+    <s-page heading="Onboarding">
+      <s-banner heading="Unavailable" tone="critical">
+        {message}
+      </s-banner>
+    </s-page>
   );
 }
 

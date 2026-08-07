@@ -8,6 +8,19 @@ import {
 import { logger } from "../../services/logger.server";
 import { widgetSettingsSchema } from "./widget-settings.schema";
 
+function isUniqueConstraintError(error: unknown): boolean {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  ) {
+    return true;
+  }
+
+  return error instanceof Error && error.message.includes("Unique constraint");
+}
+
 export class WidgetSettingsService {
   constructor(private readonly settings: WidgetSettingsRepository) {}
 
@@ -18,10 +31,22 @@ export class WidgetSettingsService {
       return existing;
     }
 
-    return this.settings.upsert({
-      shopId,
-      ...DEFAULT_WIDGET_SETTINGS,
-    });
+    try {
+      return await this.settings.upsert({
+        shopId,
+        ...DEFAULT_WIDGET_SETTINGS,
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        const raced = await this.settings.findByShopId(shopId);
+        if (raced) {
+          return raced;
+        }
+      }
+
+      logger.error("widget_settings_ensure_failed", { shopId }, error);
+      throw error;
+    }
   }
 
   async updateForShop(

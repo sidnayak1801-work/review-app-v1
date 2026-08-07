@@ -65,8 +65,13 @@ type WidgetSettingsModel = {
   }): Promise<WidgetSettingsRecord | null>;
   upsert(args: {
     where: { shopId: string };
-    create: UpsertWidgetSettingsInput;
-    update: Omit<UpsertWidgetSettingsInput, "shopId">;
+    create: UpsertWidgetSettingsInput & {
+      createdAt?: Date;
+      updatedAt?: Date;
+    };
+    update: Omit<UpsertWidgetSettingsInput, "shopId"> & {
+      updatedAt?: Date;
+    };
     select: typeof WIDGET_SELECT;
   }): Promise<WidgetSettingsRecord>;
 };
@@ -93,10 +98,11 @@ export class PrismaWidgetSettingsRepository
     input: UpsertWidgetSettingsInput,
   ): Promise<WidgetSettingsRecord> {
     const { shopId, ...update } = input;
+    const now = new Date();
     return widgetSettingsModel(this.database).upsert({
       where: { shopId },
-      create: input,
-      update,
+      create: { ...input, createdAt: now, updatedAt: now },
+      update: { ...update, updatedAt: now },
       select: WIDGET_SELECT,
     });
   }

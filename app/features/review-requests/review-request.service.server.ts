@@ -63,6 +63,19 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  ) {
+    return true;
+  }
+
+  return error instanceof Error && error.message.includes("Unique constraint");
+}
+
 export function resolveDelayDays(input: {
   shopPlan: ShopPlan;
   settings: ReviewRequestSettingsRecord;
@@ -159,7 +172,23 @@ export class ReviewRequestService {
       return existing;
     }
 
-    return this.settings.upsert(defaultReviewRequestSettings(shopId));
+    try {
+      return await this.settings.upsert(defaultReviewRequestSettings(shopId));
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        const raced = await this.settings.findByShopId(shopId);
+        if (raced) {
+          return raced;
+        }
+      }
+
+      logger.error(
+        "review_request_settings_ensure_failed",
+        { shopId },
+        error,
+      );
+      throw error;
+    }
   }
 
   async updateSettingsForShop(
@@ -231,17 +260,7 @@ export class ReviewRequestService {
 
         scheduledCount += 1;
       } catch (error) {
-        const prismaCode =
-          typeof error === "object" &&
-          error !== null &&
-          "code" in error &&
-          error.code === "P2002";
-
-        if (
-          prismaCode ||
-          (error instanceof Error &&
-            error.message.includes("Unique constraint"))
-        ) {
+        if (isUniqueConstraintError(error)) {
           skippedCount += 1;
           continue;
         }

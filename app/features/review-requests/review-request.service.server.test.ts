@@ -351,3 +351,38 @@ describe("ReviewRequestService", () => {
     expect(result.reviewId).toBe("review-1");
   });
 });
+
+describe("getSettingsForShop", () => {
+  it("creates defaults when settings are missing", async () => {
+    const settings = createSettings({
+      findByShopId: vi.fn().mockResolvedValue(null),
+      upsert: vi.fn().mockResolvedValue(baseSettings),
+    });
+    const service = createService({ settings });
+
+    const result = await service.getSettingsForShop("shop-1");
+
+    expect(settings.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ shopId: "shop-1", requestDelayDays: 3 }),
+    );
+    expect(result).toEqual(baseSettings);
+  });
+
+  it("recovers when upsert races on unique shopId", async () => {
+    const settings = createSettings({
+      findByShopId: vi
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(baseSettings),
+      upsert: vi.fn().mockRejectedValue(Object.assign(new Error("Unique"), {
+        code: "P2002",
+      })),
+    });
+    const service = createService({ settings });
+
+    const result = await service.getSettingsForShop("shop-1");
+
+    expect(result).toEqual(baseSettings);
+    expect(settings.findByShopId).toHaveBeenCalledTimes(2);
+  });
+});

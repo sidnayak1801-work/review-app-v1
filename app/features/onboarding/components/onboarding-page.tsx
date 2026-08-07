@@ -28,8 +28,8 @@ type OnboardingPageProps = {
     reminderEnabled: boolean;
     reminderDelayDays: number;
     emailSubject: string;
-  };
-  widgetSettings: WidgetSettingsInput;
+  } | null;
+  widgetSettings: WidgetSettingsInput | null;
   actionData?: OnboardingActionData;
 };
 
@@ -70,6 +70,9 @@ export function OnboardingPage({
         <ImportReviewsScreen search={search} message={message} ok={ok} />
       );
     case "automation":
+      if (!emailSettings) {
+        return <LaunchChecklist status={liveStatus} search={search} />;
+      }
       return (
         <ReviewAutomationScreen
           search={search}
@@ -79,6 +82,9 @@ export function OnboardingPage({
         />
       );
     case "branding":
+      if (!widgetSettings) {
+        return <LaunchChecklist status={liveStatus} search={search} />;
+      }
       return (
         <BrandingScreen
           search={search}
