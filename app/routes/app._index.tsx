@@ -155,6 +155,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       brandingConfigured: onboarding.brandingConfigured,
       completed: onboarding.completed,
       skipped: onboarding.skipped,
+      completedAt: onboarding.completedAt,
       progress: onboarding.progress,
     },
   };

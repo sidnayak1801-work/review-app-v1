@@ -195,16 +195,17 @@ export function TopNavbar({
             </button>
             {helpOpen ? (
               <div className={styles.dropdown} role="menu">
-                <a
+                <Link
                   className={styles.dropdownItem}
-                  href="mailto:support@reviewtrix.algorithmtrix.com"
+                  to="/app/support"
                   role="menuitem"
+                  onClick={() => setHelpOpen(false)}
                 >
                   Contact support
                   <span className={styles.dropdownMeta}>
-                    support@reviewtrix.algorithmtrix.com
+                    Open the Support page
                   </span>
-                </a>
+                </Link>
                 <a
                   className={styles.dropdownItem}
                   href="/privacy"

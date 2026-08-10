@@ -59,6 +59,9 @@ Theme app blocks are removed automatically with the Theme App Extension.
 
 ## Support (pilot)
 
+In the embedded admin, open **Support** (`/app/support`) from the Home footer,
+Help menu, or Settings. That page lists the support email and what to include.
+
 Contact the operator with:
 
 - Shop domain (e.g. `your-store.myshopify.com`)

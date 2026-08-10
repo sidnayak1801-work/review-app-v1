@@ -10,7 +10,7 @@ export function DashboardFooter() {
         Need help? Support, legal pages, plans, and settings are one click away.
       </p>
       <nav className={styles.footerLinks} aria-label="Dashboard help">
-        <a href="mailto:support@reviewtrix.algorithmtrix.com">Support</a>
+        <Link to="/app/support">Support</Link>
         <span aria-hidden>·</span>
         <a href="/privacy" target="_blank" rel="noopener noreferrer">
           Privacy

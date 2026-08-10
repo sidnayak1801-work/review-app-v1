@@ -221,9 +221,7 @@ export function SettingsPage({
           aria-label="Support and legal"
           style={{ marginTop: 12 }}
         >
-          <a href="mailto:support@reviewtrix.algorithmtrix.com">
-            support@reviewtrix.algorithmtrix.com
-          </a>
+          <Link to="/app/support">Support</Link>
           <span aria-hidden>·</span>
           <a href="/privacy" target="_blank" rel="noopener noreferrer">
             Privacy policy

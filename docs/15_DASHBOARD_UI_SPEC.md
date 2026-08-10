@@ -322,10 +322,15 @@ Order is important.
 Welcome
 
 ```
-Welcome back 👋
+Welcome to ReviewTrix          # completed onboarding within last 7 days
+Welcome back 👋                # otherwise (returning or skipped)
 
-Here's what's happening with your reviews today.
+You're all set — here's what's happening with your reviews.   # fresh
+Here's what's happening with your reviews today.              # returning
 ```
+
+Use `OnboardingStatus.completedAt` when `completed` is true. Skippers and
+older completes keep “Welcome back”.
 
 No large illustrations.
 

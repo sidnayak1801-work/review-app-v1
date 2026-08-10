@@ -12,7 +12,10 @@ import { QuickActions } from "./reviewtrix/QuickActions";
 import { RatingDistribution } from "./reviewtrix/RatingDistribution";
 import { ReviewsChart } from "./reviewtrix/ReviewsChart";
 import type { ReviewTrixDashboardData } from "./reviewtrix/types";
-import { WelcomeSection } from "./reviewtrix/WelcomeSection";
+import {
+  isFreshAfterOnboarding,
+  WelcomeSection,
+} from "./reviewtrix/WelcomeSection";
 import { WidgetPreview } from "./WidgetPreview";
 import { WidgetSettingsPanel } from "./WidgetSettings";
 import styles from "./reviewtrix/dashboard.module.css";
@@ -28,6 +31,7 @@ interface DashboardPageProps {
     brandingConfigured: boolean;
     completed: boolean;
     skipped: boolean;
+    completedAt: string | null;
     progress: number;
   } | null;
 }
@@ -57,6 +61,7 @@ export function DashboardPage({
       !onboardingReminder.automationConfigured ||
       !onboardingReminder.reviewsImported ||
       !onboardingReminder.brandingConfigured);
+  const freshWelcome = isFreshAfterOnboarding(onboardingReminder);
 
   return (
     <DashboardLayout>
@@ -114,7 +119,7 @@ export function DashboardPage({
         </div>
       ) : null}
 
-      <WelcomeSection />
+      <WelcomeSection isFreshAfterOnboarding={freshWelcome} />
       <KPIGrid kpis={data.kpis} />
       <div className={styles.split}>
         <ReviewsChart seriesByRange={data.chartSeriesByRange} />

@@ -5,6 +5,10 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Dashboard welcome greeting: “Welcome to ReviewTrix” for merchants who
+  completed onboarding in the last 7 days; “Welcome back” otherwise.
+- In-app Support page at `/app/support` (footer, Help, and Settings links);
+  replaces bare `mailto:` clicks that fail in the Admin iframe.
 - Storefront media URLs fall back to the absolute `ReviewMedia.url` when
   `MEDIA_PUBLIC_BASE_URL` is missing (avoids broken `/api/media/...` thumbs).
   Widget default accent / primary button aligned to theme extension teal
