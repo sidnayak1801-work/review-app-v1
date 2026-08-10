@@ -15,8 +15,8 @@ export function OnboardingBrand() {
         style={{
           display: "block",
           width: "100%",
-          maxWidth: 260,
-          maxHeight: 64,
+          maxWidth: 360,
+          maxHeight: 96,
           height: "auto",
           objectFit: "contain",
         }}
