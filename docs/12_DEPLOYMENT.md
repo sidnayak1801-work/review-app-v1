@@ -44,7 +44,7 @@ Neon Postgres  <-->  Coolify (Node / React Router)
 | `SCOPES` | `read_orders,read_products,read_themes` |
 | `NODE_ENV` | `production` |
 | `BILLING_TEST_MODE` | **`false` for App Store / public listing** (use `true` only on staging) |
-| `MEDIA_S3_*` / `MEDIA_PUBLIC_BASE_URL` | Production media bucket |
+| `MEDIA_S3_*` / `MEDIA_PUBLIC_BASE_URL` | Production media bucket. **`MEDIA_PUBLIC_BASE_URL` is required** for storefront photos (public S3/CloudFront base, no trailing slash, e.g. `https://reviewx.s3.ap-south-1.amazonaws.com`). Without it, the API may emit `/api/media/...` URLs that 404 on the shop and app. |
 | `INTEGRATIONS_ENCRYPTION_KEY` | 32-byte AES key (hex/base64) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Optional; without these, review emails log to console |
 

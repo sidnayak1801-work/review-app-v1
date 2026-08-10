@@ -112,8 +112,8 @@ export const widgetSettingsRepository = new PrismaWidgetSettingsRepository();
 
 export const DEFAULT_WIDGET_SETTINGS = {
   widgetEnabled: true,
-  accentColor: "#111111",
-  primaryButtonColor: "#111111",
+  accentColor: "#0f766e",
+  primaryButtonColor: "#0f766e",
   starColor: "#22c55e",
   borderRadius: 8,
   cardShadow: true,

@@ -7,7 +7,9 @@ import {
   MAX_IMAGE_BYTES,
   MAX_IMAGES_PER_REVIEW,
   MAX_VIDEO_BYTES,
+  resolvePublicMediaResponseUrl,
   ReviewMediaService,
+  toPublicMedia,
 } from "./review-media.service.server";
 
 function mediaRecord(
@@ -44,6 +46,87 @@ function mockStorage(
     ...overrides,
   };
 }
+
+describe("resolvePublicMediaResponseUrl / toPublicMedia", () => {
+  it("builds from MEDIA_PUBLIC_BASE_URL when configured", () => {
+    expect(
+      resolvePublicMediaResponseUrl(
+        "review-images/shop/a.jpg",
+        "https://old.example/a.jpg",
+        { MEDIA_PUBLIC_BASE_URL: "https://cdn.example.com" },
+      ),
+    ).toBe("https://cdn.example.com/review-images/shop/a.jpg");
+  });
+
+  it("falls back to absolute stored URL when public base is missing", () => {
+    expect(
+      resolvePublicMediaResponseUrl(
+        "review-images/shop/a.jpg",
+        "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
+        {},
+      ),
+    ).toBe(
+      "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
+    );
+  });
+
+  it("falls back when only SHOPIFY_APP_URL would produce /api/media", () => {
+    expect(
+      resolvePublicMediaResponseUrl(
+        "review-images/shop/a.jpg",
+        "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
+        { SHOPIFY_APP_URL: "https://reviewtrix.algorithmtrix.com" },
+      ),
+    ).toBe(
+      "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
+    );
+  });
+
+  it("keeps built local path when stored URL is not absolute http(s)", () => {
+    expect(
+      resolvePublicMediaResponseUrl("shops/1/a.jpg", "/api/media/shops/1/a.jpg", {}),
+    ).toBe("/api/media/shops/1/a.jpg");
+  });
+
+  it("falls back when MEDIA_PUBLIC_BASE_URL is the app origin", () => {
+    expect(
+      resolvePublicMediaResponseUrl(
+        "review-images/shop/a.jpg",
+        "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
+        {
+          MEDIA_PUBLIC_BASE_URL: "https://reviewtrix.algorithmtrix.com",
+          SHOPIFY_APP_URL: "https://reviewtrix.algorithmtrix.com",
+        },
+      ),
+    ).toBe(
+      "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
+    );
+  });
+
+  it("toPublicMedia uses the resolved URL", () => {
+    const previousPublic = process.env.MEDIA_PUBLIC_BASE_URL;
+    const previousApp = process.env.SHOPIFY_APP_URL;
+    delete process.env.MEDIA_PUBLIC_BASE_URL;
+    delete process.env.SHOPIFY_APP_URL;
+
+    try {
+      expect(toPublicMedia(mediaRecord({ id: "m-public" })).url).toBe(
+        "https://example.com/x.webp",
+      );
+    } finally {
+      if (previousPublic === undefined) {
+        delete process.env.MEDIA_PUBLIC_BASE_URL;
+      } else {
+        process.env.MEDIA_PUBLIC_BASE_URL = previousPublic;
+      }
+      if (previousApp === undefined) {
+        delete process.env.SHOPIFY_APP_URL;
+      } else {
+        process.env.SHOPIFY_APP_URL = previousApp;
+      }
+    }
+  });
+});
 
 describe("assertMediaLimits", () => {
   it("allows up to 5 images and 1 video", () => {

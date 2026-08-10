@@ -5,6 +5,10 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Storefront media URLs fall back to the absolute `ReviewMedia.url` when
+  `MEDIA_PUBLIC_BASE_URL` is missing (avoids broken `/api/media/...` thumbs).
+  Widget default accent / primary button aligned to theme extension teal
+  `#0f766e`.
 - Merchant onboarding v2 (launch checklist): replaced the linear wizard with
   Welcome → Store Health Check → Launch Checklist → Theme / Import /
   Automation / Branding → Celebration → Dashboard. Spec in

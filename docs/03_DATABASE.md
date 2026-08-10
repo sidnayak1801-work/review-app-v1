@@ -112,8 +112,8 @@ Current fields:
 - `id`
 - `shopId` — unique
 - `widgetEnabled`
-- `accentColor`
-- `primaryButtonColor`
+- `accentColor` — default `#0f766e` (matches theme extension)
+- `primaryButtonColor` — default `#0f766e`
 - `starColor`
 - `borderRadius` — 0–20 px
 - `cardShadow`

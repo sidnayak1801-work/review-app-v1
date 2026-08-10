@@ -101,11 +101,66 @@ export function assertMediaLimits(media: ReviewMediaRecord[]): void {
   }
 }
 
+function isAbsoluteHttpUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url.trim());
+}
+
+function urlHost(url: string): string | null {
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prefer key + MEDIA_PUBLIC_BASE_URL. If env is incomplete/mis-set and we would
+ * emit a storefront-broken app-local media URL, fall back to the absolute URL
+ * stored at upload time (typically public S3/CDN).
+ */
+export function resolvePublicMediaResponseUrl(
+  storageKey: string,
+  storedUrl: string,
+  environment: NodeJS.ProcessEnv = process.env,
+): string {
+  const built = buildPublicMediaUrl(storageKey, environment);
+  const stored = storedUrl.trim();
+
+  if (!isAbsoluteHttpUrl(stored) || stored.includes("/api/media/")) {
+    return built;
+  }
+
+  const builtIsLocalMediaPath =
+    built.startsWith("/api/media/") ||
+    built.startsWith("/api/media?") ||
+    /\/api\/media\//.test(built);
+
+  if (builtIsLocalMediaPath) {
+    return stored;
+  }
+
+  if (built.startsWith("/") && !built.startsWith("//")) {
+    return stored;
+  }
+
+  // MEDIA_PUBLIC_BASE_URL mistakenly set to the app origin yields
+  // https://app.example/review-images/... which 404s under S3 mode.
+  const appHost = environment.SHOPIFY_APP_URL?.trim()
+    ? urlHost(environment.SHOPIFY_APP_URL.trim())
+    : null;
+  const builtHost = urlHost(built);
+  if (appHost && builtHost === appHost) {
+    return stored;
+  }
+
+  return built || stored;
+}
+
 export function toPublicMedia(media: ReviewMediaRecord) {
   return {
     id: media.id,
     kind: media.kind,
-    url: buildPublicMediaUrl(media.storageKey),
+    url: resolvePublicMediaResponseUrl(media.storageKey, media.url),
     mimeType: media.mimeType,
     position: media.position,
   };

@@ -394,8 +394,8 @@ model WidgetSettings {
   shopId               String       @unique
   shop                 Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
   widgetEnabled        Boolean      @default(true)
-  accentColor          String       @default("#111111")
-  primaryButtonColor   String       @default("#111111")
+  accentColor          String       @default("#0f766e")
+  primaryButtonColor   String       @default("#0f766e")
   starColor            String       @default("#22c55e")
   borderRadius         Int          @default(8)
   cardShadow           Boolean      @default(true)
