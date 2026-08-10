@@ -1,5 +1,6 @@
 import { Form } from "react-router";
 
+import { OnboardingSampleReview } from "./onboarding-sample-review";
 import { OnboardingShell } from "./onboarding-shell";
 
 type WelcomeScreenProps = {
@@ -8,10 +9,9 @@ type WelcomeScreenProps = {
 
 export function WelcomeScreen({ shopDomain }: WelcomeScreenProps) {
   return (
-    <OnboardingShell>
+    <OnboardingShell title={null}>
       <s-stack direction="block" gap="large" alignItems="center">
         <s-stack direction="block" gap="small" alignItems="center">
-          <s-text type="strong">ReviewTrix</s-text>
           <h1
             style={{
               margin: 0,
@@ -38,23 +38,7 @@ export function WelcomeScreen({ shopDomain }: WelcomeScreenProps) {
 
         <s-text type="strong">✓ Setup takes about 2 minutes</s-text>
 
-        <div
-          aria-hidden
-          style={{
-            width: "min(100%, 280px)",
-            borderRadius: 16,
-            border: "1px solid rgba(0, 0, 0, 0.08)",
-            background: "#fff",
-            boxShadow: "0 12px 40px rgba(15, 23, 42, 0.08)",
-            padding: "1.25rem",
-          }}
-        >
-          <s-stack direction="block" gap="small-200">
-            <s-text color="subdued">Sample review</s-text>
-            <s-text type="strong">★★★★★ “Exactly what I needed.”</s-text>
-            <s-text color="subdued">Verified buyer</s-text>
-          </s-stack>
-        </div>
+        <OnboardingSampleReview />
 
         <s-stack direction="inline" gap="base" alignItems="center">
           <Form method="post">

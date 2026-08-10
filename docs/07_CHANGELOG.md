@@ -5,6 +5,8 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Onboarding: green ReviewTrix wordmark on every screen via `OnboardingShell`;
+  welcome sample review replaced with a storefront-style preview card.
 - Dashboard welcome greeting: “Welcome to ReviewTrix” for merchants who
   completed onboarding in the last 7 days; “Welcome back” otherwise.
 - In-app Support page at `/app/support` (footer, Help, and Settings links);

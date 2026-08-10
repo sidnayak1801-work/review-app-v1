@@ -23,7 +23,7 @@ export function CelebrationScreen({
   }, []);
 
   return (
-    <OnboardingShell>
+    <OnboardingShell title={null}>
       <s-stack direction="block" gap="large" alignItems="center">
         {showConfetti ? (
           <div aria-hidden style={{ fontSize: 40, lineHeight: 1 }}>
