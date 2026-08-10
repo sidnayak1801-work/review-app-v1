@@ -36,11 +36,18 @@ Explanation Card
 
 Before opening Shopify Theme Editor:
 
-ReviewTrix will open Shopify's Theme Editor.
+ReviewTrix will open Shopify's Theme Editor for the theme chosen on the store
+health step (defaults to the live / MAIN theme).
 
 Simply enable the ReviewTrix App Embed or App Block and click Save.
 
-We'll detect the change automatically.
+We'll detect the change automatically on that theme's `settings_data.json`
+(falls back to MAIN when no selection cookie is present).
+
+Note: the app only has `read_themes`. Choosing a theme configures ReviewTrix
+against that theme; it does not publish or switch the storefront theme. Widgets
+appear on the live theme — publish an unpublished theme in Shopify Themes after
+enabling the embed if needed.
 
 ---
 
@@ -52,7 +59,8 @@ Open Theme Editor
 
 ↓
 
-Shopify Theme Editor opens
+Shopify Theme Editor opens for the selected theme id
+(`/admin/themes/{id}/editor`, not always `themes/current`)
 
 ↓
 

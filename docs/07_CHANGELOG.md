@@ -5,6 +5,11 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Onboarding: transparent `reviewtrix-wordmark.png` on every screen (no white/black
+  plate behind the logo).
+- Store health: merchants pick which installed theme to configure (Live badge on
+  MAIN); selection stored in `rx_onboarding_theme` and used for Theme Editor
+  deep-links + embed detection (`read_themes` only — no publish/switch).
 - Onboarding: green ReviewTrix wordmark on every screen via `OnboardingShell`;
   welcome sample review replaced with a storefront-style preview card.
 - Dashboard welcome greeting: “Welcome to ReviewTrix” for merchants who

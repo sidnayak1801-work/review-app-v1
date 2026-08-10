@@ -37,7 +37,7 @@ export function WelcomeScreen({ shopDomain }: WelcomeScreenProps) {
         </s-stack>
 
         <s-text type="strong">✓ Setup takes about 2 minutes</s-text>
-
+        <div><h2>Live preview</h2></div>
         <OnboardingSampleReview />
 
         <s-stack direction="inline" gap="base" alignItems="center">

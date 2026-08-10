@@ -6,6 +6,7 @@ import { OnboardingShell } from "./onboarding-shell";
 
 type ThemeEnableScreenProps = {
   themeEditorUrl: string;
+  selectedThemeName?: string | null;
   status: OnboardingPublicStatus;
   search: string;
   message?: string;
@@ -19,6 +20,7 @@ type PollResult = {
 
 export function ThemeEnableScreen({
   themeEditorUrl,
+  selectedThemeName,
   status,
   search,
   message,
@@ -65,6 +67,7 @@ export function ThemeEnableScreen({
           <s-text type="strong">What to do</s-text>
           <s-text color="subdued">
             1. Click Open Theme Editor
+            {selectedThemeName ? ` for ${selectedThemeName}` : ""}
             <br />
             2. Enable the ReviewTrix app embed (and optional product blocks)
             <br />

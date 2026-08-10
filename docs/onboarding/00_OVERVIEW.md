@@ -61,6 +61,12 @@ Dashboard
 
 ```
 
+On **Store Health Check**, merchants confirm store/plan readiness and choose
+which **installed** theme ReviewTrix should configure (Live badge on MAIN).
+Selection is kept for the rest of onboarding via the `rx_onboarding_theme`
+httpOnly cookie and drives Theme Editor deep-links. The app does not publish or
+switch themes (`read_themes` only).
+
 Unlike traditional onboarding, ReviewTrix should not force merchants through numbered steps.
 
 Instead, merchants should complete a dynamic launch checklist that automatically updates as ReviewTrix detects completed actions.

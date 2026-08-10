@@ -96,6 +96,12 @@ Maximum
 
 Stop polling after success.
 
+Detection reads `config/settings_data.json` on the theme selected during store
+health (`rx_onboarding_theme` cookie). If unset, falls back to the MAIN theme.
+
+Theme Editor URLs use `/admin/themes/{numericId}/editor` when a theme id is
+known; otherwise `themes/current`.
+
 ---
 
 Loading States

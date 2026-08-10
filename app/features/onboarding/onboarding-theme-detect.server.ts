@@ -1,14 +1,34 @@
 /**
  * Best-effort Theme App Extension / app-block detection via Admin GraphQL.
  * Requires `read_themes`. Failures return false without throwing.
+ * When `themeId` is set, inspect that theme; otherwise fall back to MAIN.
  */
-export async function detectThemeExtensionEnabled(admin: {
-  graphql: (
-    query: string,
-    options?: { variables?: Record<string, unknown> },
-  ) => Promise<Response>;
-}): Promise<boolean> {
-  const query = `#graphql
+export async function detectThemeExtensionEnabled(
+  admin: {
+    graphql: (
+      query: string,
+      options?: { variables?: Record<string, unknown> },
+    ) => Promise<Response>;
+  },
+  themeId?: string | null,
+): Promise<boolean> {
+  const query = themeId
+    ? `#graphql
+    query OnboardingAppEmbedByTheme($id: ID!) {
+      theme(id: $id) {
+        files(filenames: ["config/settings_data.json"], first: 1) {
+          nodes {
+            body {
+              ... on OnlineStoreThemeFileBodyText {
+                content
+              }
+            }
+          }
+        }
+      }
+    }
+  `
+    : `#graphql
     query OnboardingAppEmbed {
       themes(first: 1, roles: [MAIN]) {
         nodes {
@@ -27,9 +47,17 @@ export async function detectThemeExtensionEnabled(admin: {
   `;
 
   try {
-    const response = await admin.graphql(query);
+    const response = await admin.graphql(
+      query,
+      themeId ? { variables: { id: themeId } } : undefined,
+    );
     const payload = (await response.json()) as {
       data?: {
+        theme?: {
+          files?: {
+            nodes?: Array<{ body?: { content?: string } }>;
+          };
+        };
         themes?: {
           nodes?: Array<{
             files?: {
@@ -46,7 +74,10 @@ export async function detectThemeExtensionEnabled(admin: {
     }
 
     const content =
-      payload.data?.themes?.nodes?.[0]?.files?.nodes?.[0]?.body?.content ?? "";
+      (themeId
+        ? payload.data?.theme?.files?.nodes?.[0]?.body?.content
+        : payload.data?.themes?.nodes?.[0]?.files?.nodes?.[0]?.body?.content) ??
+      "";
     const lower = content.toLowerCase();
 
     // App embeds appear under blocks with the extension handle / type.
@@ -54,7 +85,7 @@ export async function detectThemeExtensionEnabled(admin: {
       lower.includes("review-widget") ||
       lower.includes("review_widget") ||
       lower.includes("app-embed") ||
-      (lower.includes("\"disabled\":false") && lower.includes("review"))
+      (lower.includes('"disabled":false') && lower.includes("review"))
     );
   } catch {
     return false;
@@ -64,13 +95,32 @@ export async function detectThemeExtensionEnabled(admin: {
 /**
  * Detect shipped ReviewTrix app blocks in product (or index) JSON templates.
  */
-export async function detectWidgetBlocksPresent(admin: {
-  graphql: (
-    query: string,
-    options?: { variables?: Record<string, unknown> },
-  ) => Promise<Response>;
-}): Promise<boolean> {
-  const query = `#graphql
+export async function detectWidgetBlocksPresent(
+  admin: {
+    graphql: (
+      query: string,
+      options?: { variables?: Record<string, unknown> },
+    ) => Promise<Response>;
+  },
+  themeId?: string | null,
+): Promise<boolean> {
+  const query = themeId
+    ? `#graphql
+    query OnboardingThemeFilesById($id: ID!) {
+      theme(id: $id) {
+        files(filenames: ["templates/product.json", "templates/index.json"], first: 5) {
+          nodes {
+            body {
+              ... on OnlineStoreThemeFileBodyText {
+                content
+              }
+            }
+          }
+        }
+      }
+    }
+  `
+    : `#graphql
     query OnboardingMainThemeFiles {
       themes(first: 1, roles: [MAIN]) {
         nodes {
@@ -89,9 +139,17 @@ export async function detectWidgetBlocksPresent(admin: {
   `;
 
   try {
-    const response = await admin.graphql(query);
+    const response = await admin.graphql(
+      query,
+      themeId ? { variables: { id: themeId } } : undefined,
+    );
     const payload = (await response.json()) as {
       data?: {
+        theme?: {
+          files?: {
+            nodes?: Array<{ body?: { content?: string } }>;
+          };
+        };
         themes?: {
           nodes?: Array<{
             files?: {
@@ -107,7 +165,9 @@ export async function detectWidgetBlocksPresent(admin: {
       return false;
     }
 
-    const files = payload.data?.themes?.nodes?.[0]?.files?.nodes ?? [];
+    const files = themeId
+      ? (payload.data?.theme?.files?.nodes ?? [])
+      : (payload.data?.themes?.nodes?.[0]?.files?.nodes ?? []);
     const blob = files
       .map((file) => file.body?.content ?? "")
       .join("\n")

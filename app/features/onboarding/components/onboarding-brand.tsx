@@ -10,7 +10,7 @@ export function OnboardingBrand() {
       }}
     >
       <img
-        src="/reviewtrix-logo.png"
+        src="/reviewtrix-wordmark.png"
         alt="ReviewTrix"
         style={{
           display: "block",

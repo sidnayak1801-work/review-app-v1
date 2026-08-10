@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import { data } from "react-router";
 
+import { readOnboardingThemeCookie } from "../features/onboarding/onboarding-theme-cookie.server";
 import { detectThemeExtensionEnabled } from "../features/onboarding/onboarding-theme-detect.server";
 import { onboardingService } from "../features/onboarding/onboarding.service.server";
 import { requireShopRecord } from "../lib/shop-context.server";
@@ -12,7 +13,11 @@ export async function action({ request }: ActionFunctionArgs) {
   const shop = await requireShopRecord(session.shop);
 
   try {
-    const detected = await detectThemeExtensionEnabled(admin);
+    const selectedTheme = await readOnboardingThemeCookie(request);
+    const detected = await detectThemeExtensionEnabled(
+      admin,
+      selectedTheme?.id,
+    );
     const status = detected
       ? await onboardingService.markThemeEnabled(shop.id)
       : await onboardingService.getStatus(shop.id);

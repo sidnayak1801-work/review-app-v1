@@ -21,6 +21,7 @@ type OnboardingPageProps = {
   shopDomain: string;
   health: StoreHealthSnapshot;
   themeEditorUrl: string;
+  selectedThemeName: string | null;
   storeUrl: string;
   search: string;
   emailSettings: {
@@ -39,6 +40,7 @@ export function OnboardingPage({
   shopDomain,
   health,
   themeEditorUrl,
+  selectedThemeName,
   storeUrl,
   search,
   emailSettings,
@@ -60,6 +62,7 @@ export function OnboardingPage({
       return (
         <ThemeEnableScreen
           themeEditorUrl={themeEditorUrl}
+          selectedThemeName={selectedThemeName}
           status={liveStatus}
           search={search}
           message={message}

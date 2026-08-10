@@ -16,6 +16,11 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useEffect } from "react";
 
 import { OnboardingPage } from "../features/onboarding/components/onboarding-page";
+import type { OnboardingThemeOption } from "../features/onboarding/components/store-health-check";
+import {
+  readOnboardingThemeCookie,
+  serializeOnboardingThemeCookie,
+} from "../features/onboarding/onboarding-theme-cookie.server";
 import { detectThemeExtensionEnabled } from "../features/onboarding/onboarding-theme-detect.server";
 import {
   storefrontUrl,
@@ -56,23 +61,44 @@ function screenHref(screen: OnboardingScreen, preservedQuery: string): string {
   return `/app/onboarding?${params.toString()}`;
 }
 
-async function detectThemeName(
+async function listInstalledThemes(
   admin: { graphql: (query: string) => Promise<Response> },
-): Promise<string | null> {
+): Promise<OnboardingThemeOption[]> {
   try {
     const response = await admin.graphql(`#graphql
-      query OnboardingMainTheme {
-        themes(first: 1, roles: [MAIN]) {
-          nodes { name }
+      query OnboardingInstalledThemes {
+        themes(first: 25) {
+          nodes {
+            id
+            name
+            role
+          }
         }
       }
     `);
     const payload = (await response.json()) as {
-      data?: { themes?: { nodes?: Array<{ name?: string }> } };
+      data?: {
+        themes?: {
+          nodes?: Array<{ id?: string; name?: string; role?: string }>;
+        };
+      };
     };
-    return payload.data?.themes?.nodes?.[0]?.name ?? null;
+    return (payload.data?.themes?.nodes ?? [])
+      .filter(
+        (node): node is { id: string; name: string; role: string } =>
+          typeof node.id === "string" &&
+          typeof node.name === "string" &&
+          typeof node.role === "string",
+      )
+      .map((node) => ({
+        id: node.id,
+        name: node.name,
+        role: node.role,
+        isLive: node.role === "MAIN",
+      }))
+      .sort((a, b) => Number(b.isLive) - Number(a.isLive));
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -93,8 +119,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const preservedQuery = preserved.toString();
     const linkSuffix = preservedQuery ? `&${preservedQuery}` : "";
 
-    const themeName =
-      screen === "health" ? await detectThemeName(admin) : null;
+    const selectedTheme = await readOnboardingThemeCookie(request);
+    const themes =
+      screen === "health" ? await listInstalledThemes(admin) : [];
+    const selectedThemeId =
+      selectedTheme?.id ??
+      themes.find((theme) => theme.isLive)?.id ??
+      themes[0]?.id ??
+      null;
 
     const emailSettings =
       screen === "automation"
@@ -113,11 +145,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       health: {
         shopDomain: session.shop,
         planLabel: shop.plan === "PRO" ? "Pro" : "Free",
-        themeName,
+        themes,
+        selectedThemeId,
         scopesOk: true,
       },
       themeEditorUrl:
-        screen === "theme" ? themeAppEmbedEditorUrl(session.shop) : "",
+        screen === "theme"
+          ? themeAppEmbedEditorUrl(session.shop, selectedTheme?.id)
+          : "",
+      selectedThemeName:
+        screen === "theme" ? (selectedTheme?.name ?? null) : null,
       storeUrl:
         screen === "celebration" ? storefrontUrl(session.shop) : "",
       search: linkSuffix,
@@ -165,14 +202,32 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         throw redirect(screenHref("health", preservedQuery));
       }
       case "continue-checklist": {
-        throw redirect(screenHref("checklist", preservedQuery));
+        const selectedThemeId = String(form.get("selectedThemeId") ?? "");
+        const headers = new Headers();
+        if (selectedThemeId.startsWith("gid://shopify/OnlineStoreTheme/")) {
+          const selectedThemeName = String(
+            form.get(`themeName:${selectedThemeId}`) ?? "Theme",
+          );
+          headers.set(
+            "Set-Cookie",
+            await serializeOnboardingThemeCookie({
+              id: selectedThemeId,
+              name: selectedThemeName,
+            }),
+          );
+        }
+        throw redirect(screenHref("checklist", preservedQuery), { headers });
       }
       case "skip": {
         await onboardingService.skipOnboarding(shop.id);
         throw redirect("/app");
       }
       case "poll-theme": {
-        const detected = await detectThemeExtensionEnabled(admin);
+        const selectedTheme = await readOnboardingThemeCookie(request);
+        const detected = await detectThemeExtensionEnabled(
+          admin,
+          selectedTheme?.id,
+        );
         const status = detected
           ? await onboardingService.markThemeEnabled(shop.id)
           : await onboardingService.getStatus(shop.id);
