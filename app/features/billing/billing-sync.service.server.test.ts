@@ -4,13 +4,18 @@ import type { ShopRecord, ShopRepository } from "../../repositories/shop.reposit
 import { ShopifyBillingSyncService } from "./billing-sync.service.server";
 import { PRO_PLAN } from "./billing.constants";
 
+const installedAt = new Date("2026-07-01T00:00:00.000Z");
+
 const baseShop: ShopRecord = {
   id: "shop-1",
   shopDomain: "demo.myshopify.com",
   shopifyShopId: null,
   plan: "FREE",
   status: "INSTALLED",
-  installedAt: new Date("2026-07-01T00:00:00.000Z"),
+  contactEmail: null,
+  firstInstalledAt: installedAt,
+  latestInstalledAt: installedAt,
+  installedAt,
   uninstalledAt: null,
   billingStatus: "FREE",
   billingSyncedAt: new Date("2026-07-01T00:00:00.000Z"),

@@ -5,6 +5,7 @@ import {
   type ShopRepository,
 } from "../../repositories/shop.repository.server";
 import { logger } from "../../services/logger.server";
+import { lifecycleEmailService } from "../lifecycle-emails/lifecycle-email.service.server";
 import { onboardingService } from "../onboarding/onboarding.service.server";
 import {
   createShopSchema,
@@ -48,6 +49,7 @@ export class ShopService {
     });
 
     await onboardingService.ensureForShop(shop.id);
+    await lifecycleEmailService.scheduleForInstall(shop);
 
     return shop;
   }
@@ -66,6 +68,8 @@ export class ShopService {
       });
       return null;
     }
+
+    await lifecycleEmailService.cancelPendingForShop(shop.id);
 
     logger.info("Shop marked uninstalled", {
       shopId: shop.id,

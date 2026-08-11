@@ -20,13 +20,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const installedAt = new Date("2026-07-17T00:00:00.000Z");
+
 const shop: ShopRecord = {
   id: "shop-1",
   shopDomain: "example.myshopify.com",
   shopifyShopId: "gid://shopify/Shop/1",
   plan: "FREE",
   status: "INSTALLED",
-  installedAt: new Date("2026-07-17T00:00:00.000Z"),
+  contactEmail: null,
+  firstInstalledAt: installedAt,
+  latestInstalledAt: installedAt,
+  installedAt,
   uninstalledAt: null,
   billingStatus: null,
   billingSyncedAt: null,

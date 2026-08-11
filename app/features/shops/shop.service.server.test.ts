@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../onboarding/onboarding.service.server", () => ({
   onboardingService: {
@@ -16,15 +16,25 @@ vi.mock("../onboarding/onboarding.service.server", () => ({
   },
 }));
 
+vi.mock("../lifecycle-emails/lifecycle-email.service.server", () => ({
+  lifecycleEmailService: {
+    scheduleForInstall: vi.fn().mockResolvedValue(undefined),
+    cancelPendingForShop: vi.fn().mockResolvedValue(0),
+  },
+}));
+
 import type {
   ShopRecord,
   ShopRepository,
 } from "../../repositories/shop.repository.server";
+import { lifecycleEmailService } from "../lifecycle-emails/lifecycle-email.service.server";
 import { ShopService } from "./shop.service.server";
 
-afterEach(() => {
-  vi.restoreAllMocks();
+beforeEach(() => {
+  vi.clearAllMocks();
 });
+
+const installedAt = new Date("2026-07-17T00:00:00.000Z");
 
 const shopRecord: ShopRecord = {
   id: "shop-1",
@@ -32,7 +42,10 @@ const shopRecord: ShopRecord = {
   shopifyShopId: "gid://shopify/Shop/1",
   plan: "FREE",
   status: "INSTALLED",
-  installedAt: new Date("2026-07-17T00:00:00.000Z"),
+  contactEmail: "owner@example.com",
+  firstInstalledAt: installedAt,
+  latestInstalledAt: installedAt,
+  installedAt,
   uninstalledAt: null,
   billingStatus: null,
   billingSyncedAt: null,
@@ -98,7 +111,7 @@ describe("ShopService", () => {
     });
   });
 
-  it("installs a validated shop record", async () => {
+  it("installs a validated shop record and schedules lifecycle emails", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const repository = createRepository();
     const service = new ShopService(repository);
@@ -106,16 +119,21 @@ describe("ShopService", () => {
     const shop = await service.install({
       shopDomain: " Example.myshopify.com ",
       shopifyShopId: shopRecord.shopifyShopId,
+      contactEmail: "owner@example.com",
     });
 
     expect(shop).toBe(shopRecord);
     expect(repository.install).toHaveBeenCalledWith({
       shopDomain: "example.myshopify.com",
       shopifyShopId: shopRecord.shopifyShopId,
+      contactEmail: "owner@example.com",
     });
+    expect(lifecycleEmailService.scheduleForInstall).toHaveBeenCalledWith(
+      shopRecord,
+    );
   });
 
-  it("marks a shop uninstalled without requiring extra input", async () => {
+  it("marks a shop uninstalled and cancels pending lifecycle emails", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const repository = createRepository();
     const service = new ShopService(repository);
@@ -125,6 +143,9 @@ describe("ShopService", () => {
     expect(shop).toBe(uninstalledShopRecord);
     expect(repository.markUninstalled).toHaveBeenCalledWith(
       "example.myshopify.com",
+    );
+    expect(lifecycleEmailService.cancelPendingForShop).toHaveBeenCalledWith(
+      "shop-1",
     );
   });
 

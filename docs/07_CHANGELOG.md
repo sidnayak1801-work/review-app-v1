@@ -5,6 +5,13 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Merchant lifecycle emails: welcome (install), 24h/72h onboarding reminders,
+  and completion email. Extends `Shop` (`contactEmail`, `firstInstalledAt`,
+  `latestInstalledAt`) and `OnboardingStatus.startedAt`; adds `LifecycleEmail`
+  jobs with DB-backed worker (`npm run worker:lifecycle`) and authenticated
+  `POST /internal/process-lifecycle-emails`. Reuses Resend via `EmailProvider`
+  with idempotency keys. Uninstall cancels pending jobs; reinstall preserves
+  completed onboarding and does not restart the sequence.
 - Onboarding: transparent `reviewtrix-wordmark.png` on every screen (no white/black
   plate behind the logo).
 - Store health: merchants pick which installed theme to configure (Live badge on

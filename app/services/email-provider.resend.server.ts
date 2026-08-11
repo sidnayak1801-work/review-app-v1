@@ -24,12 +24,18 @@ export class ResendEmailProvider implements EmailProvider {
   ) {}
 
   async sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.apiKey}`,
+      "Content-Type": "application/json",
+    };
+
+    if (input.idempotencyKey) {
+      headers["Idempotency-Key"] = input.idempotencyKey;
+    }
+
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         from: this.fromAddress,
         to: [input.to],

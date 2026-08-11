@@ -8,11 +8,13 @@ export type ShopStatus = "INSTALLED" | "UNINSTALLED";
 export interface CreateShopRecordInput {
   shopDomain: string;
   shopifyShopId?: string;
+  contactEmail?: string | null;
 }
 
 export interface InstallShopRecordInput {
   shopDomain: string;
   shopifyShopId?: string;
+  contactEmail?: string | null;
 }
 
 export interface UpdateShopBillingStateInput {
@@ -27,6 +29,9 @@ export interface ShopRecord {
   shopifyShopId: string | null;
   plan: ShopPlan;
   status: ShopStatus;
+  contactEmail: string | null;
+  firstInstalledAt: Date;
+  latestInstalledAt: Date;
   installedAt: Date;
   uninstalledAt: Date | null;
   billingStatus: string | null;
@@ -52,6 +57,9 @@ const SHOP_SELECT = {
   shopifyShopId: true,
   plan: true,
   status: true,
+  contactEmail: true,
+  firstInstalledAt: true,
+  latestInstalledAt: true,
   installedAt: true,
   uninstalledAt: true,
   billingStatus: true,
@@ -67,6 +75,10 @@ type ShopModel = {
     data: {
       shopDomain: string;
       shopifyShopId?: string;
+      contactEmail?: string | null;
+      firstInstalledAt?: Date;
+      latestInstalledAt?: Date;
+      installedAt?: Date;
     };
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord>;
@@ -75,15 +87,20 @@ type ShopModel = {
     create: {
       shopDomain: string;
       shopifyShopId?: string;
+      contactEmail?: string | null;
       status: ShopStatus;
+      firstInstalledAt: Date;
+      latestInstalledAt: Date;
       installedAt: Date;
       uninstalledAt: null;
     };
     update: {
       status: ShopStatus;
+      latestInstalledAt: Date;
       installedAt: Date;
       uninstalledAt: null;
       shopifyShopId?: string;
+      contactEmail?: string | null;
     };
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord>;
@@ -95,6 +112,7 @@ type ShopModel = {
       plan?: ShopPlan;
       billingStatus?: string;
       billingSyncedAt?: Date;
+      contactEmail?: string | null;
     };
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord>;
@@ -126,33 +144,46 @@ export class PrismaShopRepository implements ShopRepository {
   }
 
   async create(input: CreateShopRecordInput): Promise<ShopRecord> {
+    const now = new Date();
+
     return shopModel(this.database).create({
       data: {
         shopDomain: input.shopDomain,
         shopifyShopId: input.shopifyShopId,
+        contactEmail: input.contactEmail ?? null,
+        firstInstalledAt: now,
+        latestInstalledAt: now,
+        installedAt: now,
       },
       select: SHOP_SELECT,
     });
   }
 
   async install(input: InstallShopRecordInput): Promise<ShopRecord> {
-    const installedAt = new Date();
+    const now = new Date();
 
     return shopModel(this.database).upsert({
       where: { shopDomain: input.shopDomain },
       create: {
         shopDomain: input.shopDomain,
         shopifyShopId: input.shopifyShopId,
+        contactEmail: input.contactEmail ?? null,
         status: "INSTALLED",
-        installedAt,
+        firstInstalledAt: now,
+        latestInstalledAt: now,
+        installedAt: now,
         uninstalledAt: null,
       },
       update: {
         status: "INSTALLED",
-        installedAt,
+        latestInstalledAt: now,
+        installedAt: now,
         uninstalledAt: null,
         ...(input.shopifyShopId
           ? { shopifyShopId: input.shopifyShopId }
+          : {}),
+        ...(input.contactEmail !== undefined
+          ? { contactEmail: input.contactEmail }
           : {}),
       },
       select: SHOP_SELECT,

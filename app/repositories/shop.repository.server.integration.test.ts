@@ -57,17 +57,25 @@ describeWithDatabase("PrismaShopRepository integration", () => {
       });
       expect(uninstalled?.uninstalledAt).toBeInstanceOf(Date);
 
+      const firstInstalledAt = created.firstInstalledAt;
+
       const reinstalled = await repository.install({
         shopDomain,
         shopifyShopId: `gid://shopify/Shop/${Date.now() + 1}`,
+        contactEmail: "owner@example.com",
       });
 
       expect(reinstalled).toMatchObject({
         shopDomain,
         status: "INSTALLED",
         uninstalledAt: null,
+        contactEmail: "owner@example.com",
       });
       expect(reinstalled.shopifyShopId).not.toBe(shopifyShopId);
+      expect(reinstalled.firstInstalledAt).toEqual(firstInstalledAt);
+      expect(reinstalled.latestInstalledAt.getTime()).toBeGreaterThanOrEqual(
+        firstInstalledAt.getTime(),
+      );
 
       const secondUninstall = await repository.markUninstalled(shopDomain);
       expect(secondUninstall?.status).toBe("UNINSTALLED");

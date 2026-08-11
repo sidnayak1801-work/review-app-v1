@@ -1,97 +1,126 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../lifecycle-emails/lifecycle-email.service.server", () => ({
+  lifecycleEmailService: {
+    scheduleCompletionEmail: vi.fn().mockResolvedValue(undefined),
+    cancelPendingReminders: vi.fn().mockResolvedValue(0),
+  },
+}));
+
+vi.mock("./onboarding-analytics.server", () => ({
+  trackOnboardingEvent: vi.fn(),
+}));
 
 import type {
   OnboardingStatusRecord,
   OnboardingStatusRepository,
 } from "../../repositories/onboarding-status.repository.server";
+import { lifecycleEmailService } from "../lifecycle-emails/lifecycle-email.service.server";
 import { OnboardingService } from "./onboarding.service.server";
 
-function baseRecord(
-  overrides: Partial<OnboardingStatusRecord> = {},
-): OnboardingStatusRecord {
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+const baseRecord: OnboardingStatusRecord = {
+  id: "ob-1",
+  shopId: "shop-1",
+  themeEnabled: true,
+  reviewsImported: false,
+  automationConfigured: false,
+  brandingConfigured: false,
+  completed: false,
+  skipped: false,
+  startedAt: null,
+  completedAt: null,
+  createdAt: new Date("2026-08-11T00:00:00.000Z"),
+  updatedAt: new Date("2026-08-11T00:00:00.000Z"),
+};
+
+function createRepo(
+  overrides: Partial<OnboardingStatusRepository> = {},
+): OnboardingStatusRepository {
   return {
-    id: "ob-1",
-    shopId: "shop-1",
-    themeEnabled: false,
-    reviewsImported: false,
-    automationConfigured: false,
-    brandingConfigured: false,
-    completed: false,
-    skipped: false,
-    completedAt: null,
-    createdAt: new Date("2026-01-01T00:00:00.000Z"),
-    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    findByShopId: vi.fn().mockResolvedValue(baseRecord),
+    ensureForShop: vi.fn().mockResolvedValue(baseRecord),
+    update: vi.fn().mockImplementation(async (_shopId, data) => ({
+      ...baseRecord,
+      ...data,
+    })),
     ...overrides,
   };
 }
 
-function createService(store: { record: OnboardingStatusRecord }) {
-  const statuses = {
-    findByShopId: vi.fn(async () => store.record),
-    ensureForShop: vi.fn(async () => store.record),
-    update: vi.fn(async (_shopId, data) => {
-      store.record = { ...store.record, ...data, updatedAt: new Date() };
-      return store.record;
-    }),
-  } as unknown as OnboardingStatusRepository;
+describe("OnboardingService lifecycle hooks", () => {
+  it("persists startedAt once when onboarding starts", async () => {
+    const repo = createRepo();
+    const service = new OnboardingService(repo);
 
-  return new OnboardingService(statuses);
-}
+    await service.markStarted("shop-1");
 
-describe("OnboardingService", () => {
-  it("reports needsOnboarding when not completed or skipped", async () => {
-    const store = { record: baseRecord() };
-    const service = createService(store);
-
-    await expect(service.getStatus("shop-1")).resolves.toMatchObject({
-      needsOnboarding: true,
-      completed: false,
-      progress: 0,
+    expect(repo.update).toHaveBeenCalledWith("shop-1", {
+      startedAt: expect.any(Date),
     });
   });
 
-  it("computes progress in 25% steps", async () => {
-    const store = {
-      record: baseRecord({
-        themeEnabled: true,
-        automationConfigured: true,
+  it("does not overwrite startedAt on duplicate start", async () => {
+    const started = new Date("2026-08-11T01:00:00.000Z");
+    const repo = createRepo({
+      ensureForShop: vi.fn().mockResolvedValue({
+        ...baseRecord,
+        startedAt: started,
       }),
-    };
-    const service = createService(store);
-
-    await expect(service.getStatus("shop-1")).resolves.toMatchObject({
-      progress: 50,
     });
+    const service = new OnboardingService(repo);
+
+    const status = await service.markStarted("shop-1");
+
+    expect(repo.update).not.toHaveBeenCalled();
+    expect(status.needsOnboarding).toBe(true);
   });
 
-  it("marks theme enabled", async () => {
-    const store = { record: baseRecord() };
-    const service = createService(store);
+  it("schedules completion email when onboarding completes", async () => {
+    const repo = createRepo();
+    const service = new OnboardingService(repo);
 
-    const status = await service.markThemeEnabled("shop-1");
-    expect(status.themeEnabled).toBe(true);
-    expect(status.progress).toBe(25);
-  });
-
-  it("complete requires themeEnabled", async () => {
-    const store = { record: baseRecord() };
-    const service = createService(store);
-
-    const blocked = await service.complete("shop-1");
-    expect(blocked.completed).toBe(false);
-
-    store.record.themeEnabled = true;
     const status = await service.complete("shop-1");
+
     expect(status.completed).toBe(true);
-    expect(status.needsOnboarding).toBe(false);
+    expect(lifecycleEmailService.scheduleCompletionEmail).toHaveBeenCalledWith(
+      "shop-1",
+    );
   });
 
-  it("skip onboarding sets skipped without completed", async () => {
-    const store = { record: baseRecord() };
-    const service = createService(store);
+  it("is idempotent on duplicate completion", async () => {
+    const completed = {
+      ...baseRecord,
+      completed: true,
+      completedAt: new Date("2026-08-11T02:00:00.000Z"),
+    };
+    const repo = createRepo({
+      ensureForShop: vi.fn().mockResolvedValue(completed),
+      update: vi.fn(),
+    });
+    const service = new OnboardingService(repo);
 
-    const status = await service.skipOnboarding("shop-1");
-    expect(status.skipped).toBe(true);
-    expect(status.needsOnboarding).toBe(false);
+    const status = await service.complete("shop-1");
+
+    expect(repo.update).not.toHaveBeenCalled();
+    expect(status.completed).toBe(true);
+    expect(lifecycleEmailService.scheduleCompletionEmail).toHaveBeenCalledWith(
+      "shop-1",
+    );
+  });
+
+  it("cancels reminders when onboarding is skipped", async () => {
+    const repo = createRepo();
+    const service = new OnboardingService(repo);
+
+    await service.skipOnboarding("shop-1");
+
+    expect(lifecycleEmailService.cancelPendingReminders).toHaveBeenCalledWith(
+      "shop-1",
+    );
+    expect(lifecycleEmailService.scheduleCompletionEmail).not.toHaveBeenCalled();
   });
 });

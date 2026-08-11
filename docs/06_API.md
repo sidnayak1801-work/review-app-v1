@@ -333,6 +333,17 @@ Thin helpers (same auth):
 `POST /api/onboarding/theme`, `/import`, `/automation`, `/branding`,
 `/complete`.
 
+`start` persists `startedAt` once. `complete` cancels pending onboarding
+reminder lifecycle emails and queues a one-time completion email. `skip`
+cancels pending reminders only (no completion email).
+
+## Internal jobs
+
+`POST /internal/process-lifecycle-emails` — processes due merchant lifecycle
+email jobs. Requires `Authorization: Bearer $INTERNAL_JOB_SECRET`. Not for
+browser or Shopify Admin use. Prefer Coolify cron against this route, or run
+`npm run worker:lifecycle` / `npm run docker-worker` as a second service.
+
 ## Deferred APIs
 
 Do not implement these until their roadmap phase is active:

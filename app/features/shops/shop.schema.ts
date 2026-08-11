@@ -17,9 +17,18 @@ export const shopifyShopIdSchema = z
     "Must be a valid Shopify Shop GID",
   );
 
+const contactEmailSchema = z
+  .string()
+  .trim()
+  .email()
+  .max(255)
+  .nullable()
+  .optional();
+
 export const createShopSchema = z.object({
   shopDomain: shopDomainSchema,
   shopifyShopId: shopifyShopIdSchema.optional(),
+  contactEmail: contactEmailSchema,
 });
 
 export const installShopSchema = createShopSchema;

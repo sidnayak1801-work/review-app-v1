@@ -46,7 +46,30 @@ Neon Postgres  <-->  Coolify (Node / React Router)
 | `BILLING_TEST_MODE` | **`false` for App Store / public listing** (use `true` only on staging) |
 | `MEDIA_S3_*` / `MEDIA_PUBLIC_BASE_URL` | Production media bucket. **`MEDIA_PUBLIC_BASE_URL` is required** for storefront photos (public S3/CloudFront base, no trailing slash, e.g. `https://reviewx.s3.ap-south-1.amazonaws.com`). Without it, the API may emit `/api/media/...` URLs that 404 on the shop and app. |
 | `INTEGRATIONS_ENCRYPTION_KEY` | 32-byte AES key (hex/base64) |
-| `RESEND_API_KEY` / `EMAIL_FROM` | Optional; without these, review emails log to console |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Optional; without these, review/lifecycle emails log to console |
+| `INTERNAL_JOB_SECRET` | Bearer secret for `POST /internal/process-lifecycle-emails` |
+
+### Lifecycle email worker (recommended)
+
+Merchant welcome / onboarding reminder emails are database-backed. They need a
+processor in addition to the web service:
+
+**Option A — second Coolify service (same image)**
+
+| Field | Value |
+|-------|--------|
+| Start Command | `npm run docker-worker` |
+| Env | Same `DATABASE_URL`, `DIRECT_URL`, `RESEND_*`, `SHOPIFY_*` as web |
+
+**Option B — Coolify cron / scheduled HTTP job**
+
+```text
+POST https://reviewtrix.algorithmtrix.com/internal/process-lifecycle-emails
+Authorization: Bearer $INTERNAL_JOB_SECRET
+```
+
+Run every 1 minute. Without A or B, welcome/reminder/completion jobs stay
+`SCHEDULED` and are never sent.
 
 `isBillingTestMode()` (`app/lib/billing-env.server.ts`): explicit
 `BILLING_TEST_MODE` wins; if unset, defaults to test charges when

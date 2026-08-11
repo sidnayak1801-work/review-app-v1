@@ -24,6 +24,9 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/public ./public
+# App source for the lifecycle email worker (tsx).
+COPY --from=build /app/app ./app
+COPY --from=build /app/tsconfig.json ./tsconfig.json
 
 EXPOSE 3000
 

@@ -2,6 +2,8 @@ export interface SendEmailInput {
   to: string;
   subject: string;
   html: string;
+  /** Deterministic key for provider-level idempotency when supported. */
+  idempotencyKey?: string;
 }
 
 export interface SendEmailResult {

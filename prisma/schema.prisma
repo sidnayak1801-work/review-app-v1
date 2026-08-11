@@ -99,32 +99,51 @@ enum IntegrationExternalType {
   EVENT
 }
 
+enum LifecycleEmailType {
+  WELCOME
+  ONBOARDING_REMINDER_24H
+  ONBOARDING_REMINDER_3D
+  ONBOARDING_COMPLETED
+}
+
+enum LifecycleEmailStatus {
+  SCHEDULED
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
 model Shop {
-  id             String          @id @default(cuid())
-  shopDomain     String          @unique
-  shopifyShopId  String?         @unique
-  plan           ShopPlan        @default(FREE)
-  status         ShopStatus      @default(INSTALLED)
-  installedAt    DateTime        @default(now())
-  uninstalledAt  DateTime?
-  billingStatus  String?
-  billingSyncedAt DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  reviews        Review[]
-  reviewImports  ReviewImport[]
-  reviewRequests ReviewRequest[]
-  reviewMedia    ReviewMedia[]
+  id                String          @id @default(cuid())
+  shopDomain        String          @unique
+  shopifyShopId     String?         @unique
+  plan              ShopPlan        @default(FREE)
+  status            ShopStatus      @default(INSTALLED)
+  contactEmail      String?
+  firstInstalledAt  DateTime        @default(now())
+  latestInstalledAt DateTime        @default(now())
+  installedAt       DateTime        @default(now())
+  uninstalledAt     DateTime?
+  billingStatus     String?
+  billingSyncedAt   DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  reviews           Review[]
+  reviewImports     ReviewImport[]
+  reviewRequests    ReviewRequest[]
+  reviewMedia       ReviewMedia[]
   productRatingSummaries ProductRatingSummary[]
-  questions      Question[]
+  questions         Question[]
   incentiveCampaigns IncentiveCampaign[]
   integrationConnections IntegrationConnection[]
   integrationExternalRefs IntegrationExternalRef[]
-  apiTokens      ApiToken[]
+  apiTokens         ApiToken[]
   uninstallFeedbacks UninstallFeedback[]
-  widgetSettings WidgetSettings?
+  lifecycleEmails   LifecycleEmail[]
+  widgetSettings    WidgetSettings?
   reviewRequestSettings ReviewRequestSettings?
-  onboardingStatus OnboardingStatus?
+  onboardingStatus  OnboardingStatus?
 
   @@index([status])
 }
@@ -139,9 +158,30 @@ model OnboardingStatus {
   brandingConfigured    Boolean   @default(false)
   completed             Boolean   @default(false)
   skipped               Boolean   @default(false)
+  startedAt             DateTime?
   completedAt           DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+}
+
+model LifecycleEmail {
+  id                String               @id @default(cuid())
+  shopId            String
+  shop              Shop                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  type              LifecycleEmailType
+  status            LifecycleEmailStatus @default(SCHEDULED)
+  scheduledFor      DateTime
+  sentAt            DateTime?
+  failedAt          DateTime?
+  lastErrorCode     String?
+  providerMessageId String?
+  attemptCount      Int                  @default(0)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@unique([shopId, type])
+  @@index([status, scheduledFor])
+  @@index([shopId, status])
 }
 
 model UninstallFeedback {

@@ -15,36 +15,48 @@ import { logger } from "./services/logger.server";
 
 const environment = getShopifyEnv();
 
-const SHOP_IDENTITY_QUERY = `#graphql
-  query ShopIdentity {
+const SHOP_INSTALL_QUERY = `#graphql
+  query ShopInstallIdentity {
     shop {
       id
+      email
+      contactEmail
     }
   }
 `;
 
-interface ShopIdentityResponse {
+interface ShopInstallResponse {
   data?: {
     shop?: {
       id?: string;
+      email?: string | null;
+      contactEmail?: string | null;
     };
   };
 }
 
-async function resolveShopifyShopId(
+async function resolveShopInstallIdentity(
   admin: { graphql: (query: string) => Promise<Response> },
-): Promise<string | undefined> {
+): Promise<{ shopifyShopId?: string; contactEmail?: string }> {
   try {
-    const response = await admin.graphql(SHOP_IDENTITY_QUERY);
-    const payload = (await response.json()) as ShopIdentityResponse;
-    const shopId = payload.data?.shop?.id;
+    const response = await admin.graphql(SHOP_INSTALL_QUERY);
+    const payload = (await response.json()) as ShopInstallResponse;
+    const shop = payload.data?.shop;
+    const shopifyShopId =
+      typeof shop?.id === "string" ? shop.id : undefined;
+    const contactEmail = (shop?.email || shop?.contactEmail || "")
+      .trim()
+      .toLowerCase();
 
-    return typeof shopId === "string" ? shopId : undefined;
+    return {
+      ...(shopifyShopId ? { shopifyShopId } : {}),
+      ...(contactEmail ? { contactEmail } : {}),
+    };
   } catch (error) {
-    logger.warn("Unable to resolve Shopify shop GID during install", {
+    logger.warn("Unable to resolve Shopify shop identity during install", {
       errorName: error instanceof Error ? error.name : "UnknownError",
     });
-    return undefined;
+    return {};
   }
 }
 
@@ -72,11 +84,16 @@ const shopify = shopifyApp({
   },
   hooks: {
     afterAuth: async ({ session, admin }) => {
-      const shopifyShopId = await resolveShopifyShopId(admin);
+      const identity = await resolveShopInstallIdentity(admin);
 
       await shopService.install({
         shopDomain: session.shop,
-        ...(shopifyShopId ? { shopifyShopId } : {}),
+        ...(identity.shopifyShopId
+          ? { shopifyShopId: identity.shopifyShopId }
+          : {}),
+        ...(identity.contactEmail
+          ? { contactEmail: identity.contactEmail }
+          : {}),
       });
     },
   },

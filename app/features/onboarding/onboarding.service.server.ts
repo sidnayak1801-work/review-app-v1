@@ -3,6 +3,7 @@ import {
   type OnboardingStatusRecord,
   type OnboardingStatusRepository,
 } from "../../repositories/onboarding-status.repository.server";
+import { lifecycleEmailService } from "../lifecycle-emails/lifecycle-email.service.server";
 import { trackOnboardingEvent } from "./onboarding-analytics.server";
 import type { OnboardingPublicStatus } from "./onboarding.types";
 
@@ -45,7 +46,10 @@ export class OnboardingService {
   }
 
   async markStarted(shopId: string): Promise<OnboardingPublicStatus> {
-    const record = await this.statuses.ensureForShop(shopId);
+    const current = await this.statuses.ensureForShop(shopId);
+    const record = current.startedAt
+      ? current
+      : await this.statuses.update(shopId, { startedAt: new Date() });
     trackOnboardingEvent("Onboarding Started", { shopId });
     trackOnboardingEvent("Welcome Completed", { shopId });
     return toPublic(record);
@@ -104,6 +108,7 @@ export class OnboardingService {
       skipped: true,
       completedAt: new Date(),
     });
+    await lifecycleEmailService.cancelPendingReminders(shopId);
     trackOnboardingEvent("Skipped Onboarding", { shopId });
     return toPublic(record);
   }
@@ -113,13 +118,23 @@ export class OnboardingService {
     if (!current.themeEnabled) {
       return toPublic(current);
     }
-    const record = await this.statuses.update(shopId, {
-      completed: true,
-      skipped: false,
-      completedAt: new Date(),
-    });
-    trackOnboardingEvent("Checklist Completed", { shopId });
-    trackOnboardingEvent("Onboarding Finished", { shopId });
+
+    const alreadyCompleted = current.completed;
+    const record = alreadyCompleted
+      ? current
+      : await this.statuses.update(shopId, {
+          completed: true,
+          skipped: false,
+          completedAt: new Date(),
+        });
+
+    await lifecycleEmailService.scheduleCompletionEmail(shopId);
+
+    if (!alreadyCompleted) {
+      trackOnboardingEvent("Checklist Completed", { shopId });
+      trackOnboardingEvent("Onboarding Finished", { shopId });
+    }
+
     return toPublic(record);
   }
 }

@@ -44,7 +44,10 @@ Current fields:
 - `shopifyShopId` — unique when present
 - `plan`
 - `status`
-- `installedAt`
+- `contactEmail` — optional merchant contact for lifecycle emails
+- `firstInstalledAt` — original install time; never overwritten on reinstall
+- `latestInstalledAt` — updated on every install/reinstall
+- `installedAt` — kept in sync with `latestInstalledAt` for existing callers
 - `uninstalledAt`
 - `createdAt`
 - `updatedAt`
@@ -56,13 +59,30 @@ One row per shop tracking merchant launch-checklist progress
 
 - `themeEnabled`, `reviewsImported`, `automationConfigured`,
   `brandingConfigured`
-- `completed`, `skipped`, `completedAt`
+- `completed`, `skipped`, `startedAt`, `completedAt`
 - Created on install via `onboardingService.ensureForShop`
 - Progress for UI is derived as 25% per completed checklist flag
+- Lifecycle emails treat onboarding as incomplete when
+  `!completed && !skipped` (`needsOnboarding`)
 
 Phase 1 Shop lifecycle connects this model to installation, reinstallation, and
 uninstall workflows. Uninstall sets `status = UNINSTALLED` and `uninstalledAt`
 without deleting the row.
+
+### LifecycleEmail
+
+Database-backed merchant onboarding lifecycle email jobs
+(welcome, 24h/72h reminders, completion). See
+`docs/18_ReviewTrix_Lifecycle_Email_Implementation_Plan.md`.
+
+- `shopId` + `type` — unique (`WELCOME`, `ONBOARDING_REMINDER_24H`,
+  `ONBOARDING_REMINDER_3D`, `ONBOARDING_COMPLETED`)
+- `status` — `SCHEDULED`, `PROCESSING`, `SENT`, `FAILED`, `CANCELLED`
+- `scheduledFor`, `sentAt`, `failedAt`, `attemptCount`, `lastErrorCode`,
+  `providerMessageId`
+- Index `(status, scheduledFor)` for due-job polling
+- Worker claims atomically; eligibility always re-checked against Shop +
+  OnboardingStatus before send
 
 ## Phase 1 Tables
 

@@ -11,6 +11,7 @@ export interface OnboardingStatusRecord {
   brandingConfigured: boolean;
   completed: boolean;
   skipped: boolean;
+  startedAt: Date | null;
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +36,7 @@ const SELECT = {
   brandingConfigured: true,
   completed: true,
   skipped: true,
+  startedAt: true,
   completedAt: true,
   createdAt: true,
   updatedAt: true,
@@ -48,6 +50,7 @@ export interface OnboardingStatusRepository {
     data: OnboardingStepFlags & {
       completed?: boolean;
       skipped?: boolean;
+      startedAt?: Date | null;
       completedAt?: Date | null;
     },
   ): Promise<OnboardingStatusRecord>;
@@ -104,6 +107,7 @@ export class PrismaOnboardingStatusRepository
     data: OnboardingStepFlags & {
       completed?: boolean;
       skipped?: boolean;
+      startedAt?: Date | null;
       completedAt?: Date | null;
     },
   ): Promise<OnboardingStatusRecord> {

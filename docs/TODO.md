@@ -97,6 +97,9 @@ App Store submit (see `11_APP_STORE_AND_BFS.md`):
 
 - [ ] Partner: public distribution, PCD, listing assets, privacy URL, pricing
 - [ ] Coolify: `BILLING_TEST_MODE=false`
+- [ ] Coolify: apply lifecycle email migration; set `INTERNAL_JOB_SECRET`;
+      run `npm run docker-worker` **or** cron
+      `POST /internal/process-lifecycle-emails` every minute
 - [ ] Pre-submit QA checklist (theme, billing, health, mobile/a11y)
 - Code/docs for legal pages, support links, and ops runbook are done
 
