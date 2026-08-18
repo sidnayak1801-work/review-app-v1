@@ -830,22 +830,29 @@ export function ProductDetailPage({
                       <s-text type="strong">AI insights</s-text>
                       <s-badge tone="info">Coming soon</s-badge>
                     </s-stack>
-                    {insights.map((insight) => (
-                      <s-box
-                        key={insight.id}
-                        padding="small"
-                        border="base"
-                        borderRadius="base"
-                        background="base"
-                      >
-                        <s-stack direction="block" gap="small-200">
-                          <s-text type="strong">{insight.headline}</s-text>
-                          {insight.detail ? (
-                            <s-text color="subdued">{insight.detail}</s-text>
-                          ) : null}
-                        </s-stack>
-                      </s-box>
-                    ))}
+                    {insights.length === 0 ? (
+                      <s-text color="subdued">
+                        Review themes and sentiment will appear here when they
+                        are available. No sample insights are shown.
+                      </s-text>
+                    ) : (
+                      insights.map((insight) => (
+                        <s-box
+                          key={insight.id}
+                          padding="small"
+                          border="base"
+                          borderRadius="base"
+                          background="base"
+                        >
+                          <s-stack direction="block" gap="small-200">
+                            <s-text type="strong">{insight.headline}</s-text>
+                            {insight.detail ? (
+                              <s-text color="subdued">{insight.detail}</s-text>
+                            ) : null}
+                          </s-stack>
+                        </s-box>
+                      ))
+                    )}
                   </s-stack>
                 </s-box>
               </s-stack>

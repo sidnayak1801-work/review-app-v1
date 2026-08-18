@@ -49,7 +49,7 @@ function createReviewsMock(
 }
 
 describe("ProductInsightsService", () => {
-  it("builds product detail with trends and insight placeholders", async () => {
+  it("builds product detail with trends and no sample AI insights", async () => {
     const volumeTrend = [
       { monthKey: "2026-06", label: "Jun", count: 0 },
       { monthKey: "2026-07", label: "Jul", count: 2 },
@@ -130,8 +130,7 @@ describe("ProductInsightsService", () => {
     expect(detail.title).toBe("The Complete Snowboard");
     expect(detail.volumeTrend).toEqual(volumeTrend);
     expect(detail.ratingTrend).toEqual(ratingTrend);
-    expect(detail.insights.length).toBeGreaterThan(0);
-    expect(detail.insights[0]?.source).toBe("placeholder");
+    expect(detail.insights).toEqual([]);
     expect(detail.hasAnyReviews).toBe(true);
   });
 

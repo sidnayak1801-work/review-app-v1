@@ -254,8 +254,8 @@ Do not build a custom checkout, card form, or public billing API.
 Authenticated merchant routes (loaders/actions, not a public REST API):
 
 - `GET /app/products/:productId` — product health dashboard (Shopify metadata,
-  summary stats, rating mix, volume/rating trends, AI insight placeholders,
-  product-scoped reviews)
+  summary stats, rating mix, volume/rating trends, Coming soon AI insights
+  (no sample headlines), product-scoped reviews)
 - `POST /app/products/:productId` — Publish/Hide/Feature/Reply/Delete intents
   (same `reviewService` as `/app/reviews`)
 

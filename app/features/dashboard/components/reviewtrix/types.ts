@@ -43,10 +43,8 @@ export interface RatingDistributionData {
 export interface AnalyticsSnapshotData {
   averageRating: number | null;
   reviewsThisMonth: number;
-  /** Mock until email analytics exist */
-  emailOpenRate: number;
-  /** Mock until conversion tracking exists */
-  conversionRate: number;
+  emailOpenRate: number | null;
+  conversionRate: number | null;
   sparks: {
     rating: number[];
     volume: number[];

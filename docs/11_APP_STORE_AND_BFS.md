@@ -1,8 +1,8 @@
 # App Store and Built for Shopify gaps
 
 Recorded against Shopify’s published requirements (fetched 2026-07-21;
-submission readiness pass 2026-08-06). Do **not** claim Built for Shopify
-status until Shopify awards it.
+submission readiness pass 2026-08-06; AI self-review 2026-08-18). Do **not**
+claim Built for Shopify status until Shopify awards it.
 
 Canonical sources:
 
@@ -44,6 +44,22 @@ promo text in screenshots).
 
 Do not opt out of protected customer data — ReviewTrix needs PCD for order
 email on review requests (`docs/Shopify_pcd.md`).
+
+## AI self-review (2026-08-18)
+
+Ran Shopify’s App Store AI self-review against the live requirements list.
+Code-checkable items: **0 likely failing**. Remaining “needs review” items are
+Partner Dashboard, live TLS, and billing decline/reinstall QA — not repo
+blockers.
+
+This pass also closed reviewer nits in code:
+
+- App Bridge: `app-bridge.js` and `shopify-api-key` meta in `app/root.tsx` `<head>`
+- `/auth/login` errors never ask the merchant to enter a shop domain
+- Admin UI does not show fabricated AI insight headlines or estimated
+  open/conversion percents
+
+See Partner checklist and pre-submit QA below before submitting.
 
 ## App Store / security checklist (MVP status)
 
@@ -181,3 +197,5 @@ Manual pass before App Store submit:
 - Coolify deployment + `BILLING_TEST_MODE=false` guidance
 - Data-request operator runbook (`privacy_customers_data_request` logs)
 - This gap record updated for App Store submit vs BFS deferrals
+- AI self-review 2026-08-18: 0 likely failing; App Bridge head script,
+  shop-domain-free login errors, no fabricated admin insight/analytics copy

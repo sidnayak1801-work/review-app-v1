@@ -18,10 +18,7 @@ import {
   productDetailQuerySchema,
   productIdParamSchema,
 } from "./product-insights.schema";
-import {
-  PRODUCT_INSIGHT_PLACEHOLDERS,
-  type ProductInsight,
-} from "./product-insights.types";
+import type { ProductInsight } from "./product-insights.types";
 
 type AdminGraphqlClient = {
   graphql: (
@@ -106,7 +103,7 @@ export class ProductInsightsService {
       stats,
       volumeTrend,
       ratingTrend,
-      insights: PRODUCT_INSIGHT_PLACEHOLDERS,
+      insights: [],
       hasAnyReviews: stats.totalReviews > 0 || sample.items.length > 0,
     };
   }

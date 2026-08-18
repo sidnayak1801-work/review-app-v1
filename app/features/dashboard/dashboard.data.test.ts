@@ -53,6 +53,7 @@ describe("buildReviewTrixDashboardData", () => {
     expect(data.kpis.emailsSent).toBe(20);
     expect(data.kpis.trends.emails.direction).toBe("up");
     expect(data.chartSeriesByRange["30d"]).toHaveLength(30);
-    expect(data.analytics.emailOpenRate).toBe(48);
+    expect(data.analytics.emailOpenRate).toBeNull();
+    expect(data.analytics.conversionRate).toBeNull();
   });
 });

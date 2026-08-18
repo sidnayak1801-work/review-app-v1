@@ -53,15 +53,15 @@ export function AnalyticsSnapshot({ data }: AnalyticsSnapshotProps) {
     },
     {
       label: "Email Open Rate",
-      value: `${data.emailOpenRate}%`,
+      value: data.emailOpenRate == null ? "—" : `${data.emailOpenRate}%`,
       spark: data.sparks.openRate,
-      mock: true,
+      unavailable: data.emailOpenRate == null,
     },
     {
       label: "Conversion Rate",
-      value: `${data.conversionRate}%`,
+      value: data.conversionRate == null ? "—" : `${data.conversionRate}%`,
       spark: data.sparks.conversion,
-      mock: true,
+      unavailable: data.conversionRate == null,
     },
   ] as const;
 
@@ -77,19 +77,20 @@ export function AnalyticsSnapshot({ data }: AnalyticsSnapshotProps) {
       <div className={styles.analyticsGrid}>
         {cards.map((card) => (
           <article key={card.label} className={styles.sparkCard}>
-            <div className={styles.statLabel}>
-              {card.label}
-              {"mock" in card && card.mock ? (
-                <span style={{ marginLeft: 6, fontSize: 11 }}>(est.)</span>
-              ) : null}
-            </div>
+            <div className={styles.statLabel}>{card.label}</div>
             <div className={styles.sparkValue}>{card.value}</div>
-            <Sparkline values={[...card.spark]} label={`${card.label} trend`} />
+            {"unavailable" in card && card.unavailable ? null : (
+              <Sparkline
+                values={[...card.spark]}
+                label={`${card.label} trend`}
+              />
+            )}
           </article>
         ))}
       </div>
       <p className={styles.footer}>
-        Open rate and conversion are placeholders until campaign analytics ship.
+        Email open rate and conversion are not tracked yet, so those cards show
+        a dash instead of estimated numbers.
       </p>
     </section>
   );

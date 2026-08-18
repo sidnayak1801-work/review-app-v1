@@ -5,6 +5,11 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- App Store AI self-review (2026-08-18): code-checkable requirements had zero
+  likely failures. Hardening for remaining review nits: `app-bridge.js` plus
+  `shopify-api-key` meta in the document head; `/auth/login` errors no longer
+  ask for a shop domain; product AI sample headlines and dashboard open/conversion
+  estimates removed.
 - OAuth: Partner redirect URL aligned to `/auth/callback` (matches
   `authPathPrefix: "/auth"`). `/auth/login` no longer collects a shop domain —
   App Store CTA only (App Store requirement 2.3.1).
@@ -87,8 +92,8 @@ This file records completed changes only. Planned work belongs in
   `ProductRatingSummary` (maintained on approve/reject/delete/import).
 - Home “Reviews collected” chart is interactive: hover snaps to a day with a
   crosshair, accent dot, and tooltip (`reviews: N`); light draw animation on
-  range change. Analytics snapshot email open/conversion remain estimated
-  placeholders until campaign analytics ship.
+  range change. Analytics snapshot email open/conversion show a dash until
+  campaign analytics ship.
 - Save incentives, Save widget settings, and Save settings show a success modal
   with a green check (instead of only a banner or App Bridge toast); errors stay
   as critical banners.

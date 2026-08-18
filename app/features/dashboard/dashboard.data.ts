@@ -104,10 +104,6 @@ export function buildReviewTrixDashboardData(input: {
   const monthPoints = input.series30d;
   const reviewsThisMonth = sumCounts(monthPoints);
 
-  // MOCK spark values for open/conversion until analytics backends exist.
-  const mockOpen = [42, 44, 41, 48, 47, 51, 49, 53];
-  const mockConversion = [1.8, 2.0, 1.9, 2.2, 2.1, 2.4, 2.3, 2.5];
-
   const shopName = input.shopDomain.replace(/\.myshopify\.com$/i, "");
 
   return {
@@ -122,15 +118,15 @@ export function buildReviewTrixDashboardData(input: {
     analytics: {
       averageRating: input.averageRating,
       reviewsThisMonth,
-      emailOpenRate: 48,
-      conversionRate: 2.3,
+      emailOpenRate: null,
+      conversionRate: null,
       sparks: {
         rating: sparkFromSeries(input.series30d).map((count, index) =>
           count === 0 ? 0 : Math.min(5, 3 + (index % 3) * 0.3),
         ),
         volume: sparkFromSeries(input.series30d),
-        openRate: mockOpen,
-        conversion: mockConversion,
+        openRate: [],
+        conversion: [],
       },
     },
     settings: input.settings,
