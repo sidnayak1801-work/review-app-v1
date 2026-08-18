@@ -36,7 +36,7 @@ function LegalLayout({
 
 /**
  * Canonical App Store privacy URL:
- * https://reviewtrix.algorithmtrix.com/privacy
+ * https://reviewtrixapp.algorithmtrix.com/privacy
  */
 export default function PrivacyPage() {
   return (
@@ -154,8 +154,8 @@ export default function PrivacyPage() {
       </p>
       <p>
         Canonical policy URL:{" "}
-        <a href="https://reviewtrix.algorithmtrix.com/privacy">
-          https://reviewtrix.algorithmtrix.com/privacy
+        <a href="https://reviewtrixapp.algorithmtrix.com/privacy">
+          https://reviewtrixapp.algorithmtrix.com/privacy
         </a>
       </p>
     </LegalLayout>

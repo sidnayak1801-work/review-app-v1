@@ -4,7 +4,7 @@ Source of truth: `04_ROADMAP.md`
 
 Active phase: **Phase 5** (5.1–5.5 shipped); merchant home follows
 `15_DASHBOARD_UI_SPEC.md`. Production URLs: Coolify at
-`https://reviewtrix.algorithmtrix.com`.
+`https://reviewtrixapp.algorithmtrix.com`.
 
 Review submission / identity / verified-buyer work must follow
 `14_REVIEW_SUBMISSION_SPEC.md`.

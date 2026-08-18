@@ -2,7 +2,7 @@
 
 client_id = "5583660bf73cc180c986fcedf3977151"
 name = "ReviewTrix"
-application_url = "https://reviewtrix.algorithmtrix.com"
+application_url = "https://reviewtrixapp.algorithmtrix.com"
 embedded = true
 
 [access_scopes]
@@ -29,7 +29,7 @@ api_version = "2026-07"
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [auth]
-redirect_urls = [ "https://reviewtrix.algorithmtrix.com/auth/callback" ]
+redirect_urls = [ "https://reviewtrixapp.algorithmtrix.com/auth/callback" ]
 
 [app_proxy]
 url = "/api/storefront/reviews"

@@ -35,7 +35,7 @@ function LegalLayout({
 
 /**
  * Canonical App Store terms URL:
- * https://reviewtrix.algorithmtrix.com/terms
+ * https://reviewtrixapp.algorithmtrix.com/terms
  */
 export default function TermsPage() {
   return (
@@ -43,8 +43,8 @@ export default function TermsPage() {
       <p>
         These Terms govern your use of the ReviewTrix Shopify application
         operated by Algorithm Trix Private Ltd at{" "}
-        <a href="https://reviewtrix.algorithmtrix.com">
-          reviewtrix.algorithmtrix.com
+        <a href="https://reviewtrixapp.algorithmtrix.com">
+          reviewtrixapp.algorithmtrix.com
         </a>
         . By installing or using ReviewTrix, you agree to these Terms.
       </p>
@@ -125,8 +125,8 @@ export default function TermsPage() {
       </p>
       <p>
         Canonical terms URL:{" "}
-        <a href="https://reviewtrix.algorithmtrix.com/terms">
-          https://reviewtrix.algorithmtrix.com/terms
+        <a href="https://reviewtrixapp.algorithmtrix.com/terms">
+          https://reviewtrixapp.algorithmtrix.com/terms
         </a>
       </p>
     </LegalLayout>

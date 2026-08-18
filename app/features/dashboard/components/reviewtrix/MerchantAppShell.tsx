@@ -9,7 +9,7 @@ import { AdminPageSkeleton } from "./EmptyState";
 import { Sidebar } from "./Sidebar";
 import { TopNavbar } from "./TopNavbar";
 
-const COLLAPSE_KEY = "reviewx.sidebar.collapsed";
+const COLLAPSE_KEY = "reviewtrix.sidebar.collapsed";
 
 interface MerchantAppShellProps {
   shopDomain: string;

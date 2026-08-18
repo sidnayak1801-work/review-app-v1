@@ -22,7 +22,7 @@ review.
 Related docs:
 
 - Privacy policy (merchant-facing): `/privacy` →
-  `https://reviewtrix.algorithmtrix.com/privacy` (`app/routes/privacy.tsx`)
+  `https://reviewtrixapp.algorithmtrix.com/privacy` (`app/routes/privacy.tsx`)
 - Ops / retention / data requests: `10_OPERATIONS.md`
 - App Store checklist: `11_APP_STORE_AND_BFS.md`
 

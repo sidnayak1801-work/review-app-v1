@@ -5,14 +5,14 @@ vi.mock("../../db.server", () => ({
 }));
 
 vi.mock("../../lib/email-env.server", () => ({
-  getAppBaseUrl: () => "https://reviewtrix.algorithmtrix.com",
+  getAppBaseUrl: () => "https://reviewtrixapp.algorithmtrix.com",
 }));
 
 vi.mock("../../lib/env.server", () => ({
   getShopifyEnv: () => ({
     SHOPIFY_API_KEY: "test-api-key",
     SHOPIFY_API_SECRET: "secret",
-    SHOPIFY_APP_URL: "https://reviewtrix.algorithmtrix.com",
+    SHOPIFY_APP_URL: "https://reviewtrixapp.algorithmtrix.com",
     SCOPES: "read_orders",
   }),
   getDatabaseEnv: () => ({

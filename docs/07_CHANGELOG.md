@@ -5,6 +5,9 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Shopify app origin is `https://reviewtrixapp.algorithmtrix.com` (Partner App
+  URL, OAuth callback, and canonical `/privacy` `/terms`). Marketing remains
+  `https://reviewtrix.algorithmtrix.com`. Support email is unchanged.
 - Public support address is `support.reviewtrix@algorithmtrix.com` (privacy,
   terms, in-app Support, lifecycle emails, and Partner listing checklist).
 - App Store AI self-review (2026-08-18): code-checkable requirements had zero

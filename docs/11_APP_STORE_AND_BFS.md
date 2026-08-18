@@ -72,8 +72,8 @@ See Partner checklist and pre-submit QA below before submitting.
 | Least-privilege scopes | Done | `read_orders,read_products,read_themes` |
 | Protected customer data access | Gap (Partners) | Fill Partner form per `docs/Shopify_pcd.md` (Email field; Level 1+2 answers); prod approval with App Store review |
 | Public distribution | Gap (Partners) | Enable App Store / public distribution for Billing API |
-| Privacy policy URL | Done (code) | `https://reviewtrix.algorithmtrix.com/privacy` — wire URL in listing |
-| Terms of service URL | Done (code) | `https://reviewtrix.algorithmtrix.com/terms` |
+| Privacy policy URL | Done (code) | `https://reviewtrixapp.algorithmtrix.com/privacy` — wire URL in listing |
+| Terms of service URL | Done (code) | `https://reviewtrixapp.algorithmtrix.com/terms` |
 | In-app support / legal links | Done | Help menu, footer, Settings |
 | App listing screenshots / demo store | Gap (Partners) | Submission assets |
 | Billing disclosures | Done (app) / confirm listing | Free + Pro $19 / 14-day trial; set Coolify `BILLING_TEST_MODE=false` |
@@ -86,9 +86,9 @@ Complete in Shopify Partners (cannot be done from this repo):
 - [ ] Enable **public / App Store distribution**
 - [ ] Request **Protected customer data** access required for fulfillment email
       (follow `docs/Shopify_pcd.md` reasons, Email field, data-protection answers)
-- [ ] App URL + redirect: `https://reviewtrix.algorithmtrix.com` and
+- [ ] App URL + redirect: `https://reviewtrixapp.algorithmtrix.com` and
       `…/auth/callback`
-- [ ] Privacy policy URL: `https://reviewtrix.algorithmtrix.com/privacy`
+- [ ] Privacy policy URL: `https://reviewtrixapp.algorithmtrix.com/privacy`
 - [ ] Support email: `support.reviewtrix@algorithmtrix.com`
 - [ ] Category: **Product reviews** + structured category fields
 - [ ] Pricing text matches Free + Pro ($19/mo, 14-day trial) and allowances
@@ -99,7 +99,7 @@ Complete in Shopify Partners (cannot be done from this repo):
 
 ## Pre-submit QA checklist
 
-- [ ] `GET https://reviewtrix.algorithmtrix.com/health?ready=1` → ready
+- [ ] `GET https://reviewtrixapp.algorithmtrix.com/health?ready=1` → ready
 - [ ] Install from Partner / Admin Apps / App Store (Shopify-owned surface).
       Bare app URL `/auth/login` is an App Store CTA only — no shop-domain form.
 - [ ] Onboarding / Home loads on Coolify URL

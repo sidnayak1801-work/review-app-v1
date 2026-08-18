@@ -75,7 +75,7 @@ describe("resolvePublicMediaResponseUrl / toPublicMedia", () => {
       resolvePublicMediaResponseUrl(
         "review-images/shop/a.jpg",
         "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
-        { SHOPIFY_APP_URL: "https://reviewtrix.algorithmtrix.com" },
+        { SHOPIFY_APP_URL: "https://reviewtrixapp.algorithmtrix.com" },
       ),
     ).toBe(
       "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
@@ -94,8 +94,8 @@ describe("resolvePublicMediaResponseUrl / toPublicMedia", () => {
         "review-images/shop/a.jpg",
         "https://reviewx.s3.ap-south-1.amazonaws.com/review-images/shop/a.jpg",
         {
-          MEDIA_PUBLIC_BASE_URL: "https://reviewtrix.algorithmtrix.com",
-          SHOPIFY_APP_URL: "https://reviewtrix.algorithmtrix.com",
+          MEDIA_PUBLIC_BASE_URL: "https://reviewtrixapp.algorithmtrix.com",
+          SHOPIFY_APP_URL: "https://reviewtrixapp.algorithmtrix.com",
         },
       ),
     ).toBe(
