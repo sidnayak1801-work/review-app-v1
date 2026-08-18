@@ -56,7 +56,7 @@ describe("lifecycle email templates", () => {
     const rendered = renderLifecycleEmail("ONBOARDING_REMINDER_3D", input);
 
     expect(rendered.subject).toBe("Need help getting ReviewTrix live?");
-    expect(rendered.html).toContain("mailto:support@reviewtrix.algorithmtrix.com");
+    expect(rendered.html).toContain("mailto:support.reviewtrix@algorithmtrix.com");
     expect(rendered.html).toContain("Contact support");
   });
 

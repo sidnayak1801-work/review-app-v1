@@ -119,8 +119,8 @@ export default function TermsPage() {
       <h2>Contact</h2>
       <p>
         Questions:{" "}
-        <a href="mailto:support@reviewtrix.algorithmtrix.com">
-          support@reviewtrix.algorithmtrix.com
+        <a href="mailto:support.reviewtrix@algorithmtrix.com">
+          support.reviewtrix@algorithmtrix.com
         </a>
       </p>
       <p>

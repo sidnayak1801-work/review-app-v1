@@ -10,7 +10,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { requireShopRecord } from "../lib/shop-context.server";
 import { authenticate } from "../shopify.server";
 
-const SUPPORT_EMAIL = "support@reviewtrix.algorithmtrix.com";
+const SUPPORT_EMAIL = "support.reviewtrix@algorithmtrix.com";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);

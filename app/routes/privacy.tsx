@@ -148,8 +148,8 @@ export default function PrivacyPage() {
       <h2>Contact</h2>
       <p>
         Privacy questions:{" "}
-        <a href="mailto:support@reviewtrix.algorithmtrix.com">
-          support@reviewtrix.algorithmtrix.com
+        <a href="mailto:support.reviewtrix@algorithmtrix.com">
+          support.reviewtrix@algorithmtrix.com
         </a>
       </p>
       <p>

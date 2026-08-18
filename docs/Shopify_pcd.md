@@ -193,7 +193,7 @@ Controls:
 ## Security incident response
 
 Owner: Algorithm Trix Private Ltd — contact
-`support@reviewtrix.algorithmtrix.com` (and Partner emergency contact).
+`support.reviewtrix@algorithmtrix.com` (and Partner emergency contact).
 
 ### Severity (examples)
 

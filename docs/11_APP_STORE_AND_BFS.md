@@ -89,7 +89,7 @@ Complete in Shopify Partners (cannot be done from this repo):
 - [ ] App URL + redirect: `https://reviewtrix.algorithmtrix.com` and
       `…/auth/callback`
 - [ ] Privacy policy URL: `https://reviewtrix.algorithmtrix.com/privacy`
-- [ ] Support email: `support@reviewtrix.algorithmtrix.com`
+- [ ] Support email: `support.reviewtrix@algorithmtrix.com`
 - [ ] Category: **Product reviews** + structured category fields
 - [ ] Pricing text matches Free + Pro ($19/mo, 14-day trial) and allowances
 - [ ] Screenshots + demo store attached

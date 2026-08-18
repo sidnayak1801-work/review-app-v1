@@ -21,7 +21,7 @@ export function toAppHomeDeepLink(shopDomain: string): string {
   return `${adminAppBaseUrl(shopDomain)}/app`;
 }
 
-export const SUPPORT_EMAIL = "support@reviewtrix.algorithmtrix.com";
+export const SUPPORT_EMAIL = "support.reviewtrix@algorithmtrix.com";
 
 export function toSupportMailto(shopDomain: string): string {
   const subject = encodeURIComponent(`ReviewTrix support — ${shopDomain}`);

@@ -5,6 +5,8 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Public support address is `support.reviewtrix@algorithmtrix.com` (privacy,
+  terms, in-app Support, lifecycle emails, and Partner listing checklist).
 - App Store AI self-review (2026-08-18): code-checkable requirements had zero
   likely failures. Hardening for remaining review nits: `app-bridge.js` plus
   `shopify-api-key` meta in the document head; `/auth/login` errors no longer
