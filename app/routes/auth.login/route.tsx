@@ -1,48 +1,44 @@
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
-import { useState } from "react";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { Form, useActionData, useLoaderData } from "react-router";
+import type { LoaderFunctionArgs } from "react-router";
+import { useLoaderData } from "react-router";
 
 import { login } from "../../shopify.server";
 import { loginErrorMessage } from "./error.server";
 
+const APP_STORE_URL = "https://apps.shopify.com/reviewtrix";
+
+/**
+ * Keep login() so ?shop= still starts OAuth. Never collect a shop domain —
+ * App Store install must use Shopify-owned surfaces (requirement 2.3.1).
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const errors = loginErrorMessage(await login(request));
 
   return { errors };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const errors = loginErrorMessage(await login(request));
-
-  return {
-    errors,
-  };
-};
-
 export default function Auth() {
-  const loaderData = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
-  const [shop, setShop] = useState("");
-  const { errors } = actionData || loaderData;
+  const { errors } = useLoaderData<typeof loader>();
 
   return (
     <AppProvider embedded={false}>
       <s-page>
-        <Form method="post">
-        <s-section heading="Log in">
-          <s-text-field
-            name="shop"
-            label="Shop domain"
-            details="example.myshopify.com"
-            value={shop}
-            onChange={(e) => setShop(e.currentTarget.value)}
-            autocomplete="on"
-            error={errors.shop}
-          ></s-text-field>
-          <s-button type="submit">Log in</s-button>
+        <s-section heading="Install ReviewTrix">
+          <s-stack direction="block" gap="base">
+            <s-text>
+              Install ReviewTrix from the Shopify App Store or open it from
+              Shopify Admin → Apps. Do not enter a shop domain here.
+            </s-text>
+            {errors.shop ? (
+              <s-banner tone="critical" heading="Could not start login">
+                {errors.shop}
+              </s-banner>
+            ) : null}
+            <s-link href={APP_STORE_URL} target="_blank">
+              Open ReviewTrix on the Shopify App Store
+            </s-link>
+          </s-stack>
         </s-section>
-        </Form>
       </s-page>
     </AppProvider>
   );

@@ -85,7 +85,7 @@ Do not hardcode local `shopify app dev` ports (`4742`, etc.).
 
 ```toml
 application_url = "https://reviewtrix.algorithmtrix.com"
-redirect_urls = [ "https://reviewtrix.algorithmtrix.com/api/auth" ]
+redirect_urls = [ "https://reviewtrix.algorithmtrix.com/auth/callback" ]
 automatically_update_urls_on_dev = false
 ```
 
@@ -112,8 +112,8 @@ curl https://reviewtrix.algorithmtrix.com/health?ready=1
 
 - [ ] Health returns ready
 - [ ] Open `https://reviewtrix.algorithmtrix.com/` → redirects to `/auth/login`
-      (marketing site is separate Next.js app)
-- [ ] Install from Partner / Admin Apps (prefer Shopify-owned install surface)
+      (App Store install CTA; marketing site is separate Next.js app)
+- [ ] Install from Partner / Admin Apps / App Store (prefer Shopify-owned install surface)
 - [ ] App Home / onboarding loads
 - [ ] Settings → theme blocks → storefront review → approve in Reviews
 - [ ] Billing: with `BILLING_TEST_MODE=false`, upgrade/decline/reinstall charge
@@ -140,5 +140,5 @@ and pre-submit QA.
 
 If Admin still loads an old host after Coolify is live, Partner Dashboard App URL
 and Allowed redirection URL(s) are stale — set them to
-`https://reviewtrix.algorithmtrix.com` (and `/api/auth`) then run
+`https://reviewtrix.algorithmtrix.com` (and `/auth/callback`) then run
 `shopify app deploy`.

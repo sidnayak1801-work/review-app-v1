@@ -10,8 +10,6 @@ import {
   getPublishedReviewLimit,
   getReviewRequestLimit,
   getUtcMonthWindow,
-  PRO_MAX_PUBLISHED_REVIEWS,
-  PRO_MAX_REVIEW_REQUESTS_PER_MONTH,
 } from "./billing.constants";
 
 export { getPublishedReviewLimit, getReviewRequestLimit, getUtcMonthWindow };
@@ -23,7 +21,7 @@ export interface PublishedReviewUsage {
 
 export interface ReviewRequestUsage {
   used: number;
-  limit: number;
+  limit: number | null;
   monthLabel: string;
 }
 
@@ -67,12 +65,10 @@ export class BillingEntitlementsService implements BillingService {
     );
 
     if (approvedCount >= limit) {
-      const message =
-        input.shopPlan === "PRO"
-          ? `Pro plan allows up to ${PRO_MAX_PUBLISHED_REVIEWS} published reviews.`
-          : `Free plan allows up to ${FREE_MAX_PUBLISHED_REVIEWS} published reviews. Upgrade to Pro to approve more reviews.`;
-
-      throw new DomainError(message, "PLAN_LIMIT_REACHED");
+      throw new DomainError(
+        `Free plan allows up to ${FREE_MAX_PUBLISHED_REVIEWS} published reviews. Upgrade to Pro to approve more reviews.`,
+        "PLAN_LIMIT_REACHED",
+      );
     }
   }
 
@@ -94,13 +90,15 @@ export class BillingEntitlementsService implements BillingService {
   }): Promise<void> {
     const usage = await this.getReviewRequestUsage(input);
 
-    if (usage.used >= usage.limit) {
-      const message =
-        input.shopPlan === "PRO"
-          ? `Pro plan allows up to ${PRO_MAX_REVIEW_REQUESTS_PER_MONTH} review-request emails per month.`
-          : `Free plan allows up to ${FREE_MAX_REVIEW_REQUESTS_PER_MONTH} review-request emails per month. Upgrade to Pro to send more requests.`;
+    if (usage.limit === null) {
+      return;
+    }
 
-      throw new DomainError(message, "REVIEW_REQUEST_LIMIT_REACHED");
+    if (usage.used >= usage.limit) {
+      throw new DomainError(
+        `Free plan allows up to ${FREE_MAX_REVIEW_REQUESTS_PER_MONTH} review-request emails per month. Upgrade to Pro to send more requests.`,
+        "REVIEW_REQUEST_LIMIT_REACHED",
+      );
     }
   }
 

@@ -15,7 +15,7 @@ Price: `$0`
 Includes:
 
 - Up to 100 published reviews
-- Up to 50 review-request emails per month
+- Up to 100 review-request emails per month
 - Text review submission
 - Pending, approved, and rejected moderation
 - Product review widget and star-rating badge
@@ -37,8 +37,8 @@ Trial: `14 days`
 
 Includes everything in Free plus:
 
-- Up to 5,000 published reviews
-- Up to 1,000 review-request emails per month
+- Unlimited published reviews
+- Unlimited review-request emails per month
 - Separate domestic and international review-request delays
 - Multi-product request emails listing all order items
 - Priority support

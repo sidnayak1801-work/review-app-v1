@@ -42,7 +42,7 @@ interface ReviewRequestsPageProps {
   requests: ReviewRequestListItem[];
   reviewRequestUsage: {
     used: number;
-    limit: number;
+    limit: number | null;
     monthLabel: string;
   };
   shopPlan: "FREE" | "PRO";
@@ -95,7 +95,9 @@ export function ReviewRequestsPage({
     isSubmitting,
     "Settings saved successfully!",
   );
-  const atLimit = reviewRequestUsage.used >= reviewRequestUsage.limit;
+  const atLimit =
+    reviewRequestUsage.limit != null &&
+    reviewRequestUsage.used >= reviewRequestUsage.limit;
   const orderGroups = groupRequests(requests);
 
   return (
@@ -108,8 +110,10 @@ export function ReviewRequestsPage({
       <s-box padding="base" border="base" borderRadius="large" background="subdued">
         <s-stack direction="block" gap="small">
           <s-text type="strong">
-            {reviewRequestUsage.used} / {reviewRequestUsage.limit} emails ·{" "}
-            {reviewRequestUsage.monthLabel}
+            {reviewRequestUsage.limit != null
+              ? `${reviewRequestUsage.used} / ${reviewRequestUsage.limit} emails`
+              : `${reviewRequestUsage.used} / Unlimited emails`}{" "}
+            · {reviewRequestUsage.monthLabel}
           </s-text>
           {atLimit ? (
             <s-banner tone="warning" heading="Monthly limit reached">

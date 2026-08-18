@@ -38,9 +38,9 @@ delay validation of the core product.
 
 ### Pricing
 
-- Free plan with 100 published reviews and 50 review requests per month
-- Pro plan at `$19/month` with a 14-day trial, 5,000 published reviews, and
-  1,000 review requests per month
+- Free plan with 100 published reviews and 100 review requests per month
+- Pro plan at `$19/month` with a 14-day trial, unlimited published reviews, and
+  unlimited review requests per month
 - Shopify-hosted plan selection and billing
 - Self-serve upgrade, downgrade, and cancellation behavior
 - Server-side allowance enforcement without deleting merchant data

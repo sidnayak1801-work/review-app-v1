@@ -3,27 +3,27 @@ import type { ShopPlan } from "../../repositories/shop.repository.server";
 export const PRO_PLAN = "Pro";
 
 export const FREE_MAX_PUBLISHED_REVIEWS = 100;
-export const PRO_MAX_PUBLISHED_REVIEWS = 5_000;
 
-export const FREE_MAX_REVIEW_REQUESTS_PER_MONTH = 50;
-export const PRO_MAX_REVIEW_REQUESTS_PER_MONTH = 1_000;
+export const FREE_MAX_REVIEW_REQUESTS_PER_MONTH = 100;
 
 export const BILLING_SYNC_MAX_AGE_MS = 60 * 60 * 1000;
 
 export const PRO_TRIAL_DAYS = 14;
 export const PRO_MONTHLY_PRICE_USD = 19;
 
+/** `null` means unlimited for the plan. */
 export function getPublishedReviewLimit(plan: ShopPlan): number | null {
   if (plan === "PRO") {
-    return PRO_MAX_PUBLISHED_REVIEWS;
+    return null;
   }
 
   return FREE_MAX_PUBLISHED_REVIEWS;
 }
 
-export function getReviewRequestLimit(plan: ShopPlan): number {
+/** `null` means unlimited for the plan. */
+export function getReviewRequestLimit(plan: ShopPlan): number | null {
   if (plan === "PRO") {
-    return PRO_MAX_REVIEW_REQUESTS_PER_MONTH;
+    return null;
   }
 
   return FREE_MAX_REVIEW_REQUESTS_PER_MONTH;

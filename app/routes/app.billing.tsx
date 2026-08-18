@@ -16,8 +16,6 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import {
   FREE_MAX_PUBLISHED_REVIEWS,
   FREE_MAX_REVIEW_REQUESTS_PER_MONTH,
-  PRO_MAX_PUBLISHED_REVIEWS,
-  PRO_MAX_REVIEW_REQUESTS_PER_MONTH,
   PRO_MONTHLY_PRICE_USD,
   PRO_TRIAL_DAYS,
 } from "../features/billing/billing.constants";
@@ -115,8 +113,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       pro: {
         price: PRO_MONTHLY_PRICE_USD,
         trialDays: PRO_TRIAL_DAYS,
-        publishedReviews: PRO_MAX_PUBLISHED_REVIEWS,
-        reviewRequests: PRO_MAX_REVIEW_REQUESTS_PER_MONTH,
+        publishedReviews: null as number | null,
+        reviewRequests: null as number | null,
       },
     },
   };
@@ -228,8 +226,10 @@ export default function BillingRoute() {
                     : " · unlimited"}
                 </s-text>
                 <s-text>
-                  Review-request emails this month:{" "}
-                  {data.reviewRequestUsage.used} / {data.reviewRequestUsage.limit}
+                  Review-request emails this month: {data.reviewRequestUsage.used}
+                  {data.reviewRequestUsage.limit !== null
+                    ? ` / ${data.reviewRequestUsage.limit}`
+                    : " · unlimited"}
                 </s-text>
                 {data.billingSyncedAt ? (
                   <s-text color="subdued">
@@ -284,10 +284,8 @@ export default function BillingRoute() {
                   Pro — ${data.plans.pro.price}/month
                 </s-text>
                 <s-text color="subdued">
-                  {data.plans.pro.trialDays}-day trial. Up to{" "}
-                  {data.plans.pro.publishedReviews.toLocaleString()} published
-                  reviews and {data.plans.pro.reviewRequests.toLocaleString()}{" "}
-                  request emails / month.
+                  {data.plans.pro.trialDays}-day trial. Unlimited published
+                  reviews and unlimited request emails / month.
                 </s-text>
                 {isPro ? (
                   <div className={styles.planStatusRow}>

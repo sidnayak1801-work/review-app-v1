@@ -17,6 +17,34 @@ Canonical sources:
 - Listing copy must not claim Built for Shopify, unearned badges, or competitor
   trademarks
 
+## App Store listing — App details
+
+Partners → App store listing content → **App details** (max 500 characters).
+Use plain prose only: no bullets, numbered lists, labels, links, or marketing
+slogans. Put specific capabilities in the separate **Features** field. Do not
+use the words “free” or “pricing” in App details (Shopify review tip — plan
+names and billing belong only in Pricing details).
+
+Paste-ready App details:
+
+```text
+ReviewTrix helps Shopify merchants collect, moderate, and display product reviews on their storefront. Merchants add Theme App Extension blocks for star ratings and review lists, approve or reject submissions in the embedded admin, and send post-fulfillment review-request emails. CSV import brings existing reviews into the moderation queue. Published-review and review-request email allowances are enforced in the app.
+```
+
+Example Features items (separate field, not App details):
+
+- Theme App Extension star rating and product review widgets
+- Pending / approved / rejected moderation in the Shopify admin
+- Post-fulfillment review-request emails
+- CSV review import
+
+Screenshot listing checks: do not include customer testimonials or ratings
+imagery that Shopify flags (e.g. star-rating callouts or “Customer reviews”
+promo text in screenshots).
+
+Do not opt out of protected customer data — ReviewTrix needs PCD for order
+email on review requests (`docs/Shopify_pcd.md`).
+
 ## App Store / security checklist (MVP status)
 
 | Item | Status | Notes |
@@ -26,7 +54,7 @@ Canonical sources:
 | App proxy verification | Done | Storefront reviews |
 | Mandatory compliance webhooks | Done | `customers/data_request`, `customers/redact`, `shop/redact` |
 | Least-privilege scopes | Done | `read_orders,read_products,read_themes` |
-| Protected customer data access | Gap (Partners) | Request/approve in Partner Dashboard for order email on non-dev stores |
+| Protected customer data access | Gap (Partners) | Fill Partner form per `docs/Shopify_pcd.md` (Email field; Level 1+2 answers); prod approval with App Store review |
 | Public distribution | Gap (Partners) | Enable App Store / public distribution for Billing API |
 | Privacy policy URL | Done (code) | `https://reviewtrix.algorithmtrix.com/privacy` — wire URL in listing |
 | Terms of service URL | Done (code) | `https://reviewtrix.algorithmtrix.com/terms` |
@@ -41,8 +69,9 @@ Complete in Shopify Partners (cannot be done from this repo):
 
 - [ ] Enable **public / App Store distribution**
 - [ ] Request **Protected customer data** access required for fulfillment email
+      (follow `docs/Shopify_pcd.md` reasons, Email field, data-protection answers)
 - [ ] App URL + redirect: `https://reviewtrix.algorithmtrix.com` and
-      `…/api/auth`
+      `…/auth/callback`
 - [ ] Privacy policy URL: `https://reviewtrix.algorithmtrix.com/privacy`
 - [ ] Support email: `support@reviewtrix.algorithmtrix.com`
 - [ ] Category: **Product reviews** + structured category fields
@@ -55,8 +84,8 @@ Complete in Shopify Partners (cannot be done from this repo):
 ## Pre-submit QA checklist
 
 - [ ] `GET https://reviewtrix.algorithmtrix.com/health?ready=1` → ready
-- [ ] Install from Partner / Admin Apps (Shopify-owned surface), not only
-      `/auth/login` shop-domain form
+- [ ] Install from Partner / Admin Apps / App Store (Shopify-owned surface).
+      Bare app URL `/auth/login` is an App Store CTA only — no shop-domain form.
 - [ ] Onboarding / Home loads on Coolify URL
 - [ ] Clean OS 2.0 theme: enable app embed + Star rating / Product reviews /
       Review Summary; submit via app proxy; moderate in admin

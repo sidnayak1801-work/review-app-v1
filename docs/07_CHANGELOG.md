@@ -5,6 +5,15 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- OAuth: Partner redirect URL aligned to `/auth/callback` (matches
+  `authPathPrefix: "/auth"`). `/auth/login` no longer collects a shop domain —
+  App Store CTA only (App Store requirement 2.3.1).
+- Docs: ReviewTrix Protected Customer Data Partner runbook
+  (`docs/Shopify_pcd.md`) with exact reasons/fields, Level 1+2 answer key,
+  DLP and incident-response policies, and App Store checklist link.
+- Pricing limits: Free review-request emails raised to 100/month; Pro published
+  reviews and review-request emails are unlimited (`null` entitlement). Updated
+  billing UI, docs, and marketing pricing copy.
 - Merchant lifecycle emails: welcome (install), 24h/72h onboarding reminders,
   and completion email. Extends `Shop` (`contactEmail`, `firstInstalledAt`,
   `latestInstalledAt`) and `OnboardingStatus.startedAt`; adds `LifecycleEmail`

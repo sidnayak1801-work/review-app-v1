@@ -52,7 +52,7 @@ function createBilling(
     assertCanSendReviewRequest: vi.fn().mockResolvedValue(undefined),
     getReviewRequestUsage: vi.fn().mockResolvedValue({
       used: 0,
-      limit: 50,
+      limit: 100,
       monthLabel: "2026-07",
     }),
     ...overrides,

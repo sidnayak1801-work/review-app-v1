@@ -165,8 +165,8 @@ Required scope: `read_orders`
 
 Limits:
 
-- Free: 50 review-request emails per UTC calendar month
-- Pro: 1,000 review-request emails per UTC calendar month
+- Free: 100 review-request emails per UTC calendar month
+- Pro: unlimited review-request emails per UTC calendar month
 - Count increments when the provider first accepts delivery; retries do not
   consume additional allowance
 - Allowance counts emails, not products. Phase 4 multi-product sends still use
