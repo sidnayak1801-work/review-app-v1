@@ -5,11 +5,25 @@ import {
   type CustomerPrivacyPayload,
   type ShopRedactPayload,
 } from "../features/privacy/privacy.service.server";
+import {
+  authenticateShopifyWebhook,
+  webhookMethodNotAllowedResponse,
+} from "../lib/shopify-webhook.server";
 import { logger } from "../services/logger.server";
 import { authenticate } from "../shopify.server";
 
+export const loader = () => webhookMethodNotAllowedResponse();
+
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, topic, payload } = await authenticate.webhook(request);
+  const result = await authenticateShopifyWebhook(
+    authenticate.webhook,
+    request,
+  );
+  if (!result.ok) {
+    return result.response;
+  }
+
+  const { shop, topic, payload } = result.data;
   const normalizedTopic = topic.toLowerCase();
 
   switch (normalizedTopic) {

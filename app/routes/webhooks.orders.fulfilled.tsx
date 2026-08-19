@@ -2,11 +2,25 @@ import type { ActionFunctionArgs } from "react-router";
 
 import { reviewRequestService } from "../features/review-requests/review-request.service.server";
 import { shopService } from "../features/shops/shop.service.server";
+import {
+  authenticateShopifyWebhook,
+  webhookMethodNotAllowedResponse,
+} from "../lib/shopify-webhook.server";
 import { logger } from "../services/logger.server";
 import { authenticate } from "../shopify.server";
 
+export const loader = () => webhookMethodNotAllowedResponse();
+
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, payload } = await authenticate.webhook(request);
+  const result = await authenticateShopifyWebhook(
+    authenticate.webhook,
+    request,
+  );
+  if (!result.ok) {
+    return result.response;
+  }
+
+  const { shop, payload } = result.data;
   const shopRecord = await shopService.findByDomain(shop);
 
   if (!shopRecord || shopRecord.status !== "INSTALLED") {

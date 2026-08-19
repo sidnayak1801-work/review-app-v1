@@ -5,6 +5,9 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Webhook HMAC failures return an explicit HTTP 401 (including missing HMAC)
+  instead of throwing into the HTML document renderer, so App Store automated
+  checks do not see 200/400/500. GET on webhook URLs returns 405.
 - Shopify app origin is `https://reviewtrixapp.algorithmtrix.com` (Partner App
   URL, OAuth callback, and canonical `/privacy` `/terms`). Marketing remains
   `https://reviewtrix.algorithmtrix.com`. Support email is unchanged.

@@ -66,7 +66,7 @@ See Partner checklist and pre-submit QA below before submitting.
 | Item | Status | Notes |
 | --- | --- | --- |
 | Shopify OAuth / session tokens | Done | Embedded React Router app |
-| Webhook HMAC verification | Done | `authenticate.webhook` |
+| Webhook HMAC verification | Done | `authenticate.webhook`; invalid/missing HMAC returns explicit 401 |
 | App proxy verification | Done | Storefront reviews |
 | Mandatory compliance webhooks | Done | `customers/data_request`, `customers/redact`, `shop/redact` |
 | Least-privilege scopes | Done | `read_orders,read_products,read_themes` |
