@@ -53,6 +53,11 @@ async function resolveShopInstallIdentity(
       ...(contactEmail ? { contactEmail } : {}),
     };
   } catch (error) {
+    // A thrown Response is App Bridge control flow, not a missing identity.
+    if (error instanceof Response) {
+      throw error;
+    }
+
     logger.warn("Unable to resolve Shopify shop identity during install", {
       errorName: error instanceof Error ? error.name : "UnknownError",
     });

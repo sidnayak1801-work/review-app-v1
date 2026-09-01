@@ -96,16 +96,17 @@ export default function SupportRoute() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? error.statusText
-    : error instanceof Error
-      ? error.message
-      : "Support could not be loaded.";
+
+  // An ErrorResponse here carries App Bridge's redirect script; only
+  // `boundary.error` renders it so the redirect can complete.
+  if (isRouteErrorResponse(error)) {
+    return boundary.error(error);
+  }
 
   return (
     <s-page heading="Support">
       <s-banner heading="Unavailable" tone="critical">
-        {message}
+        {error instanceof Error ? error.message : "Support could not be loaded."}
       </s-banner>
     </s-page>
   );

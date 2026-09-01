@@ -100,7 +100,7 @@ target, not a label the app can self-assign:
 - Protect admin and storefront performance.
 - Never claim the status or badge before Shopify awards it.
 
-MVP billing uses Shopify App Pricing with the documented Free and Pro plans.
+MVP billing uses the Shopify Billing API with the documented Free and Pro plans.
 Shopify is the subscription source of truth, and plan allowances are enforced
 server-side.
 

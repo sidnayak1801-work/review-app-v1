@@ -5,7 +5,12 @@ import {
   type ShopRepository,
 } from "../../repositories/shop.repository.server";
 import { logger } from "../../services/logger.server";
-import { BILLING_SYNC_MAX_AGE_MS, PRO_PLAN } from "./billing.constants";
+import {
+  BILLING_ACTIVATION_RETRIES,
+  BILLING_ACTIVATION_RETRY_DELAY_MS,
+  BILLING_SYNC_MAX_AGE_MS,
+  PRO_PLAN,
+} from "./billing.constants";
 
 export type ShopifyAppSubscription = {
   name: string;
@@ -13,6 +18,7 @@ export type ShopifyAppSubscription = {
   createdAt?: string;
   currentPeriodEnd?: string | null;
   trialDays?: number;
+  test?: boolean;
 };
 
 export type ProSubscriptionSummary = {
@@ -20,6 +26,8 @@ export type ProSubscriptionSummary = {
   createdAt: string | null;
   currentPeriodEnd: string | null;
   trialDays: number | null;
+  /** Shopify created this as a test charge, so it never bills the merchant. */
+  test: boolean;
 };
 
 export type BillingSyncResult = {
@@ -30,7 +38,6 @@ export type BillingSyncResult = {
 export interface ShopifyBillingClient {
   check(input: {
     plans: "Pro"[];
-    isTest?: boolean;
   }): Promise<{
     hasActivePayment: boolean;
     appSubscriptions: ShopifyAppSubscription[];
@@ -41,12 +48,12 @@ export interface BillingSyncService {
   syncFromShopify(input: {
     shopId: string;
     billing: ShopifyBillingClient;
-    isTest?: boolean;
+    /** Set when returning from charge approval, to absorb activation lag. */
+    awaitActivation?: boolean;
   }): Promise<BillingSyncResult>;
   resolvePlanForShop(input: {
     shop: ShopRecord;
     billing?: ShopifyBillingClient;
-    isTest?: boolean;
     forceSync?: boolean;
   }): Promise<ShopRecord>;
 }
@@ -74,25 +81,63 @@ function toProSubscriptionSummary(
     currentPeriodEnd: subscription.currentPeriodEnd ?? null,
     trialDays:
       typeof subscription.trialDays === "number" ? subscription.trialDays : null,
+    test: subscription.test === true,
   };
 }
 
+function defaultSleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 export class ShopifyBillingSyncService implements BillingSyncService {
-  constructor(private readonly shops: ShopRepository) {}
+  constructor(
+    private readonly shops: ShopRepository,
+    private readonly sleep: (milliseconds: number) => Promise<void> = defaultSleep,
+  ) {}
+
+  /**
+   * Read the active Pro subscription from Shopify.
+   *
+   * Deliberately no `isTest` filter. Passing `isTest: false` makes the Shopify
+   * SDK discard subscriptions flagged `test`, which is every subscription on a
+   * development store — including the one a Shopify app reviewer approves. Only
+   * Partners can create test charges, so accepting them here cannot be abused
+   * by a merchant on a live store.
+   */
+  private async checkProSubscription(
+    billing: ShopifyBillingClient,
+    awaitActivation: boolean,
+  ): Promise<{ hasActivePayment: boolean; pro?: ShopifyAppSubscription }> {
+    const attempts = awaitActivation ? BILLING_ACTIVATION_RETRIES + 1 : 1;
+
+    for (let attempt = 1; ; attempt += 1) {
+      const result = await billing.check({ plans: [PRO_PLAN] });
+      const pro = result.appSubscriptions.find(
+        (subscription) => subscription.name === PRO_PLAN,
+      );
+
+      if (pro || attempt >= attempts) {
+        return {
+          hasActivePayment: result.hasActivePayment,
+          ...(pro ? { pro } : {}),
+        };
+      }
+
+      await this.sleep(BILLING_ACTIVATION_RETRY_DELAY_MS);
+    }
+  }
 
   async syncFromShopify(input: {
     shopId: string;
     billing: ShopifyBillingClient;
-    isTest?: boolean;
+    awaitActivation?: boolean;
   }): Promise<BillingSyncResult> {
-    const billingCheck = await input.billing.check({
-      plans: [PRO_PLAN],
-      ...(input.isTest !== undefined ? { isTest: input.isTest } : {}),
-    });
-
-    const proSubscriptionRecord = billingCheck.appSubscriptions.find(
-      (subscription) => subscription.name === PRO_PLAN,
+    const billingCheck = await this.checkProSubscription(
+      input.billing,
+      input.awaitActivation === true,
     );
+
+    const proSubscriptionRecord = billingCheck.pro;
 
     const hasActiveProPayment =
       billingCheck.hasActivePayment && Boolean(proSubscriptionRecord);
@@ -128,7 +173,6 @@ export class ShopifyBillingSyncService implements BillingSyncService {
   async resolvePlanForShop(input: {
     shop: ShopRecord;
     billing?: ShopifyBillingClient;
-    isTest?: boolean;
     forceSync?: boolean;
   }): Promise<ShopRecord> {
     if (!input.billing) {
@@ -147,10 +191,16 @@ export class ShopifyBillingSyncService implements BillingSyncService {
       const { shop } = await this.syncFromShopify({
         shopId: input.shop.id,
         billing: input.billing,
-        isTest: input.isTest,
       });
       return shop;
     } catch (error) {
+      // A thrown Response is App Bridge control flow (reauth or bounce), not a
+      // sync failure. Swallowing it would silently strand the caller on a stale
+      // plan instead of letting the merchant re-authenticate.
+      if (error instanceof Response) {
+        throw error;
+      }
+
       logger.warn("Billing sync failed; using cached plan", {
         shopId: input.shop.id,
         errorName: error instanceof Error ? error.name : "UnknownError",

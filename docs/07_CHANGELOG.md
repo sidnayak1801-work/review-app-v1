@@ -5,6 +5,57 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- The remaining source of the "200 error when approving charges" is gone. Every
+  route calling `authenticate.admin` had replaced the SDK's `ErrorBoundary` with
+  its own banner. Because `authenticate.admin` signals bounce, exit-iframe, and
+  reauth by throwing a status-200 Response whose body is an App Bridge script,
+  and React Router hands that to the nearest boundary as an `ErrorResponse`,
+  those routes rendered an empty "Unavailable" message while the redirect never
+  completed. `ErrorResponse` now goes to `boundary.error` on all thirteen
+  routes; the friendly banner still covers ordinary errors.
+- Thrown Responses are no longer swallowed. The billing page's "Refresh billing
+  status" action, `resolvePlanForShop`, `isDevelopmentStore`, and the install
+  identity lookup each caught App Bridge reauth and turned it into a message or
+  a `null`. The `isDevelopmentStore` case was the worst: falling back to
+  `NODE_ENV` in production creates a live charge on a reviewer's development
+  store, which can never activate.
+- The billing page tolerates Shopify's activation lag. `activeSubscriptions`
+  omits a just-approved subscription until Shopify flips it to `ACTIVE`, so a
+  fast return trip wrote `plan = FREE` and told the merchant their charge was
+  not approved. The loader now re-reads a bounded number of times when the URL
+  carries `charge_id`.
+- The return trip makes one less Admin API call. The "Test billing mode" notice
+  reads the live subscription's `test` flag instead of predicting it with a
+  separate `shop.plan` query, and the Billing nav link no longer prefetches,
+  which was running a full billing sync on hover.
+- `updateBillingState` no longer reports every database failure as a missing
+  shop. Only Prisma's `P2025` returns `null`; the rest surface.
+- Billing review rejection (App Store requirement 1.2.2) fixed. Two independent
+  defects made the Pro plan untestable: the `returnUrl` passed to
+  `billing.request` pointed at the app origin, so Shopify's post-approval
+  navigation arrived without `shop`/`host` and the SDK answered with an App
+  Bridge bootstrap page served as HTTP 200 while the plan-sync loader never ran;
+  and `billing.check` was called with `isTest: false` in production, which
+  discards the test subscriptions that are the only kind a development store can
+  hold. The return URL is now the admin-hosted app URL, subscription checks no
+  longer filter test charges, and charge creation keys off
+  `shop.plan.partnerDevelopment` instead of `NODE_ENV`.
+- Plan state no longer depends on the browser completing the redirect. Added the
+  `app_subscriptions/update` webhook, which records approvals, declines,
+  cancellations, expiries, and freezes. The handler treats the payload as a
+  trigger only and re-reads the active subscriptions from Shopify before
+  writing, because webhook delivery is unordered and a late `PENDING` or stale
+  `DECLINED` would otherwise downgrade an already-approved merchant. Every plan
+  write now shares one mapping, so `billingStatus` is only ever `ACTIVE` or
+  `FREE`.
+- Reinstall now resets the cached plan to Free, so Shopify can request approval
+  for charges again as requirement 1.2.2 expects. Previously an uninstalled Pro
+  shop kept `plan = PRO` and the Upgrade button stayed hidden.
+- Billing is reachable before onboarding completes, and upgrades use
+  `APPLY_IMMEDIATELY` replacement so a stale plan cache cannot stack duplicate
+  subscriptions.
+- Docs corrected throughout: the app bills with the Shopify Billing API, not
+  Shopify App Pricing. Migrating to App Pricing is follow-up work.
 - Webhook HMAC failures return an explicit HTTP 401 (including missing HMAC)
   instead of throwing into the HTML document renderer, so App Store automated
   checks do not see 200/400/500. GET on webhook URLs returns 405.

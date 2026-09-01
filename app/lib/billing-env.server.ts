@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { isDevelopmentStore } from "../services/shopify-shop-plan.server";
 import { parseWithSchema } from "./validation";
 
 const billingEnvSchema = z.object({
@@ -26,16 +27,30 @@ export function getBillingEnv(
 }
 
 /**
- * Use test charges when explicitly enabled, or automatically outside production
- * so local/dev stores can complete Shopify billing approval.
+ * Decide whether a Shopify charge must be created as a test charge.
+ *
+ * `BILLING_TEST_MODE` wins when set. Otherwise the store type decides:
+ * development stores cannot process real transactions, so charges there must be
+ * test charges. This is how Shopify app reviewers evaluate paid plans, so
+ * keying off `NODE_ENV` alone makes the Pro plan untestable in review.
+ *
+ * Falls back to the deployment environment only when the store type cannot be
+ * resolved.
  */
-export function isBillingTestMode(
+export async function resolveChargeTestMode(
+  admin: Parameters<typeof isDevelopmentStore>[0],
   environment: NodeJS.ProcessEnv = process.env,
-): boolean {
+): Promise<boolean> {
   const configured = getBillingEnv(environment).BILLING_TEST_MODE;
 
   if (configured !== undefined) {
     return configured;
+  }
+
+  const developmentStore = await isDevelopmentStore(admin);
+
+  if (developmentStore !== null) {
+    return developmentStore;
   }
 
   return environment.NODE_ENV !== "production";

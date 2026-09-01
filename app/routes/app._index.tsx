@@ -275,14 +275,17 @@ export default function AppIndex() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? error.statusText
-    : "The dashboard could not be loaded. Please try again.";
+
+  // An ErrorResponse here carries App Bridge's redirect script; only
+  // `boundary.error` renders it so the redirect can complete.
+  if (isRouteErrorResponse(error)) {
+    return boundary.error(error);
+  }
 
   return (
     <s-page heading="Dashboard">
       <s-banner heading="Dashboard unavailable" tone="critical">
-        {message}
+        The dashboard could not be loaded. Please try again.
       </s-banner>
     </s-page>
   );

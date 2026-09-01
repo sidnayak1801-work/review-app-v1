@@ -3,10 +3,56 @@
 Pricing is part of the launchable MVP. Keep it transparent and limited to two
 plans so one developer can implement and support it reliably.
 
-Use Shopify App Pricing, Shopify's default recommended billing approach for
-public App Store apps. Shopify hosts plan selection and handles approval,
-charges, trials, proration, upgrades, and downgrades. Never collect payment
-details or charge merchants outside Shopify.
+Use the Shopify Billing API through `@shopify/shopify-app-react-router`. The Pro
+plan is declared in `app/shopify.server.ts`, and Shopify hosts charge approval
+and handles charges, trials, proration, upgrades, and downgrades. Never collect
+payment details or charge merchants outside Shopify.
+
+Three rules exist because breaking any one of them fails App Store review
+requirement 1.2.2:
+
+- The `returnUrl` passed to `billing.request` must be the admin-hosted app URL
+  (`https://admin.shopify.com/store/<handle>/apps/<apiKey>/app/billing`). An
+  app-origin return URL drops the `shop` and `host` params Shopify appends, so
+  the merchant lands on an App Bridge bootstrap page served with HTTP 200 and
+  the plan never registers.
+- Subscription checks must not filter out test charges. Development stores can
+  only hold test subscriptions, so a non-test filter makes paid plans
+  untestable during review.
+- Every route calling `authenticate.admin` must hand an `ErrorResponse` to
+  `boundary.error`. See the next section.
+
+## The Return Trip Contract
+
+`authenticate.admin` signals bounce, exit-iframe, and reauth by **throwing a
+Response** whose body is an App Bridge `<script>` tag, and `renderAppBridge`
+throws it with the default status of **200**. React Router converts a thrown
+Response into an `ErrorResponse` and hands it to the nearest `ErrorBoundary`,
+so the SDK depends on that boundary re-rendering the body:
+
+```tsx
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  if (isRouteErrorResponse(error)) {
+    return boundary.error(error);
+  }
+
+  return /* the route's own message */;
+}
+```
+
+A route that renders its own text instead leaves the merchant on an HTTP 200
+page with the script never executing, the redirect never completing, and the
+plan never syncing. This produced the "200 error when approving charges"
+rejection. The same reasoning applies to catch blocks: a thrown `Response` is
+App Bridge control flow, so any `catch` around an Admin API call must rethrow
+it rather than convert it into a message.
+
+Shopify may still be flipping a just-approved subscription to `ACTIVE` when the
+merchant lands back on the billing page, and `activeSubscriptions` omits it
+until then. The billing loader therefore re-reads a bounded number of times
+when the URL carries `charge_id`, before concluding the charge was declined.
 
 ## Free Plan
 
@@ -77,8 +123,13 @@ ReviewRequest until measured load requires an aggregate.
 - Shopify is the subscription source of truth.
 - The Shop record may cache `FREE` or `PRO` and minimal synchronization state
   for request-time checks.
-- Refresh the cache after the Shopify-hosted plan flow and relevant billing
-  lifecycle events.
+- Refresh the cache from the `app_subscriptions/update` webhook, and again when
+  the billing page loads.
+- Treat the webhook payload as a trigger, never as truth. Shopify does not
+  guarantee webhook ordering, so the handler re-reads the active subscriptions
+  from Shopify and writes that verified state. Writing the delivered status
+  directly would let a late `PENDING` or a stale `DECLINED` downgrade an
+  already-approved merchant.
 - Re-verify with Shopify when cached state is missing or stale.
 - Centralize entitlement checks in one billing service.
 - Enforce allowances server-side; hiding UI is not enforcement.
@@ -86,15 +137,24 @@ ReviewRequest until measured load requires an aggregate.
 ## Upgrade Flow
 
 1. Merchant chooses Pro.
-2. Redirect to Shopify's hosted App Pricing experience.
-3. Shopify processes approval and returns to the configured welcome link.
-4. The app verifies the active subscription with Shopify.
+2. `billing.request` creates the subscription and redirects to Shopify's charge
+   approval page.
+3. Shopify processes approval and returns the merchant to the admin-hosted
+   billing page.
+4. The `app_subscriptions/update` webhook records the new status, and the
+   billing page verifies the active subscription with Shopify on load.
 5. The app refreshes the entitlement cache.
 6. Pro allowances become available.
+
+A declined charge follows the same return path and leaves the shop on Free.
 
 ## Downgrade and Cancellation
 
 - Merchants can change plans without contacting support or reinstalling.
+- Cancellation happens in Shopify Admin; the `app_subscriptions/update` webhook
+  downgrades the cached plan.
+- Reinstall resets the cached plan to Free so Shopify can request approval for
+  charges again, as required by App Store requirement 1.2.2.
 - Never delete reviews, requests, settings, or imports.
 - Existing approved reviews remain visible after downgrade.
 - If approved reviews exceed 100, block new approvals until the merchant
@@ -114,7 +174,7 @@ ReviewRequest until measured load requires an aggregate.
 
 ## Built for Shopify Billing Traits
 
-- Use Shopify App Pricing or another Shopify-provided billing solution.
+- Use the Shopify Billing API or another Shopify-provided billing solution.
 - Display accurate pricing, limits, trial terms, and additional charges.
 - Support self-serve upgrade and downgrade.
 - Ensure charges appear correctly in Shopify Admin.
@@ -124,8 +184,11 @@ ReviewRequest until measured load requires an aggregate.
 Official references:
 
 - https://shopify.dev/docs/apps/launch/billing
-- https://shopify.dev/docs/apps/launch/billing/shopify-app-pricing
+- https://shopify.dev/docs/apps/launch/billing/manual-pricing
 - https://shopify.dev/docs/apps/launch/shopify-app-store/app-store-requirements
+
+Shopify App Pricing is the newer default for public apps. Migrating is tracked
+as follow-up work, not part of this MVP.
 
 ## Future Pricing
 

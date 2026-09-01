@@ -430,19 +430,17 @@ export default function OnboardingRoute() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? typeof error.data === "object" &&
-      error.data !== null &&
-      "message" in error.data &&
-      typeof error.data.message === "string"
-      ? error.data.message
-      : error.statusText || "Could not load onboarding."
-    : "Could not load onboarding. Please try again.";
+
+  // An ErrorResponse here carries App Bridge's redirect script; only
+  // `boundary.error` renders it so the redirect can complete.
+  if (isRouteErrorResponse(error)) {
+    return boundary.error(error);
+  }
 
   return (
     <s-page heading="Onboarding">
       <s-banner heading="Unavailable" tone="critical">
-        {message}
+        Could not load onboarding. Please try again.
       </s-banner>
     </s-page>
   );

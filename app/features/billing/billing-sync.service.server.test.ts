@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ShopRecord, ShopRepository } from "../../repositories/shop.repository.server";
 import { ShopifyBillingSyncService } from "./billing-sync.service.server";
-import { PRO_PLAN } from "./billing.constants";
+import { BILLING_ACTIVATION_RETRIES, PRO_PLAN } from "./billing.constants";
 
 const installedAt = new Date("2026-07-01T00:00:00.000Z");
 
@@ -65,12 +65,10 @@ describe("ShopifyBillingSyncService", () => {
     const result = await service.syncFromShopify({
       shopId: "shop-1",
       billing,
-      isTest: true,
     });
 
     expect(billing.check).toHaveBeenCalledWith({
       plans: [PRO_PLAN],
-      isTest: true,
     });
     expect(shops.updateBillingState).toHaveBeenCalledWith(
       "shop-1",
@@ -85,7 +83,58 @@ describe("ShopifyBillingSyncService", () => {
       createdAt: "2026-07-20T10:00:00.000Z",
       currentPeriodEnd: "2026-08-19T10:00:00.000Z",
       trialDays: 14,
+      test: false,
     });
+  });
+
+  it("reports the subscription's test flag", async () => {
+    const shops = createShopRepository({
+      updateBillingState: vi
+        .fn()
+        .mockResolvedValue({ ...baseShop, plan: "PRO", billingStatus: "ACTIVE" }),
+    });
+    const billing = {
+      check: vi.fn().mockResolvedValue({
+        hasActivePayment: true,
+        appSubscriptions: [{ name: PRO_PLAN, id: "sub-1", test: true }],
+      }),
+    };
+    const service = new ShopifyBillingSyncService(shops);
+
+    const result = await service.syncFromShopify({
+      shopId: "shop-1",
+      billing,
+    });
+
+    expect(result.proSubscription?.test).toBe(true);
+  });
+
+  it("never filters the subscription check to non-test charges", async () => {
+    // Regression guard for the App Store rejection: passing `isTest: false`
+    // makes the Shopify SDK discard test subscriptions, which is every
+    // subscription a development store can hold, so reviewers could not test
+    // the paid plan.
+    const updatedShop: ShopRecord = {
+      ...baseShop,
+      plan: "PRO",
+      billingStatus: "ACTIVE",
+    };
+    const shops = createShopRepository({
+      updateBillingState: vi.fn().mockResolvedValue(updatedShop),
+    });
+    const billing = {
+      check: vi.fn().mockResolvedValue({
+        hasActivePayment: true,
+        appSubscriptions: [{ name: PRO_PLAN, id: "sub-test", test: true }],
+      }),
+    };
+    const service = new ShopifyBillingSyncService(shops);
+
+    const result = await service.syncFromShopify({ shopId: "shop-1", billing });
+
+    expect(billing.check).toHaveBeenCalledWith({ plans: [PRO_PLAN] });
+    expect(billing.check.mock.calls[0]?.[0]).not.toHaveProperty("isTest");
+    expect(result.shop.plan).toBe("PRO");
   });
 
   it("maps missing Pro subscription to FREE plan", async () => {
@@ -152,5 +201,106 @@ describe("ShopifyBillingSyncService", () => {
 
     expect(result).toBe(staleShop);
     expect(shops.updateBillingState).not.toHaveBeenCalled();
+  });
+
+  it("only ever writes ACTIVE or FREE as the billing status", async () => {
+    // Plan writes all flow through mapSubscriptionToPlan, so a raw Shopify
+    // status such as PENDING or FROZEN can never reach the billing badge.
+    const shops = createShopRepository();
+    const billing = {
+      check: vi.fn().mockResolvedValue({
+        hasActivePayment: false,
+        appSubscriptions: [],
+      }),
+    };
+    const service = new ShopifyBillingSyncService(shops);
+
+    await service.syncFromShopify({ shopId: "shop-1", billing });
+
+    const written = vi.mocked(shops.updateBillingState).mock.calls[0]?.[1];
+    expect(["ACTIVE", "FREE"]).toContain(written?.billingStatus);
+  });
+
+  it("rethrows a thrown Response instead of falling back to the cached plan", async () => {
+    // App Bridge reauth arrives as a thrown Response. Absorbing it would leave
+    // the merchant on a stale plan with no way to recover.
+    const reauth = new Response(undefined, { status: 401 });
+    const shops = createShopRepository();
+    const billing = { check: vi.fn().mockRejectedValue(reauth) };
+    const service = new ShopifyBillingSyncService(shops);
+
+    await expect(
+      service.resolvePlanForShop({
+        shop: { ...baseShop, billingSyncedAt: new Date("2020-01-01") },
+        billing,
+        forceSync: true,
+      }),
+    ).rejects.toBe(reauth);
+  });
+
+  describe("awaitActivation", () => {
+    const sleep = () => Promise.resolve();
+
+    it("re-reads until Shopify reports the approved subscription", async () => {
+      const shops = createShopRepository({
+        updateBillingState: vi
+          .fn()
+          .mockResolvedValue({ ...baseShop, plan: "PRO", billingStatus: "ACTIVE" }),
+      });
+      const billing = {
+        check: vi
+          .fn()
+          .mockResolvedValueOnce({ hasActivePayment: false, appSubscriptions: [] })
+          .mockResolvedValue({
+            hasActivePayment: true,
+            appSubscriptions: [{ name: PRO_PLAN, id: "sub-1" }],
+          }),
+      };
+      const service = new ShopifyBillingSyncService(shops, sleep);
+
+      const result = await service.syncFromShopify({
+        shopId: "shop-1",
+        billing,
+        awaitActivation: true,
+      });
+
+      expect(billing.check).toHaveBeenCalledTimes(2);
+      expect(result.shop.plan).toBe("PRO");
+    });
+
+    it("gives up and writes FREE when the charge was really declined", async () => {
+      const shops = createShopRepository();
+      const billing = {
+        check: vi
+          .fn()
+          .mockResolvedValue({ hasActivePayment: false, appSubscriptions: [] }),
+      };
+      const service = new ShopifyBillingSyncService(shops, sleep);
+
+      const result = await service.syncFromShopify({
+        shopId: "shop-1",
+        billing,
+        awaitActivation: true,
+      });
+
+      expect(billing.check).toHaveBeenCalledTimes(
+        BILLING_ACTIVATION_RETRIES + 1,
+      );
+      expect(result.shop.plan).toBe("FREE");
+    });
+
+    it("does not retry on an ordinary page load", async () => {
+      const shops = createShopRepository();
+      const billing = {
+        check: vi
+          .fn()
+          .mockResolvedValue({ hasActivePayment: false, appSubscriptions: [] }),
+      };
+      const service = new ShopifyBillingSyncService(shops, sleep);
+
+      await service.syncFromShopify({ shopId: "shop-1", billing });
+
+      expect(billing.check).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -101,6 +101,9 @@ type ShopModel = {
       uninstalledAt: null;
       shopifyShopId?: string;
       contactEmail?: string | null;
+      plan?: ShopPlan;
+      billingStatus?: string;
+      billingSyncedAt?: Date | null;
     };
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord>;
@@ -111,7 +114,7 @@ type ShopModel = {
       uninstalledAt?: Date;
       plan?: ShopPlan;
       billingStatus?: string;
-      billingSyncedAt?: Date;
+      billingSyncedAt?: Date | null;
       contactEmail?: string | null;
     };
     select: typeof SHOP_SELECT;
@@ -161,6 +164,20 @@ export class PrismaShopRepository implements ShopRepository {
 
   async install(input: InstallShopRecordInput): Promise<ShopRecord> {
     const now = new Date();
+    const existing = await this.findByDomain(input.shopDomain);
+
+    // Shopify cancels the app subscription on uninstall, so a reinstalling shop
+    // must start on Free and be asked to approve a charge again. Scoped to the
+    // uninstalled case because afterAuth calls install() on every token
+    // exchange, and an unconditional reset would drop a paying merchant's plan.
+    const isReinstall = existing?.status === "UNINSTALLED";
+    const resetBillingState = isReinstall
+      ? {
+          plan: "FREE" as const,
+          billingStatus: "FREE",
+          billingSyncedAt: null,
+        }
+      : {};
 
     return shopModel(this.database).upsert({
       where: { shopDomain: input.shopDomain },
@@ -179,6 +196,7 @@ export class PrismaShopRepository implements ShopRepository {
         latestInstalledAt: now,
         installedAt: now,
         uninstalledAt: null,
+        ...resetBillingState,
         ...(input.shopifyShopId
           ? { shopifyShopId: input.shopifyShopId }
           : {}),
@@ -223,6 +241,16 @@ export class PrismaShopRepository implements ShopRepository {
     });
   }
 
+  /** Prisma reports an update against a missing row as P2025. */
+  private isRecordNotFound(error: unknown): boolean {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "P2025"
+    );
+  }
+
   async updateBillingState(
     shopId: string,
     input: UpdateShopBillingStateInput,
@@ -237,8 +265,15 @@ export class PrismaShopRepository implements ShopRepository {
         },
         select: SHOP_SELECT,
       });
-    } catch {
-      return null;
+    } catch (error) {
+      // `null` means the shop is gone. Everything else — a dropped connection,
+      // a constraint violation — must surface, otherwise a transient database
+      // fault is reported to the caller as a missing shop.
+      if (this.isRecordNotFound(error)) {
+        return null;
+      }
+
+      throw error;
     }
   }
 }

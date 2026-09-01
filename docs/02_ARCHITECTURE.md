@@ -62,7 +62,7 @@ deployment topology make it necessary.
 - Storefront review API
 - Review-request emails
 - CSV imports
-- Shopify App Pricing and plan entitlements
+- Shopify Billing API and plan entitlements
 
 Post-MVP modules such as advanced analytics, media, AI, and broad
 integrations must not shape the MVP implementation beyond stable identifiers
@@ -217,7 +217,7 @@ The MVP needs:
 - One managed PostgreSQL database
 - One email provider
 - Scheduled execution for review requests
-- Shopify App Pricing with Free and Pro plans
+- Shopify Billing API with Free and Pro plans
 - Error monitoring and basic uptime checks
 
 Horizontal application scaling remains possible because durable application

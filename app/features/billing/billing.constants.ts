@@ -8,6 +8,15 @@ export const FREE_MAX_REVIEW_REQUESTS_PER_MONTH = 100;
 
 export const BILLING_SYNC_MAX_AGE_MS = 60 * 60 * 1000;
 
+/**
+ * Shopify can still be flipping a just-approved subscription to ACTIVE when the
+ * merchant lands back on the billing page, and `activeSubscriptions` omits it
+ * until then. Re-read a bounded number of times before concluding the charge
+ * was not approved.
+ */
+export const BILLING_ACTIVATION_RETRIES = 2;
+export const BILLING_ACTIVATION_RETRY_DELAY_MS = 600;
+
 export const PRO_TRIAL_DAYS = 14;
 export const PRO_MONTHLY_PRICE_USD = 19;
 

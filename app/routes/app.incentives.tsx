@@ -88,16 +88,20 @@ export default function IncentivesRoute() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
+
+  // An ErrorResponse here carries App Bridge's redirect script; only
+  // `boundary.error` renders it so the redirect can complete.
   if (isRouteErrorResponse(error)) {
-    return (
-      <s-page heading="Incentives">
-        <s-banner tone="critical" heading="Something went wrong">
-          {error.status} {error.statusText}
-        </s-banner>
-      </s-page>
-    );
+    return boundary.error(error);
   }
-  return boundary.error(error);
+
+  return (
+    <s-page heading="Incentives">
+      <s-banner tone="critical" heading="Something went wrong">
+        Incentives could not be loaded.
+      </s-banner>
+    </s-page>
+  );
 }
 
 export const headers: HeadersFunction = (headersArgs) => {

@@ -24,7 +24,7 @@ moderation queues, CSV import, and Free/Pro billing.
 
 The MVP is one complete workflow: install, collect/import, moderate, request,
 display, and monetize product reviews. It includes Free and Pro plans through
-Shopify App Pricing. Advanced analytics, AI, loyalty, referrals, enterprise
+the Shopify Billing API. Advanced analytics, AI, loyalty, referrals, enterprise
 features, and broad integrations are post-MVP.
 
 The intended App Store category is Product reviews. The app is designed around

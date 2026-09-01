@@ -66,7 +66,8 @@ export default function TermsPage() {
 
       <h2>Subscriptions and billing</h2>
       <p>
-        ReviewTrix uses Shopify App Pricing. Plans are <strong>Free</strong> and{" "}
+        ReviewTrix bills through the Shopify Billing API. Plans are{" "}
+        <strong>Free</strong> and{" "}
         <strong>Pro</strong> ($19 USD / month with a 14-day trial) as described
         in the app Billing screen and App Store listing. Shopify is the
         subscription source of truth. Published-review and review-request email

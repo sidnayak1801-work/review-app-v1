@@ -165,9 +165,12 @@ export default function WidgetSettingsRoute() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? error.statusText
-    : "Widget settings could not be loaded.";
+
+  // An ErrorResponse here carries App Bridge's redirect script; only
+  // `boundary.error` renders it so the redirect can complete.
+  if (isRouteErrorResponse(error)) {
+    return boundary.error(error);
+  }
 
   return (
     <div className={styles.content}>
@@ -182,7 +185,7 @@ export function ErrorBoundary() {
       >
         <h1 className={styles.sectionTitle}>Widget settings</h1>
         <p className={styles.body} style={{ marginTop: 8, color: "inherit" }}>
-          {message}
+          Widget settings could not be loaded.
         </p>
       </div>
     </div>
