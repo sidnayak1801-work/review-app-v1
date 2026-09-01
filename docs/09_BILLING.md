@@ -19,6 +19,10 @@ requirement 1.2.2:
 - Subscription checks must not filter out test charges. Development stores can
   only hold test subscriptions, so a non-test filter makes paid plans
   untestable during review.
+- Charge **creation** must use test mode on development stores
+  (`shop.plan.partnerDevelopment`), even when production sets
+  `BILLING_TEST_MODE=false`. Live charges on a dev store require a payment
+  method and leave Shopify's Approve button disabled.
 - Every route calling `authenticate.admin` must hand an `ErrorResponse` to
   `boundary.error`. See the next section.
 
@@ -53,6 +57,11 @@ Shopify may still be flipping a just-approved subscription to `ACTIVE` when the
 merchant lands back on the billing page, and `activeSubscriptions` omits it
 until then. The billing loader therefore re-reads a bounded number of times
 when the URL carries `charge_id`, before concluding the charge was declined.
+
+After a verified approval return, the billing page shows a one-time success
+modal. The app shell re-syncs plan state from Shopify on billing routes and
+when `charge_id` is present so the sidebar cannot show Pro before Shopify
+confirms an active subscription.
 
 ## Free Plan
 

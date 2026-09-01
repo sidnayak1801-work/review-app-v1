@@ -71,11 +71,12 @@ Authorization: Bearer $INTERNAL_JOB_SECRET
 Run every 1 minute. Without A or B, welcome/reminder/completion jobs stay
 `SCHEDULED` and are never sent.
 
-`isBillingTestMode()` (`app/lib/billing-env.server.ts`): explicit
-`BILLING_TEST_MODE` wins; if unset, defaults to test charges when
-`NODE_ENV !== "production"`. Always set `BILLING_TEST_MODE=false` on Coolify
-before App Store review so Pro upgrades create real (or Partner-approved)
-charges, not test charges.
+`resolveChargeTestContext()` (`app/lib/billing-env.server.ts`): development
+stores (`partnerDevelopment`) always receive **test** charges, regardless of
+`BILLING_TEST_MODE`. On live stores, explicit `BILLING_TEST_MODE` wins; if
+unset, production uses live charges and non-production defaults to test.
+Coolify may keep `BILLING_TEST_MODE=false` for App Store listing; reviewers on
+development stores still get test charges and an enabled Approve button.
 
 Do not hardcode local `shopify app dev` ports (`4742`, etc.).
 
@@ -117,8 +118,9 @@ curl https://reviewtrixapp.algorithmtrix.com/health?ready=1
 - [ ] Install from Partner / Admin Apps / App Store (prefer Shopify-owned install surface)
 - [ ] App Home / onboarding loads
 - [ ] Settings → theme blocks → storefront review → approve in Reviews
-- [ ] Billing: with `BILLING_TEST_MODE=false`, upgrade/decline/reinstall charge
-      request still works
+- [ ] Billing: on a **development** store with `BILLING_TEST_MODE=false`, Upgrade
+      still opens Shopify Approve with the button enabled (test charge); approve,
+      decline, and reinstall flows work
 
 ## 4. Local development vs Coolify
 

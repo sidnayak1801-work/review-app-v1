@@ -11,6 +11,7 @@ import {
   useNavigation,
   useRouteError,
 } from "react-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   BillingReplacementBehavior,
   boundary,
@@ -23,9 +24,10 @@ import {
   PRO_TRIAL_DAYS,
 } from "../features/billing/billing.constants";
 import styles from "../features/billing/billing-page.module.css";
+import { SaveSuccessModal } from "../components/save-success-modal";
 import { billingEntitlementsService } from "../features/billing/billing.service.server";
 import { billingSyncService } from "../features/billing/billing-sync.service.server";
-import { resolveChargeTestMode } from "../lib/billing-env.server";
+import { resolveChargeTestContext } from "../lib/billing-env.server";
 import { buildEmbeddedAdminUrl } from "../lib/embedded-admin-url";
 import { requireShopRecord } from "../lib/shop-context.server";
 import { logger } from "../services/logger.server";
@@ -69,6 +71,10 @@ function formatPlanDate(iso: string): string {
   });
 }
 
+function proSuccessStorageKey(shopDomain: string, chargeId: string | null) {
+  return `billing-pro-success:${shopDomain}:${chargeId ?? "return"}`;
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing, session } = await authenticate.admin(request);
   const shopRecord = await requireShopRecord(session.shop);
@@ -76,6 +82,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Shopify appends charge_id on the way back from the approval page for both
   // outcomes, so its presence marks the return trip rather than the outcome.
   const returnedFromCharge = new URL(request.url).searchParams.has("charge_id");
+  const chargeId = returnedFromCharge
+    ? new URL(request.url).searchParams.get("charge_id")
+    : null;
 
   const { shop, proSubscription } = await billingSyncService.syncFromShopify({
     shopId: shopRecord.id,
@@ -106,6 +115,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return {
     // Still on Free after the activation retries means the charge was declined.
     chargeDeclined: returnedFromCharge && shop.plan !== "PRO",
+    showProActivatedSuccess: returnedFromCharge && shop.plan === "PRO",
+    chargeId,
+    shopDomain: session.shop,
     shopPlan: shop.plan,
     billingStatus: shop.billingStatus,
     billingSyncedAt: shop.billingSyncedAt?.toISOString() ?? null,
@@ -164,6 +176,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "upgrade") {
+    const existing = await billing.check({ plans: [PRO_PLAN] });
+
+    if (existing.hasActivePayment) {
+      return {
+        ok: false as const,
+        message: "You already have an active Pro subscription.",
+      };
+    }
+
     // Must be the admin-hosted URL. Returning to the app origin drops the
     // shop/host params Shopify appends, leaving the merchant on an App Bridge
     // bootstrap page served with HTTP 200 instead of the billing page.
@@ -174,10 +195,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
 
     try {
+      const { isTest, partnerDevelopment } =
+        await resolveChargeTestContext(admin);
+
+      logger.info("Billing upgrade initiated", {
+        shop: session.shop,
+        isTest,
+        partnerDevelopment,
+      });
+
       // Throws a redirect Response when Shopify approval URL is ready.
       return await billing.request({
         plan: PRO_PLAN,
-        isTest: await resolveChargeTestMode(admin),
+        isTest,
         trialDays: PRO_TRIAL_DAYS,
         returnUrl,
         // Replace rather than stack if a stale cached plan let the merchant
@@ -210,9 +240,36 @@ export default function BillingRoute() {
   const navigation = useNavigation();
   const isPro = data.shopPlan === "PRO";
   const subscription = data.subscription;
+  const [proSuccessOpen, setProSuccessOpen] = useState(false);
+
+  useEffect(() => {
+    if (!data.showProActivatedSuccess) {
+      return;
+    }
+
+    const key = proSuccessStorageKey(data.shopDomain, data.chargeId);
+
+    if (sessionStorage.getItem(key)) {
+      return;
+    }
+
+    sessionStorage.setItem(key, "1");
+    setProSuccessOpen(true);
+  }, [data.showProActivatedSuccess, data.chargeId, data.shopDomain]);
+
+  const closeProSuccess = useCallback(() => {
+    setProSuccessOpen(false);
+  }, []);
 
   return (
-    <s-page heading="Billing">
+    <>
+      <SaveSuccessModal
+        open={proSuccessOpen}
+        heading="Pro activated"
+        message="Pro version activated successfully."
+        onClose={closeProSuccess}
+      />
+      <s-page heading="Billing">
       <s-stack direction="block" gap="large">
         <s-text color="subdued">
           Manage your plan and published-review allowances.
@@ -370,6 +427,7 @@ export default function BillingRoute() {
         </s-section>
       </s-stack>
     </s-page>
+    </>
   );
 }
 

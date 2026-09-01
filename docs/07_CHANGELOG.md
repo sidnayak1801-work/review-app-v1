@@ -5,6 +5,13 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Development stores always receive test charges when upgrading, even when
+  production sets `BILLING_TEST_MODE=false`. Live charges on a dev store require
+  a payment method and leave Shopify's Approve button disabled. The app shell
+  now re-syncs plan state from Shopify on billing routes and after `charge_id`
+  returns so the sidebar cannot show Pro before approval. A success modal
+  appears after verified Pro activation; duplicate upgrade attempts are blocked
+  when an active Pro subscription already exists.
 - The remaining source of the "200 error when approving charges" is gone. Every
   route calling `authenticate.admin` had replaced the SDK's `ErrorBoundary` with
   its own banner. Because `authenticate.admin` signals bounce, exit-iframe, and

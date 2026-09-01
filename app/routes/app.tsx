@@ -12,6 +12,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
 import { MerchantAppShell } from "../features/dashboard/components/reviewtrix/MerchantAppShell";
+import { billingSyncService } from "../features/billing/billing-sync.service.server";
 import { onboardingService } from "../features/onboarding/onboarding.service.server";
 import { requireShopRecord } from "../lib/shop-context.server";
 import type { ShopPlan } from "../repositories/shop.repository.server";
@@ -22,14 +23,15 @@ import { authenticate, shopifyApiKey } from "../shopify.server";
  * work. Revalidate when onboarding forms run so the gate stays accurate.
  */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = await requireShopRecord(session.shop);
-  const onboarding = await onboardingService.getStatus(shop.id);
+  const { billing, session } = await authenticate.admin(request);
+  const shopRecord = await requireShopRecord(session.shop);
+  const onboarding = await onboardingService.getStatus(shopRecord.id);
   const url = new URL(request.url);
   const onOnboarding = url.pathname.includes("/app/onboarding");
   // Billing must stay reachable regardless of onboarding state. Shopify returns
   // the merchant here after charge approval, and this is where the plan syncs.
   const onBilling = url.pathname.includes("/app/billing");
+  const returnedFromCharge = url.searchParams.has("charge_id");
 
   if (onboarding.needsOnboarding && !onOnboarding && !onBilling) {
     throw redirect(`/app/onboarding${url.search}`);
@@ -39,7 +41,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw redirect(`/app${url.search}`);
   }
 
-  const plan: ShopPlan = shop.plan ?? "FREE";
+  // Keep the shell plan aligned with Shopify on billing pages and after charge
+  // approval. The cached DB value alone can show Pro in the sidebar before the
+  // merchant has approved a charge.
+  let plan: ShopPlan = shopRecord.plan ?? "FREE";
+
+  if (onBilling || returnedFromCharge) {
+    const { shop } = await billingSyncService.syncFromShopify({
+      shopId: shopRecord.id,
+      billing,
+      awaitActivation: returnedFromCharge,
+    });
+    plan = shop.plan;
+  }
+
   return {
     apiKey: shopifyApiKey,
     shopDomain: session.shop,
@@ -64,6 +79,16 @@ export function shouldRevalidate({
   ) {
     return true;
   }
+
+  if (
+    formAction?.includes("/app/billing") ||
+    currentUrl.pathname.includes("/app/billing") ||
+    nextUrl.pathname.includes("/app/billing") ||
+    nextUrl.searchParams.has("charge_id")
+  ) {
+    return true;
+  }
+
   return false;
 }
 
