@@ -190,6 +190,40 @@ A declined charge follows the same return path and leaves the shop on Free.
 - Test trial conversion, cancellation, reinstall, and failed-payment paths.
 - Do not claim unavailable paid features.
 
+## Manual verification matrix (App Store 1.2.2)
+
+Run on a **development store without a payment method** after deploying `main`
+(includes commit `f034bd3` or later). Coolify should keep
+`BILLING_TEST_MODE=false`; dev stores still receive test charges via
+`partnerDevelopment`.
+
+| # | Scenario | Steps | Expected |
+|---|----------|-------|----------|
+| 1 | Successful subscription | Free → Upgrade to Pro → Approve on Shopify page | Return to billing with **Pro**, success modal, sidebar shows Pro |
+| 2 | Decline | Free → Upgrade → Cancel/Decline on Shopify page | Return to billing on **Free**, info banner, no success modal |
+| 3 | API failure | (Simulate only if needed) Broken billing config | Stay Free, critical banner with actionable error |
+| 4 | Refresh | With active Shopify Pro sub → Refresh billing status | Billing page shows **Pro** |
+| 4b | Refresh (no sub) | After decline → Refresh billing status | Billing page shows **Free** |
+| 5 | Reinstall | Install → subscribe → approve → uninstall → reinstall | Plan resets to **Free**; must approve charge again |
+| 6 | Duplicate upgrade | With active Pro → Upgrade again | Error: already have active Pro subscription |
+
+Before approve (test 1): sidebar must **not** show “You're on Pro” while billing
+page still shows Free.
+
+Automated regression: `npx vitest run --exclude "**/*.integration.test.ts"`
+(224 tests).
+
+## App Store resubmission (after billing QA)
+
+1. Confirm Coolify deploy from `main` (`GET /health?ready=1` → ready).
+2. Run the manual matrix above on a development store.
+3. Partner Dashboard → enable **public / App Store distribution** if not already.
+4. Run `shopify app deploy` so webhooks (including `app_subscriptions/update`)
+   and app URL config match production.
+5. Resubmit the app listing; in reviewer notes, mention billing was fixed:
+   admin-hosted return URL, App Bridge error boundaries, test charges on dev
+   stores, verified sync from Shopify before granting Pro.
+
 Official references:
 
 - https://shopify.dev/docs/apps/launch/billing
