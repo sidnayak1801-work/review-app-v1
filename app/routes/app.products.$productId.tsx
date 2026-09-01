@@ -18,7 +18,6 @@ import { productInsightsService } from "../features/products/product-insights.se
 import { reviewMediaService } from "../features/reviews/review-media.service.server";
 import { reviewService } from "../features/reviews/review.service.server";
 import { DomainError, ValidationError } from "../lib/domain-error";
-import { isBillingTestMode } from "../lib/billing-env.server";
 import {
   requireShopWithBillingSync,
 } from "../lib/shop-context.server";
@@ -40,7 +39,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const shop = await requireShopWithBillingSync({
     shopDomain: session.shop,
     billing,
-    isTest: isBillingTestMode(),
   });
 
   const productId = params.productId ?? "";
@@ -106,7 +104,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const shop = await requireShopWithBillingSync({
     shopDomain: session.shop,
     billing,
-    isTest: isBillingTestMode(),
     forceSync: false,
   });
   const formData = await request.formData();
@@ -211,14 +208,17 @@ export default function ProductDetailRoute() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? error.statusText || "Product insights could not be loaded."
-    : "Product insights could not be loaded.";
+
+  // An ErrorResponse here carries App Bridge's redirect script; only
+  // `boundary.error` renders it so the redirect can complete.
+  if (isRouteErrorResponse(error)) {
+    return boundary.error(error);
+  }
 
   return (
     <s-page heading="Product">
       <s-banner heading="Unavailable" tone="critical">
-        {message}
+        Product insights could not be loaded.
       </s-banner>
     </s-page>
   );

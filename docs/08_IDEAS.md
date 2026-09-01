@@ -88,6 +88,10 @@ validated experimentally.
 - SLA and dedicated support
 - Custom integrations
 - Advanced billing and usage tiers
+- Prevent repeat free trials. `trialDays` is sent on every upgrade, so a
+  merchant can cancel before day 14, re-subscribe, and receive a fresh trial
+  indefinitely. A fix needs a trial-consumed marker on `Shop` and `trialDays: 0`
+  on later upgrades.
 
 ## Scale Options
 

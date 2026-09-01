@@ -237,13 +237,15 @@ Email delivery and import processing are service workflows, not public
 
 ### Billing boundaries
 
-- Shopify App Pricing hosts plan selection and billing.
-- An authenticated billing entry route redirects merchants to Shopify's hosted
-  plan experience.
-- The configured Shopify welcome link verifies the active subscription before
-  updating the Shop entitlement cache.
-- Relevant Shopify billing lifecycle events refresh or invalidate cached
-  entitlements.
+- The Shopify Billing API hosts charge approval; plans are declared in
+  `app/shopify.server.ts`.
+- An authenticated billing entry route redirects merchants to Shopify's charge
+  approval page.
+- The billing return URL is the admin-hosted app URL, so the merchant lands back
+  inside the embedded admin and the active subscription is verified before the
+  Shop entitlement cache is updated.
+- The `app_subscriptions/update` webhook refreshes or invalidates cached
+  entitlements independently of the browser flow.
 - Paid actions check allowances server-side; no public endpoint can assign a
   plan or bypass limits.
 

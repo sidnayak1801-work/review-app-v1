@@ -11,7 +11,10 @@ import {
   useNavigation,
   useRouteError,
 } from "react-router";
-import { boundary } from "@shopify/shopify-app-react-router/server";
+import {
+  BillingReplacementBehavior,
+  boundary,
+} from "@shopify/shopify-app-react-router/server";
 
 import {
   FREE_MAX_PUBLISHED_REVIEWS,
@@ -22,11 +25,11 @@ import {
 import styles from "../features/billing/billing-page.module.css";
 import { billingEntitlementsService } from "../features/billing/billing.service.server";
 import { billingSyncService } from "../features/billing/billing-sync.service.server";
-import { isBillingTestMode } from "../lib/billing-env.server";
-import { getShopifyEnv } from "../lib/env.server";
+import { resolveChargeTestMode } from "../lib/billing-env.server";
+import { buildEmbeddedAdminUrl } from "../lib/embedded-admin-url";
 import { requireShopRecord } from "../lib/shop-context.server";
 import { logger } from "../services/logger.server";
-import { authenticate, PRO_PLAN } from "../shopify.server";
+import { authenticate, PRO_PLAN, shopifyApiKey } from "../shopify.server";
 
 function billingErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
@@ -68,12 +71,16 @@ function formatPlanDate(iso: string): string {
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing, session } = await authenticate.admin(request);
-  const isTest = isBillingTestMode();
   const shopRecord = await requireShopRecord(session.shop);
+
+  // Shopify appends charge_id on the way back from the approval page for both
+  // outcomes, so its presence marks the return trip rather than the outcome.
+  const returnedFromCharge = new URL(request.url).searchParams.has("charge_id");
+
   const { shop, proSubscription } = await billingSyncService.syncFromShopify({
     shopId: shopRecord.id,
     billing,
-    isTest,
+    awaitActivation: returnedFromCharge,
   });
 
   const [usage, reviewRequestUsage] = await Promise.all([
@@ -97,13 +104,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       : null;
 
   return {
+    // Still on Free after the activation retries means the charge was declined.
+    chargeDeclined: returnedFromCharge && shop.plan !== "PRO",
     shopPlan: shop.plan,
     billingStatus: shop.billingStatus,
     billingSyncedAt: shop.billingSyncedAt?.toISOString() ?? null,
     subscription,
     usage,
     reviewRequestUsage,
-    isTest,
+    // Reported from the live subscription rather than predicted before the
+    // charge exists, so it cannot disagree with what Shopify actually created.
+    isTest: proSubscription?.test ?? false,
     plans: {
       free: {
         price: 0,
@@ -121,21 +132,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing, session } = await authenticate.admin(request);
+  const { admin, billing, session } = await authenticate.admin(request);
   const shop = await requireShopRecord(session.shop);
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
-  const isTest = isBillingTestMode();
 
   if (intent === "sync") {
     try {
       await billingSyncService.syncFromShopify({
         shopId: shop.id,
         billing,
-        isTest,
       });
       return { ok: true as const, message: "Billing status refreshed." };
     } catch (error) {
+      // A thrown Response is App Bridge control flow, not a sync failure. It
+      // carries the reauthorize URL that lets the merchant recover; turning it
+      // into a banner would leave them stuck on a stale plan.
+      if (error instanceof Response) {
+        throw error;
+      }
+
       logger.warn("Manual billing sync failed", {
         shopId: shop.id,
         errorMessage: error instanceof Error ? error.message : "Unknown error",
@@ -148,18 +164,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "upgrade") {
-    const returnUrl = new URL(
-      "/app/billing",
-      getShopifyEnv().SHOPIFY_APP_URL,
-    ).href;
+    // Must be the admin-hosted URL. Returning to the app origin drops the
+    // shop/host params Shopify appends, leaving the merchant on an App Bridge
+    // bootstrap page served with HTTP 200 instead of the billing page.
+    const returnUrl = buildEmbeddedAdminUrl({
+      shopDomain: session.shop,
+      apiKey: shopifyApiKey,
+      path: "/app/billing",
+    });
 
     try {
       // Throws a redirect Response when Shopify approval URL is ready.
       return await billing.request({
         plan: PRO_PLAN,
-        isTest,
+        isTest: await resolveChargeTestMode(admin),
         trialDays: PRO_TRIAL_DAYS,
         returnUrl,
+        // Replace rather than stack if a stale cached plan let the merchant
+        // reach Upgrade while a subscription is already active.
+        replacementBehavior: BillingReplacementBehavior.ApplyImmediately,
       });
     } catch (error) {
       if (error instanceof Response) {
@@ -201,6 +224,13 @@ export default function BillingRoute() {
             tone={actionData.ok ? "success" : "critical"}
           >
             {actionData.message}
+          </s-banner>
+        ) : null}
+
+        {data.chargeDeclined ? (
+          <s-banner heading="Charge not approved" tone="info">
+            You are still on the Free plan. Choose Upgrade to Pro to review the
+            charge again.
           </s-banner>
         ) : null}
 
@@ -345,16 +375,20 @@ export default function BillingRoute() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? error.statusText
-    : error instanceof Error
-      ? error.message
-      : "Billing could not be loaded.";
+
+  // `authenticate.admin` signals bounce, exit-iframe, and reauth by throwing a
+  // Response whose body is an App Bridge script tag. React Router delivers that
+  // as an ErrorResponse, and only `boundary.error` re-renders the body so the
+  // script runs. Rendering our own message instead strands the merchant on an
+  // HTTP 200 page and the redirect back from charge approval never completes.
+  if (isRouteErrorResponse(error)) {
+    return boundary.error(error);
+  }
 
   return (
     <s-page heading="Billing">
       <s-banner heading="Unavailable" tone="critical">
-        {message}
+        {error instanceof Error ? error.message : "Billing could not be loaded."}
       </s-banner>
     </s-page>
   );

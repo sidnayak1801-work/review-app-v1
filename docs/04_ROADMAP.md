@@ -127,7 +127,7 @@ Objective: add the workflows required to operate reviews for real merchants.
 
 ### Pricing and Billing
 
-- [x] Configure Free and Pro plans with Shopify App Pricing
+- [x] Configure Free and Pro plans with the Shopify Billing API
 - [x] Set Pro pricing to `$19/month` with a 14-day trial
 - [x] Enforce published-review allowances server-side (Free plan cap in moderation)
 - [x] Centralize server-side entitlement checks (published-review allowance service)
@@ -182,7 +182,7 @@ Tasks:
 - [x] Verify Theme App Extension behavior without direct theme-code edits
 - [x] Measure against Shopify's current admin and storefront performance
   requirements
-- [x] Verify Shopify App Pricing, plan transitions, and billing disclosures
+- [x] Verify Shopify Billing API charges, plan transitions, and disclosures
 - [x] Check current Built for Shopify requirements and record remaining
   eligibility gaps
 - [ ] Deploy production infrastructure and run a small merchant pilot

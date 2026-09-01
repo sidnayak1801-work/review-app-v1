@@ -161,7 +161,7 @@ Track in `08_IDEAS.md` as post-listing work.
 
 ### Billing (BFS / App Store)
 
-- Shopify App Pricing Free + Pro implemented
+- Shopify Billing API Free + Pro implemented
 - Plan transitions and entitlement sync implemented
 - Confirm listing shows pricing, trial, and allowance language clearly
 - Partner Dashboard: enable public distribution before relying on Billing API

@@ -27,8 +27,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const onboarding = await onboardingService.getStatus(shop.id);
   const url = new URL(request.url);
   const onOnboarding = url.pathname.includes("/app/onboarding");
+  // Billing must stay reachable regardless of onboarding state. Shopify returns
+  // the merchant here after charge approval, and this is where the plan syncs.
+  const onBilling = url.pathname.includes("/app/billing");
 
-  if (onboarding.needsOnboarding && !onOnboarding) {
+  if (onboarding.needsOnboarding && !onOnboarding && !onBilling) {
     throw redirect(`/app/onboarding${url.search}`);
   }
 
@@ -100,9 +103,8 @@ function AppNavigationChrome() {
         <Link to="/app/imports" prefetch="intent">
           Imports
         </Link>
-        <Link to="/app/billing" prefetch="intent">
-          Billing
-        </Link>
+        {/* No prefetch: hovering would run a full billing sync against Shopify. */}
+        <Link to="/app/billing">Billing</Link>
         <Link to="/app/settings" prefetch="intent">
           Widget settings
         </Link>

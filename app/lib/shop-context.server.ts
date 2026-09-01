@@ -18,7 +18,6 @@ export async function requireShopRecord(
 export async function requireShopWithBillingSync(input: {
   shopDomain: string;
   billing: ShopifyBillingClient;
-  isTest?: boolean;
   forceSync?: boolean;
 }): Promise<ShopRecord> {
   const shop = await requireShopRecord(input.shopDomain);
@@ -26,7 +25,6 @@ export async function requireShopWithBillingSync(input: {
   return billingSyncService.resolvePlanForShop({
     shop,
     billing: input.billing,
-    isTest: input.isTest,
     forceSync: input.forceSync,
   });
 }

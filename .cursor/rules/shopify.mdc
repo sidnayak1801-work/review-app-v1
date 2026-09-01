@@ -40,8 +40,12 @@ workflow.
 
 # Billing
 
-- MVP billing uses Shopify App Pricing with only the documented Free and Pro
+- MVP billing uses the Shopify Billing API with only the documented Free and Pro
   plans.
+- Billing return URLs must point at the admin-hosted app URL so the merchant
+  lands back inside the embedded admin after approving or declining a charge.
+- Never filter Shopify subscription checks to non-test charges; development
+  stores can only ever hold test subscriptions.
 - Shopify is the subscription source of truth.
 - Verify plan changes before updating cached entitlements.
 - Enforce published-review and review-request allowances server-side.

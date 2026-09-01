@@ -43,7 +43,7 @@ The launchable MVP includes:
 - Customer review submission with validation and spam protection
 - Review request emails
 - CSV review import
-- Free and Pro plans through Shopify App Pricing
+- Free and Pro plans through the Shopify Billing API
 - Basic operational logging, error handling, and production checks
 
 The MVP does not include advanced analytics, AI features, loyalty, referrals,
@@ -80,8 +80,8 @@ The MVP launches with two transparent plans:
 - Free — core reviews and widget with clear usage limits
 - Pro — higher review and email allowances for `$19/month`
 
-Use Shopify App Pricing for plan selection and billing. Do not build a custom
-checkout or generic metering platform.
+Use the Shopify Billing API for plan selection and billing. Do not build a
+custom checkout or generic metering platform.
 
 See `09_BILLING.md` for plan limits, entitlement rules, and downgrade behavior.
 

@@ -124,14 +124,17 @@ export default function ReviewRequestsRoute() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? error.statusText
-    : "Review requests could not be loaded.";
+
+  // An ErrorResponse here carries App Bridge's redirect script; only
+  // `boundary.error` renders it so the redirect can complete.
+  if (isRouteErrorResponse(error)) {
+    return boundary.error(error);
+  }
 
   return (
     <s-page heading="Review requests">
       <s-banner heading="Unavailable" tone="critical">
-        {message}
+        Review requests could not be loaded.
       </s-banner>
     </s-page>
   );
