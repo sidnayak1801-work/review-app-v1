@@ -224,6 +224,21 @@ Automated regression: `npx vitest run --exclude "**/*.integration.test.ts"`
    admin-hosted return URL, App Bridge error boundaries, test charges on dev
    stores, verified sync from Shopify before granting Pro.
 
+**Paste-ready reviewer notes (App Store resubmission):**
+
+```text
+Billing (requirement 1.2.2): We fixed the charge approval return flow. The
+returnUrl now uses the admin-hosted embedded app URL
+(admin.shopify.com/store/.../apps/.../app/billing), not the app origin. All
+authenticated routes use boundary.error so App Bridge redirect scripts run
+after charge approval. Development stores receive test charges automatically
+(partnerDevelopment), so Approve works without a payment method during review.
+Plan state is written only after billing.check confirms an active Pro
+subscription from Shopify; upgrade click does not grant Pro. Reinstall resets
+to Free so merchants can approve charges again. Webhook app_subscriptions/update
+re-verifies subscription state from Shopify.
+```
+
 Official references:
 
 - https://shopify.dev/docs/apps/launch/billing

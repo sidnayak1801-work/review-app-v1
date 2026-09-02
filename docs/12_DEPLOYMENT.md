@@ -109,9 +109,15 @@ shopify app deploy
 
 ```powershell
 curl https://reviewtrixapp.algorithmtrix.com/health?ready=1
+shopify app config validate --json
 ```
 
 - [ ] Health returns ready
+- [ ] `shopify app config validate` reports `"valid": true` (webhooks including
+      `app_subscriptions/update` are defined in `shopify.app.toml`)
+- [ ] Run `shopify app deploy --allow-updates` so Partner Dashboard webhooks
+      match production (CLI deploy does not deploy the Coolify web app)
+- [ ] Coolify redeployed from `main` commit `f034bd3` or later (billing fix)
 - [ ] Open `https://reviewtrixapp.algorithmtrix.com/` → redirects to `/auth/login`
       (App Store install CTA; marketing site is the separate Next.js app at
       `https://reviewtrix.algorithmtrix.com`)
