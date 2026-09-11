@@ -5,6 +5,11 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Theme Editor Q&A (and reviews) interactivity: `qa-widget.js` / `review-widget.js`
+  re-init on `shopify:section:load` with bind guards and a `readyState` boot path,
+  so Ask / Write review work when Shopify injects blocks without a full page
+  reload (App Store 5.1.2). Q&A modal stacking matches reviews; Product Q&A is
+  limited to product templates.
 - Keep Pro (cancel a scheduled Pro → Free downgrade) clearly requires Shopify
   Approve for a new subscription (`trialDays: 0`). Declining Keep Pro while
   still scheduled shows an info banner instead of being silent; the Free-plan

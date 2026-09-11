@@ -131,7 +131,7 @@
 .vouch-qa-modal {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 10000;
   display: grid;
   place-items: center;
   padding: 1rem;
@@ -149,6 +149,7 @@
 
 .vouch-qa-modal__panel {
   position: relative;
+  z-index: 1;
   width: min(480px, 100%);
   padding: 1.25rem;
   border-radius: var(--vouch-radius);

@@ -56,6 +56,9 @@
   }
 
   function init(root){
+    if(root.getAttribute("data-vouch-qa-bound")==="1") return;
+    root.setAttribute("data-vouch-qa-bound","1");
+
     var productId=root.getAttribute("data-product-id");
     var productTitle=root.getAttribute("data-product-title")||"";
     var proxyUrl=root.getAttribute("data-proxy-url")||"/apps/reviews/qa";
@@ -216,7 +219,18 @@
     load(true);
   }
 
-  document.addEventListener("DOMContentLoaded", function(){
+  function boot(){
     document.querySelectorAll("[data-vouch-qa]").forEach(init);
+  }
+
+  // Theme Editor injects sections without a full reload; re-run on section:load.
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+  document.addEventListener("shopify:section:load", boot);
+  document.addEventListener("shopify:section:unload", function(){
+    document.documentElement.style.overflow="";
   });
 }();

@@ -104,7 +104,11 @@ Complete in Shopify Partners (cannot be done from this repo):
       Bare app URL `/auth/login` is an App Store CTA only — no shop-domain form.
 - [ ] Onboarding / Home loads on Coolify URL
 - [ ] Clean OS 2.0 theme: enable app embed + Star rating / Product reviews /
-      Review Summary; submit via app proxy; moderate in admin
+      Review Summary / Product Q&A; submit via app proxy; moderate in admin
+- [ ] Theme Editor (no full reload): add Product Q&A on a product template →
+      Ask opens modal; change a block setting → Ask still works; submit a
+      question. Repeat Write a review on Product reviews. Online Store full
+      reload still works.
 - [ ] Billing: upgrade → approve; decline path; reinstall can request charge
       again (`BILLING_TEST_MODE=false`)
 - [ ] Uninstall + reinstall OAuth works

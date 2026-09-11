@@ -42,4 +42,6 @@ prefix = "apps"
 
 [build]
 # Keep false so `shopify app dev` does not rewrite Coolify Partner URLs to a tunnel.
+# Local UI testing: open the CLI Preview URL (client_id path + ?dev-console=show) on
+# algorithmtrix-development — not Apps → review-app-v1 (that hits application_url).
 automatically_update_urls_on_dev = false

@@ -88,6 +88,16 @@ export function Sidebar({
           src="/reviewtrix-logo.png"
           alt="ReviewTrix"
           className={styles.brandLogo}
+          // Inline caps so a CSS-module miss cannot fill the Admin iframe.
+          style={{
+            display: "block",
+            width: "100%",
+            maxWidth: 200,
+            maxHeight: 72,
+            height: "auto",
+            objectFit: "contain",
+            objectPosition: "left center",
+          }}
         />
       </div>
 
