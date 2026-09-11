@@ -18,6 +18,7 @@ const proShop: ShopRecord = {
   uninstalledAt: null,
   billingStatus: "ACTIVE",
   billingSyncedAt: installedAt,
+  billingPeriodEnd: null,
 };
 
 function createRepository(existing: ShopRecord | null) {
@@ -49,6 +50,7 @@ describe("PrismaShopRepository.install", () => {
           plan: "FREE",
           billingStatus: "FREE",
           billingSyncedAt: null,
+          billingPeriodEnd: null,
         }),
       }),
     );
@@ -89,6 +91,7 @@ describe("PrismaShopRepository.updateBillingState", () => {
     plan: "PRO" as const,
     billingStatus: "ACTIVE",
     billingSyncedAt: installedAt,
+    billingPeriodEnd: null,
   };
 
   it("returns null when the shop row is gone", async () => {

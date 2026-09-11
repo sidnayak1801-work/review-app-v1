@@ -35,6 +35,7 @@ const shop: ShopRecord = {
   uninstalledAt: null,
   billingStatus: null,
   billingSyncedAt: null,
+  billingPeriodEnd: null,
 };
 
 function tokenRecord(

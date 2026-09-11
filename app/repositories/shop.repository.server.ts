@@ -21,6 +21,8 @@ export interface UpdateShopBillingStateInput {
   plan: ShopPlan;
   billingStatus: string;
   billingSyncedAt: Date;
+  /** Pass `null` to clear; omit to leave unchanged is not supported — always set. */
+  billingPeriodEnd: Date | null;
 }
 
 export interface ShopRecord {
@@ -36,6 +38,7 @@ export interface ShopRecord {
   uninstalledAt: Date | null;
   billingStatus: string | null;
   billingSyncedAt: Date | null;
+  billingPeriodEnd: Date | null;
 }
 
 export interface ShopRepository {
@@ -64,6 +67,7 @@ const SHOP_SELECT = {
   uninstalledAt: true,
   billingStatus: true,
   billingSyncedAt: true,
+  billingPeriodEnd: true,
 } as const;
 
 type ShopModel = {
@@ -104,6 +108,7 @@ type ShopModel = {
       plan?: ShopPlan;
       billingStatus?: string;
       billingSyncedAt?: Date | null;
+      billingPeriodEnd?: Date | null;
     };
     select: typeof SHOP_SELECT;
   }): Promise<ShopRecord>;
@@ -115,6 +120,7 @@ type ShopModel = {
       plan?: ShopPlan;
       billingStatus?: string;
       billingSyncedAt?: Date | null;
+      billingPeriodEnd?: Date | null;
       contactEmail?: string | null;
     };
     select: typeof SHOP_SELECT;
@@ -176,6 +182,7 @@ export class PrismaShopRepository implements ShopRepository {
           plan: "FREE" as const,
           billingStatus: "FREE",
           billingSyncedAt: null,
+          billingPeriodEnd: null,
         }
       : {};
 
@@ -262,6 +269,7 @@ export class PrismaShopRepository implements ShopRepository {
           plan: input.plan,
           billingStatus: input.billingStatus,
           billingSyncedAt: input.billingSyncedAt,
+          billingPeriodEnd: input.billingPeriodEnd,
         },
         select: SHOP_SELECT,
       });

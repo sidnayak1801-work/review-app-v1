@@ -211,8 +211,11 @@ subsystem.
 Planned fields or enum changes:
 
 - `plan` — `FREE` or `PRO`
-- `billingStatus` — minimal cached entitlement state
+- `billingStatus` — minimal cached entitlement state (`FREE`, `ACTIVE`, or
+  `DOWNGRADE_SCHEDULED`)
 - `billingSyncedAt` — last successful verification with Shopify
+- `billingPeriodEnd` — Pro access end date when a downgrade is scheduled;
+  cleared when ACTIVE or FREE
 
 Shopify remains the subscription source of truth. Refresh the cached
 entitlement after plan changes and relevant Shopify lifecycle events. Query

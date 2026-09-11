@@ -49,6 +49,7 @@ const shopRecord: ShopRecord = {
   uninstalledAt: null,
   billingStatus: null,
   billingSyncedAt: null,
+  billingPeriodEnd: null,
 };
 
 const uninstalledShopRecord: ShopRecord = {

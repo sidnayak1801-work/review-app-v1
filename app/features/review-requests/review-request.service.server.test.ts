@@ -113,6 +113,7 @@ function createShops(
       uninstalledAt: null,
       billingStatus: "FREE",
       billingSyncedAt: null,
+  billingPeriodEnd: null,
     }),
     findByDomain: vi.fn(),
     create: vi.fn(),

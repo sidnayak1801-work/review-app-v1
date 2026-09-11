@@ -5,6 +5,17 @@ This file records completed changes only. Planned work belongs in
 
 ## Unreleased
 
+- Keep Pro (cancel a scheduled Pro → Free downgrade) clearly requires Shopify
+  Approve for a new subscription (`trialDays: 0`). Declining Keep Pro while
+  still scheduled shows an info banner instead of being silent; the Free-plan
+  decline banner remains for Upgrade declines.
+- Self-serve Pro → Free downgrade (App Store requirement 1.2.3). Merchants can
+  schedule a downgrade from the Billing page via Shopify `billing.cancel`
+  (`prorate: false`). ReviewTrix keeps `plan = PRO` with
+  `billingStatus = DOWNGRADE_SCHEDULED` until `billingPeriodEnd`, then syncs to
+  Free. Keep Pro re-subscribes through Shopify approval (`trialDays: 0`). Removed
+  the merchant-facing “Refresh billing status” button and Admin-cancel
+  instructions.
 - Development stores always receive test charges when upgrading, even when
   production sets `BILLING_TEST_MODE=false`. Live charges on a dev store require
   a payment method and leave Shopify's Approve button disabled. The app shell

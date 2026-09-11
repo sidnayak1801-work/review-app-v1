@@ -10,14 +10,16 @@ import {
   useLoaderData,
   useNavigation,
   useRouteError,
+  useSubmit,
 } from "react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   BillingReplacementBehavior,
   boundary,
 } from "@shopify/shopify-app-react-router/server";
 
 import {
+  BILLING_STATUS_DOWNGRADE_SCHEDULED,
   FREE_MAX_PUBLISHED_REVIEWS,
   FREE_MAX_REVIEW_REQUESTS_PER_MONTH,
   PRO_MONTHLY_PRICE_USD,
@@ -26,12 +28,21 @@ import {
 import styles from "../features/billing/billing-page.module.css";
 import { SaveSuccessModal } from "../components/save-success-modal";
 import { billingEntitlementsService } from "../features/billing/billing.service.server";
-import { billingSyncService } from "../features/billing/billing-sync.service.server";
+import {
+  billingSyncService,
+  resolveBillingPresentation,
+} from "../features/billing/billing-sync.service.server";
 import { resolveChargeTestContext } from "../lib/billing-env.server";
 import { buildEmbeddedAdminUrl } from "../lib/embedded-admin-url";
 import { requireShopRecord } from "../lib/shop-context.server";
+import { shopRepository } from "../repositories/shop.repository.server";
 import { logger } from "../services/logger.server";
 import { authenticate, PRO_PLAN, shopifyApiKey } from "../shopify.server";
+
+type ModalElement = HTMLElement & {
+  showOverlay?: () => void;
+  hideOverlay?: () => void;
+};
 
 function billingErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
@@ -75,6 +86,10 @@ function proSuccessStorageKey(shopDomain: string, chargeId: string | null) {
   return `billing-pro-success:${shopDomain}:${chargeId ?? "return"}`;
 }
 
+function isFutureDate(value: Date | null | undefined): value is Date {
+  return value instanceof Date && value.getTime() > Date.now();
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing, session } = await authenticate.admin(request);
   const shopRecord = await requireShopRecord(session.shop);
@@ -86,11 +101,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     ? new URL(request.url).searchParams.get("charge_id")
     : null;
 
-  const { shop, proSubscription } = await billingSyncService.syncFromShopify({
-    shopId: shopRecord.id,
-    billing,
-    awaitActivation: returnedFromCharge,
-  });
+  const { shop, proSubscription, presentation } =
+    await billingSyncService.syncFromShopify({
+      shopId: shopRecord.id,
+      billing,
+      awaitActivation: returnedFromCharge,
+    });
 
   const [usage, reviewRequestUsage] = await Promise.all([
     billingEntitlementsService.getPublishedReviewUsage({
@@ -103,29 +119,39 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }),
   ]);
 
+  const isPro = presentation.entitlementPlan === "PRO";
+  const proAccessUntil =
+    presentation.proAccessUntil?.toISOString() ??
+    proSubscription?.currentPeriodEnd ??
+    null;
+
   const subscription =
-    shop.plan === "PRO" && proSubscription
+    isPro
       ? {
-          boughtOn: proSubscription.createdAt,
-          expiresAt: proSubscription.currentPeriodEnd,
+          boughtOn: proSubscription?.createdAt ?? null,
+          expiresAt: proAccessUntil,
           validForLabel: "Valid for 1 month" as const,
         }
       : null;
 
   return {
-    // Still on Free after the activation retries means the charge was declined.
-    chargeDeclined: returnedFromCharge && shop.plan !== "PRO",
-    showProActivatedSuccess: returnedFromCharge && shop.plan === "PRO",
+    chargeDeclinedUpgrade:
+      returnedFromCharge && presentation.billingPhase === "FREE",
+    chargeDeclinedKeepPro:
+      returnedFromCharge &&
+      presentation.billingPhase === "PRO_DOWNGRADE_SCHEDULED",
+    showProActivatedSuccess:
+      returnedFromCharge && presentation.billingPhase === "PRO_ACTIVE",
     chargeId,
     shopDomain: session.shop,
     shopPlan: shop.plan,
+    billingPhase: presentation.billingPhase,
     billingStatus: shop.billingStatus,
     billingSyncedAt: shop.billingSyncedAt?.toISOString() ?? null,
+    proAccessUntil,
     subscription,
     usage,
     reviewRequestUsage,
-    // Reported from the live subscription rather than predicted before the
-    // charge exists, so it cannot disagree with what Shopify actually created.
     isTest: proSubscription?.test ?? false,
     plans: {
       free: {
@@ -149,25 +175,144 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 
-  if (intent === "sync") {
+  if (intent === "downgrade") {
+    const presentation = resolveBillingPresentation(shop);
+
+    if (
+      presentation.billingPhase === "PRO_DOWNGRADE_SCHEDULED" &&
+      isFutureDate(shop.billingPeriodEnd)
+    ) {
+      return {
+        ok: true as const,
+        message: `Downgrade already scheduled. Pro access continues until ${formatPlanDate(shop.billingPeriodEnd.toISOString())}.`,
+      };
+    }
+
     try {
-      await billingSyncService.syncFromShopify({
-        shopId: shop.id,
-        billing,
+      const existing = await billing.check({ plans: [PRO_PLAN] });
+      const pro = existing.appSubscriptions.find(
+        (subscription) => subscription.name === PRO_PLAN,
+      );
+
+      if (!existing.hasActivePayment || !pro) {
+        await billingSyncService.syncFromShopify({
+          shopId: shop.id,
+          billing,
+        });
+        return {
+          ok: false as const,
+          message: "No active Pro subscription found to downgrade.",
+        };
+      }
+
+      const { isTest } = await resolveChargeTestContext(admin);
+
+      logger.info("Billing downgrade initiated", {
+        shop: session.shop,
+        subscriptionId: pro.id,
+        isTest,
       });
-      return { ok: true as const, message: "Billing status refreshed." };
+
+      await billing.cancel({
+        subscriptionId: pro.id,
+        prorate: false,
+        isTest,
+      });
+
+      const periodEnd = pro.currentPeriodEnd
+        ? new Date(pro.currentPeriodEnd)
+        : null;
+
+      if (!periodEnd || periodEnd.getTime() <= Date.now()) {
+        await billingSyncService.syncFromShopify({
+          shopId: shop.id,
+          billing,
+        });
+        return {
+          ok: true as const,
+          message: "Your plan is now Free. Existing reviews and data remain intact.",
+        };
+      }
+
+      const updated = await shopRepository.updateBillingState(shop.id, {
+        plan: "PRO",
+        billingStatus: BILLING_STATUS_DOWNGRADE_SCHEDULED,
+        billingSyncedAt: new Date(),
+        billingPeriodEnd: periodEnd,
+      });
+
+      if (!updated) {
+        return {
+          ok: false as const,
+          message: "Could not save the scheduled downgrade. Please try again.",
+        };
+      }
+
+      return {
+        ok: true as const,
+        message: `Downgrade scheduled. Pro access continues until ${formatPlanDate(periodEnd.toISOString())}.`,
+      };
     } catch (error) {
-      // A thrown Response is App Bridge control flow, not a sync failure. It
-      // carries the reauthorize URL that lets the merchant recover; turning it
-      // into a banner would leave them stuck on a stale plan.
       if (error instanceof Response) {
         throw error;
       }
 
-      logger.warn("Manual billing sync failed", {
+      logger.warn("Billing downgrade failed", {
         shopId: shop.id,
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
+
+      return {
+        ok: false as const,
+        message: billingErrorMessage(error),
+      };
+    }
+  }
+
+  if (intent === "keep_pro") {
+    const presentation = resolveBillingPresentation(shop);
+
+    if (presentation.billingPhase !== "PRO_DOWNGRADE_SCHEDULED") {
+      return {
+        ok: false as const,
+        message: "There is no scheduled downgrade to cancel.",
+      };
+    }
+
+    const returnUrl = buildEmbeddedAdminUrl({
+      shopDomain: session.shop,
+      apiKey: shopifyApiKey,
+      path: "/app/billing",
+    });
+
+    try {
+      const { isTest, partnerDevelopment } =
+        await resolveChargeTestContext(admin);
+
+      logger.info("Billing keep Pro initiated", {
+        shop: session.shop,
+        isTest,
+        partnerDevelopment,
+      });
+
+      // trialDays: 0 — merchant already used Pro; do not grant a second trial.
+      return await billing.request({
+        plan: PRO_PLAN,
+        isTest,
+        trialDays: 0,
+        returnUrl,
+        replacementBehavior: BillingReplacementBehavior.ApplyImmediately,
+      });
+    } catch (error) {
+      if (error instanceof Response) {
+        throw error;
+      }
+
+      logger.warn("Billing keep Pro request failed", {
+        shopId: shop.id,
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      });
+
       return {
         ok: false as const,
         message: billingErrorMessage(error),
@@ -176,6 +321,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "upgrade") {
+    const presentation = resolveBillingPresentation(shop);
+
+    if (presentation.billingPhase === "PRO_DOWNGRADE_SCHEDULED") {
+      return {
+        ok: false as const,
+        message:
+          "A downgrade is already scheduled. Use Keep Pro plan to stay on Pro.",
+      };
+    }
+
     const existing = await billing.check({ plans: [PRO_PLAN] });
 
     if (existing.hasActivePayment) {
@@ -210,8 +365,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         isTest,
         trialDays: PRO_TRIAL_DAYS,
         returnUrl,
-        // Replace rather than stack if a stale cached plan let the merchant
-        // reach Upgrade while a subscription is already active.
         replacementBehavior: BillingReplacementBehavior.ApplyImmediately,
       });
     } catch (error) {
@@ -234,13 +387,93 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return { ok: false as const, message: "Unknown action." };
 };
 
+function DowngradeConfirmModal({
+  open,
+  effectiveDateLabel,
+  onClose,
+  submitting,
+  onConfirm,
+}: {
+  open: boolean;
+  effectiveDateLabel: string;
+  onClose: () => void;
+  submitting: boolean;
+  onConfirm: () => void;
+}) {
+  const reactId = useId();
+  const modalId = `downgrade-confirm-${reactId.replace(/:/g, "")}`;
+  const modalRef = useRef<ModalElement | null>(null);
+
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+    if (open) {
+      modal.showOverlay?.();
+    } else {
+      modal.hideOverlay?.();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+    const handleHide = () => {
+      onClose();
+    };
+    modal.addEventListener("hide", handleHide);
+    return () => modal.removeEventListener("hide", handleHide);
+  }, [onClose]);
+
+  return (
+    <s-modal
+      id={modalId}
+      heading="Downgrade to Free?"
+      size="small"
+      ref={modalRef as never}
+    >
+      <s-stack direction="block" gap="base">
+        <s-text>
+          Your Pro plan will stop renewing and will remain active until{" "}
+          {effectiveDateLabel}. After that date, your account will switch to the
+          Free plan.
+        </s-text>
+        <s-text color="subdued">
+          Your existing reviews and data will remain intact.
+        </s-text>
+      </s-stack>
+      <s-button slot="secondary-actions" onClick={onClose} disabled={submitting}>
+        Cancel
+      </s-button>
+      <s-button
+        slot="primary-action"
+        variant="primary"
+        disabled={submitting}
+        onClick={onConfirm}
+      >
+        Downgrade to Free
+      </s-button>
+    </s-modal>
+  );
+}
+
 export default function BillingRoute() {
   const data = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const submit = useSubmit();
+  const submitting = navigation.state === "submitting";
   const isPro = data.shopPlan === "PRO";
+  const isScheduled = data.billingPhase === "PRO_DOWNGRADE_SCHEDULED";
+  const isActivePro = data.billingPhase === "PRO_ACTIVE";
   const subscription = data.subscription;
   const [proSuccessOpen, setProSuccessOpen] = useState(false);
+  const [downgradeOpen, setDowngradeOpen] = useState(false);
+
+  const confirmDowngrade = useCallback(() => {
+    const formData = new FormData();
+    formData.set("intent", "downgrade");
+    submit(formData, { method: "post" });
+  }, [submit]);
 
   useEffect(() => {
     if (!data.showProActivatedSuccess) {
@@ -257,9 +490,27 @@ export default function BillingRoute() {
     setProSuccessOpen(true);
   }, [data.showProActivatedSuccess, data.chargeId, data.shopDomain]);
 
+  useEffect(() => {
+    if (actionData?.ok && navigation.state === "idle") {
+      setDowngradeOpen(false);
+    }
+  }, [actionData, navigation.state]);
+
   const closeProSuccess = useCallback(() => {
     setProSuccessOpen(false);
   }, []);
+
+  const closeDowngrade = useCallback(() => {
+    setDowngradeOpen(false);
+  }, []);
+
+  const effectiveDateLabel = data.proAccessUntil
+    ? formatPlanDate(data.proAccessUntil)
+    : "the end of your current billing period";
+
+  const statusBadgeLabel = isScheduled
+    ? "Downgrade scheduled"
+    : (data.billingStatus ?? "Active");
 
   return (
     <>
@@ -268,6 +519,13 @@ export default function BillingRoute() {
         heading="Pro activated"
         message="Pro version activated successfully."
         onClose={closeProSuccess}
+      />
+      <DowngradeConfirmModal
+        open={downgradeOpen}
+        effectiveDateLabel={effectiveDateLabel}
+        onClose={closeDowngrade}
+        submitting={submitting}
+        onConfirm={confirmDowngrade}
       />
       <s-page heading="Billing">
       <s-stack direction="block" gap="large">
@@ -284,10 +542,27 @@ export default function BillingRoute() {
           </s-banner>
         ) : null}
 
-        {data.chargeDeclined ? (
+        {data.chargeDeclinedUpgrade ? (
           <s-banner heading="Charge not approved" tone="info">
             You are still on the Free plan. Choose Upgrade to Pro to review the
             charge again.
+          </s-banner>
+        ) : null}
+
+        {data.chargeDeclinedKeepPro ? (
+          <s-banner heading="Charge not approved" tone="info">
+            You did not approve the new Pro subscription. Your downgrade is
+            still scheduled and Pro access continues until {effectiveDateLabel}.
+            Choose Keep Pro plan to open Shopify&apos;s approval page again.
+          </s-banner>
+        ) : null}
+
+        {isScheduled && !data.chargeDeclinedKeepPro ? (
+          <s-banner heading="Downgrade scheduled" tone="info">
+            Pro access continues until {effectiveDateLabel}. After that date
+            your account switches to Free. Existing reviews and data stay
+            intact. Keep Pro plan opens Shopify&apos;s approval page for a new
+            Pro subscription (no second trial).
           </s-banner>
         ) : null}
 
@@ -303,7 +578,7 @@ export default function BillingRoute() {
                 <s-stack direction="inline" gap="small" alignItems="center">
                   <s-heading>{isPro ? "Pro" : "Free"}</s-heading>
                   <s-badge tone={isPro ? "success" : "info"}>
-                    {data.billingStatus ?? "Active"}
+                    {statusBadgeLabel}
                   </s-badge>
                 </s-stack>
                 <s-text>
@@ -318,11 +593,6 @@ export default function BillingRoute() {
                     ? ` / ${data.reviewRequestUsage.limit}`
                     : " · unlimited"}
                 </s-text>
-                {data.billingSyncedAt ? (
-                  <s-text color="subdued">
-                    Last synced {new Date(data.billingSyncedAt).toLocaleString()}
-                  </s-text>
-                ) : null}
                 {data.isTest ? (
                   <s-banner tone="info" heading="Test billing mode">
                     Charges are created in Shopify test mode.
@@ -334,20 +604,26 @@ export default function BillingRoute() {
             {subscription ? (
               <aside className={styles.metaPanel} aria-label="Plan period">
                 <div>
-                  <p className={styles.metaLabel}>Plan bought on</p>
+                  <p className={styles.metaLabel}>
+                    {isScheduled ? "Pro access until" : "Plan bought on"}
+                  </p>
                   <p className={styles.metaDate}>
-                    {subscription.boughtOn
-                      ? formatPlanDate(subscription.boughtOn)
-                      : "—"}
+                    {isScheduled
+                      ? effectiveDateLabel
+                      : subscription.boughtOn
+                        ? formatPlanDate(subscription.boughtOn)
+                        : "—"}
                   </p>
                 </div>
-                <span
-                  className={styles.validChip}
-                  role="status"
-                  aria-disabled="true"
-                >
-                  {subscription.validForLabel}
-                </span>
+                {!isScheduled ? (
+                  <span
+                    className={styles.validChip}
+                    role="status"
+                    aria-disabled="true"
+                  >
+                    {subscription.validForLabel}
+                  </span>
+                ) : null}
               </aside>
             ) : null}
           </div>
@@ -377,13 +653,14 @@ export default function BillingRoute() {
                 {isPro ? (
                   <div className={styles.planStatusRow}>
                     <s-badge tone="success">Current plan</s-badge>
-                    {subscription?.expiresAt ? (
+                    {data.proAccessUntil ? (
                       <span
                         className={styles.expiryChip}
                         role="status"
                         aria-disabled="true"
                       >
-                        Expires {formatPlanDate(subscription.expiresAt)}
+                        {isScheduled ? "Until" : "Expires"}{" "}
+                        {formatPlanDate(data.proAccessUntil)}
                       </span>
                     ) : null}
                   </div>
@@ -402,26 +679,39 @@ export default function BillingRoute() {
                   <s-button
                     type="submit"
                     variant="primary"
-                    disabled={navigation.state === "submitting"}
+                    disabled={submitting}
                   >
                     Upgrade to Pro
                   </s-button>
                 </Form>
               ) : null}
-              <Form method="post">
-                <input type="hidden" name="intent" value="sync" />
+              {isActivePro ? (
                 <s-button
-                  type="submit"
                   variant="secondary"
-                  disabled={navigation.state === "submitting"}
+                  disabled={submitting}
+                  onClick={() => setDowngradeOpen(true)}
                 >
-                  Refresh billing status
+                  Downgrade to Free
                 </s-button>
-              </Form>
+              ) : null}
+              {isScheduled ? (
+                <Form method="post">
+                  <input type="hidden" name="intent" value="keep_pro" />
+                  <s-button
+                    type="submit"
+                    variant="primary"
+                    disabled={submitting}
+                  >
+                    Keep Pro plan
+                  </s-button>
+                </Form>
+              ) : null}
             </s-stack>
             <s-text color="subdued">
-              Upgrade opens Shopify checkout. Downgrade or cancel in Shopify Admin
-              billing — existing published reviews stay visible.
+              Upgrade and Keep Pro both open Shopify&apos;s approval page.
+              Downgrade stops Pro renewal while keeping Pro access until the end
+              of the paid period. Existing published reviews stay visible on
+              Free.
             </s-text>
           </s-stack>
         </s-section>

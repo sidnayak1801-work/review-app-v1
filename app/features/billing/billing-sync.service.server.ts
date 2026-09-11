@@ -8,6 +8,9 @@ import { logger } from "../../services/logger.server";
 import {
   BILLING_ACTIVATION_RETRIES,
   BILLING_ACTIVATION_RETRY_DELAY_MS,
+  BILLING_STATUS_ACTIVE,
+  BILLING_STATUS_DOWNGRADE_SCHEDULED,
+  BILLING_STATUS_FREE,
   BILLING_SYNC_MAX_AGE_MS,
   PRO_PLAN,
 } from "./billing.constants";
@@ -30,9 +33,18 @@ export type ProSubscriptionSummary = {
   test: boolean;
 };
 
+export type BillingPhase = "FREE" | "PRO_ACTIVE" | "PRO_DOWNGRADE_SCHEDULED";
+
+export type BillingPresentation = {
+  entitlementPlan: ShopPlan;
+  billingPhase: BillingPhase;
+  proAccessUntil: Date | null;
+};
+
 export type BillingSyncResult = {
   shop: ShopRecord;
   proSubscription: ProSubscriptionSummary | null;
+  presentation: BillingPresentation;
 };
 
 export interface ShopifyBillingClient {
@@ -58,16 +70,6 @@ export interface BillingSyncService {
   }): Promise<ShopRecord>;
 }
 
-function mapSubscriptionToPlan(
-  hasActiveProPayment: boolean,
-): { plan: ShopPlan; billingStatus: string } {
-  if (hasActiveProPayment) {
-    return { plan: "PRO", billingStatus: "ACTIVE" };
-  }
-
-  return { plan: "FREE", billingStatus: "FREE" };
-}
-
 function toProSubscriptionSummary(
   subscription: ShopifyAppSubscription | undefined,
 ): ProSubscriptionSummary | null {
@@ -82,6 +84,44 @@ function toProSubscriptionSummary(
     trialDays:
       typeof subscription.trialDays === "number" ? subscription.trialDays : null,
     test: subscription.test === true,
+  };
+}
+
+function hasFutureScheduledDowngrade(
+  shop: ShopRecord,
+  now: Date = new Date(),
+): boolean {
+  return (
+    shop.billingStatus === BILLING_STATUS_DOWNGRADE_SCHEDULED &&
+    shop.billingPeriodEnd !== null &&
+    shop.billingPeriodEnd.getTime() > now.getTime()
+  );
+}
+
+export function resolveBillingPresentation(
+  shop: ShopRecord,
+  now: Date = new Date(),
+): BillingPresentation {
+  if (shop.plan === "PRO" && hasFutureScheduledDowngrade(shop, now)) {
+    return {
+      entitlementPlan: "PRO",
+      billingPhase: "PRO_DOWNGRADE_SCHEDULED",
+      proAccessUntil: shop.billingPeriodEnd,
+    };
+  }
+
+  if (shop.plan === "PRO") {
+    return {
+      entitlementPlan: "PRO",
+      billingPhase: "PRO_ACTIVE",
+      proAccessUntil: shop.billingPeriodEnd,
+    };
+  }
+
+  return {
+    entitlementPlan: "FREE",
+    billingPhase: "FREE",
+    proAccessUntil: null,
   };
 }
 
@@ -132,23 +172,48 @@ export class ShopifyBillingSyncService implements BillingSyncService {
     billing: ShopifyBillingClient;
     awaitActivation?: boolean;
   }): Promise<BillingSyncResult> {
+    const existing = await this.shops.findById(input.shopId);
+    if (!existing) {
+      throw new Error("Shop not found during billing sync");
+    }
+
     const billingCheck = await this.checkProSubscription(
       input.billing,
       input.awaitActivation === true,
     );
 
     const proSubscriptionRecord = billingCheck.pro;
-
     const hasActiveProPayment =
       billingCheck.hasActivePayment && Boolean(proSubscriptionRecord);
-
-    const nextState = mapSubscriptionToPlan(hasActiveProPayment);
     const syncedAt = new Date();
 
+    let nextPlan: ShopPlan;
+    let nextStatus: string;
+    let nextPeriodEnd: Date | null;
+
+    if (hasActiveProPayment) {
+      nextPlan = "PRO";
+      nextStatus = BILLING_STATUS_ACTIVE;
+      nextPeriodEnd = proSubscriptionRecord?.currentPeriodEnd
+        ? new Date(proSubscriptionRecord.currentPeriodEnd)
+        : null;
+    } else if (hasFutureScheduledDowngrade(existing, syncedAt)) {
+      // Cancel removes the sub from activeSubscriptions; keep Pro until the
+      // paid period end captured when the merchant scheduled the downgrade.
+      nextPlan = "PRO";
+      nextStatus = BILLING_STATUS_DOWNGRADE_SCHEDULED;
+      nextPeriodEnd = existing.billingPeriodEnd;
+    } else {
+      nextPlan = "FREE";
+      nextStatus = BILLING_STATUS_FREE;
+      nextPeriodEnd = null;
+    }
+
     const updated = await this.shops.updateBillingState(input.shopId, {
-      plan: nextState.plan,
-      billingStatus: nextState.billingStatus,
+      plan: nextPlan,
+      billingStatus: nextStatus,
       billingSyncedAt: syncedAt,
+      billingPeriodEnd: nextPeriodEnd,
     });
 
     if (!updated) {
@@ -164,9 +229,10 @@ export class ShopifyBillingSyncService implements BillingSyncService {
     return {
       shop: updated,
       proSubscription:
-        nextState.plan === "PRO"
+        nextPlan === "PRO" && hasActiveProPayment
           ? toProSubscriptionSummary(proSubscriptionRecord)
           : null,
+      presentation: resolveBillingPresentation(updated, syncedAt),
     };
   }
 

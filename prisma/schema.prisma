@@ -127,6 +127,8 @@ model Shop {
   uninstalledAt     DateTime?
   billingStatus     String?
   billingSyncedAt   DateTime?
+  /** Pro access end when a downgrade is scheduled; cleared when ACTIVE or FREE. */
+  billingPeriodEnd  DateTime?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   reviews           Review[]

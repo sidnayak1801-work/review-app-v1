@@ -159,9 +159,21 @@ A declined charge follows the same return path and leaves the shop on Free.
 
 ## Downgrade and Cancellation
 
-- Merchants can change plans without contacting support or reinstalling.
-- Cancellation happens in Shopify Admin; the `app_subscriptions/update` webhook
-  downgrades the cached plan.
+- Merchants downgrade from Pro to Free **inside ReviewTrix** (App Store
+  requirement 1.2.3). No support contact, uninstall, or Shopify Admin visit is
+  required.
+- Downgrade calls Shopify `billing.cancel` with `prorate: false` (stop renewal;
+  no custom refund logic). Shopify removes the subscription from
+  `activeSubscriptions`, so ReviewTrix keeps `plan = PRO` with
+  `billingStatus = DOWNGRADE_SCHEDULED` and `billingPeriodEnd` set from the
+  subscription's `currentPeriodEnd` until that date passes.
+- Billing UI shows “Downgrade scheduled” and **Keep Pro plan**. Keep Pro
+  creates a **new** Shopify Pro subscription via `billing.request` with
+  `trialDays: 0` (no second trial). The merchant must Approve the charge again
+  on Shopify’s confirmation page. Declining leaves the scheduled downgrade in
+  place with Pro access until `billingPeriodEnd`.
+- After `billingPeriodEnd`, the next sync (billing page load or
+  `app_subscriptions/update` webhook) writes Free and Free limits apply.
 - Reinstall resets the cached plan to Free so Shopify can request approval for
   charges again, as required by App Store requirement 1.2.2.
 - Never delete reviews, requests, settings, or imports.
@@ -202,16 +214,16 @@ Run on a **development store without a payment method** after deploying `main`
 | 1 | Successful subscription | Free → Upgrade to Pro → Approve on Shopify page | Return to billing with **Pro**, success modal, sidebar shows Pro |
 | 2 | Decline | Free → Upgrade → Cancel/Decline on Shopify page | Return to billing on **Free**, info banner, no success modal |
 | 3 | API failure | (Simulate only if needed) Broken billing config | Stay Free, critical banner with actionable error |
-| 4 | Refresh | With active Shopify Pro sub → Refresh billing status | Billing page shows **Pro** |
-| 4b | Refresh (no sub) | After decline → Refresh billing status | Billing page shows **Free** |
-| 5 | Reinstall | Install → subscribe → approve → uninstall → reinstall | Plan resets to **Free**; must approve charge again |
-| 6 | Duplicate upgrade | With active Pro → Upgrade again | Error: already have active Pro subscription |
+| 4 | Downgrade | Pro → Downgrade to Free → confirm | Downgrade scheduled; Pro access until period end |
+| 5 | Keep Pro | Scheduled → Keep Pro plan → Approve | Pro ACTIVE again |
+| 6 | Reinstall | Install → subscribe → approve → uninstall → reinstall | Plan resets to **Free**; must approve charge again |
+| 7 | Duplicate upgrade | With active Pro → Upgrade again | Error: already have active Pro subscription |
+| 8 | Duplicate downgrade | Scheduled → Downgrade again | Idempotent success; no second cancel |
 
 Before approve (test 1): sidebar must **not** show “You're on Pro” while billing
 page still shows Free.
 
-Automated regression: `npx vitest run --exclude "**/*.integration.test.ts"`
-(224 tests).
+Automated regression: `npx vitest run --exclude "**/*.integration.test.ts"`.
 
 ## App Store resubmission (after billing QA)
 

@@ -19,13 +19,14 @@ const baseShop: ShopRecord = {
   uninstalledAt: null,
   billingStatus: "FREE",
   billingSyncedAt: new Date("2026-07-01T00:00:00.000Z"),
+  billingPeriodEnd: null,
 };
 
 function createShopRepository(
   overrides: Partial<ShopRepository> = {},
 ): ShopRepository {
   return {
-    findById: vi.fn(),
+    findById: vi.fn().mockResolvedValue(baseShop),
     findByDomain: vi.fn(),
     create: vi.fn(),
     install: vi.fn(),
@@ -203,9 +204,121 @@ describe("ShopifyBillingSyncService", () => {
     expect(shops.updateBillingState).not.toHaveBeenCalled();
   });
 
-  it("only ever writes ACTIVE or FREE as the billing status", async () => {
-    // Plan writes all flow through mapSubscriptionToPlan, so a raw Shopify
-    // status such as PENDING or FROZEN can never reach the billing badge.
+  it("keeps PRO when a scheduled downgrade has not reached billingPeriodEnd", async () => {
+    const periodEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const scheduledShop: ShopRecord = {
+      ...baseShop,
+      plan: "PRO",
+      billingStatus: "DOWNGRADE_SCHEDULED",
+      billingPeriodEnd: periodEnd,
+    };
+    const shops = createShopRepository({
+      findById: vi.fn().mockResolvedValue(scheduledShop),
+      updateBillingState: vi.fn().mockResolvedValue(scheduledShop),
+    });
+    const billing = {
+      check: vi.fn().mockResolvedValue({
+        hasActivePayment: false,
+        appSubscriptions: [],
+      }),
+    };
+    const service = new ShopifyBillingSyncService(shops);
+
+    const result = await service.syncFromShopify({
+      shopId: "shop-1",
+      billing,
+    });
+
+    expect(shops.updateBillingState).toHaveBeenCalledWith(
+      "shop-1",
+      expect.objectContaining({
+        plan: "PRO",
+        billingStatus: "DOWNGRADE_SCHEDULED",
+        billingPeriodEnd: periodEnd,
+      }),
+    );
+    expect(result.presentation.billingPhase).toBe("PRO_DOWNGRADE_SCHEDULED");
+    expect(result.shop.plan).toBe("PRO");
+  });
+
+  it("writes FREE when a scheduled downgrade period has ended", async () => {
+    const expiredShop: ShopRecord = {
+      ...baseShop,
+      plan: "PRO",
+      billingStatus: "DOWNGRADE_SCHEDULED",
+      billingPeriodEnd: new Date("2020-01-01T00:00:00.000Z"),
+    };
+    const shops = createShopRepository({
+      findById: vi.fn().mockResolvedValue(expiredShop),
+      updateBillingState: vi.fn().mockResolvedValue({
+        ...baseShop,
+        plan: "FREE",
+        billingStatus: "FREE",
+        billingPeriodEnd: null,
+      }),
+    });
+    const billing = {
+      check: vi.fn().mockResolvedValue({
+        hasActivePayment: false,
+        appSubscriptions: [],
+      }),
+    };
+    const service = new ShopifyBillingSyncService(shops);
+
+    await service.syncFromShopify({ shopId: "shop-1", billing });
+
+    expect(shops.updateBillingState).toHaveBeenCalledWith(
+      "shop-1",
+      expect.objectContaining({
+        plan: "FREE",
+        billingStatus: "FREE",
+        billingPeriodEnd: null,
+      }),
+    );
+  });
+
+  it("clears scheduled downgrade when Shopify still reports active Pro", async () => {
+    const periodEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const scheduledShop: ShopRecord = {
+      ...baseShop,
+      plan: "PRO",
+      billingStatus: "DOWNGRADE_SCHEDULED",
+      billingPeriodEnd: periodEnd,
+    };
+    const shops = createShopRepository({
+      findById: vi.fn().mockResolvedValue(scheduledShop),
+      updateBillingState: vi.fn().mockResolvedValue({
+        ...scheduledShop,
+        billingStatus: "ACTIVE",
+        billingPeriodEnd: new Date("2026-08-19T10:00:00.000Z"),
+      }),
+    });
+    const billing = {
+      check: vi.fn().mockResolvedValue({
+        hasActivePayment: true,
+        appSubscriptions: [
+          {
+            name: PRO_PLAN,
+            id: "sub-1",
+            currentPeriodEnd: "2026-08-19T10:00:00.000Z",
+          },
+        ],
+      }),
+    };
+    const service = new ShopifyBillingSyncService(shops);
+
+    await service.syncFromShopify({ shopId: "shop-1", billing });
+
+    expect(shops.updateBillingState).toHaveBeenCalledWith(
+      "shop-1",
+      expect.objectContaining({
+        plan: "PRO",
+        billingStatus: "ACTIVE",
+      }),
+    );
+  });
+
+  it("writes FREE billing status when there is no active Pro and no schedule", async () => {
     const shops = createShopRepository();
     const billing = {
       check: vi.fn().mockResolvedValue({
@@ -218,7 +331,7 @@ describe("ShopifyBillingSyncService", () => {
     await service.syncFromShopify({ shopId: "shop-1", billing });
 
     const written = vi.mocked(shops.updateBillingState).mock.calls[0]?.[1];
-    expect(["ACTIVE", "FREE"]).toContain(written?.billingStatus);
+    expect(written?.billingStatus).toBe("FREE");
   });
 
   it("rethrows a thrown Response instead of falling back to the cached plan", async () => {

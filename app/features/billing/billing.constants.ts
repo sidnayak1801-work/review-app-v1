@@ -2,6 +2,11 @@ import type { ShopPlan } from "../../repositories/shop.repository.server";
 
 export const PRO_PLAN = "Pro";
 
+/** Cached on Shop.billingStatus after verified Shopify sync. */
+export const BILLING_STATUS_FREE = "FREE";
+export const BILLING_STATUS_ACTIVE = "ACTIVE";
+export const BILLING_STATUS_DOWNGRADE_SCHEDULED = "DOWNGRADE_SCHEDULED";
+
 export const FREE_MAX_PUBLISHED_REVIEWS = 100;
 
 export const FREE_MAX_REVIEW_REQUESTS_PER_MONTH = 100;

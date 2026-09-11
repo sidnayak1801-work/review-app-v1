@@ -50,6 +50,7 @@ describe("handlePublicApi", () => {
         uninstalledAt: null,
         billingStatus: null,
         billingSyncedAt: null,
+        billingPeriodEnd: null,
       },
       token: {
         id: "tok-1",
@@ -93,6 +94,7 @@ describe("handlePublicApi", () => {
         uninstalledAt: null,
         billingStatus: null,
         billingSyncedAt: null,
+        billingPeriodEnd: null,
       },
       token: {
         id: "tok-rl",
